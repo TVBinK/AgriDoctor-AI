@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AgriDoctor AI</string>
+    <string name="home">Home</string>
+    <string name="diagnose">Diagnose</string>
+    <string name="my_plants">My Plants</string>
+    <string name="chatbot">Chat Bot</string>
+</resources>
+
