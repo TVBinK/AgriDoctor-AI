@@ -29,7 +29,8 @@ fun MainApp(
                 MainBottomNavBar(
                     destinations = appState.topLevelDestinations,
                     currentDestination = appState.currentTopLevelDestination,
-                    onNavigateToDestination = { appState.navigateToTopLevelDestination(it) }
+                    onNavigateToDestination = { appState.navigateToTopLevelDestination(it) },
+                    navController = appState.navController
                 )
             }
         }

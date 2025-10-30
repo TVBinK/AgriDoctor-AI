@@ -7,4 +7,6 @@ android {
 }
 
 dependencies {
+    //core
+    implementation(project(":core:theme"))
 }

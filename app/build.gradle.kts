@@ -62,4 +62,5 @@ dependencies {
     implementation(project(":feature:chatbot"))
     implementation(project(":feature:myplants"))
     implementation(project(":feature:diagnose"))
+    implementation(project(":feature:camera"))
 }

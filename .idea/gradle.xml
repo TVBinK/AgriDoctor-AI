@@ -29,6 +29,7 @@
             <option value="$PROJECT_DIR$/core/model" />
             <option value="$PROJECT_DIR$/core/theme" />
             <option value="$PROJECT_DIR$/feature" />
+            <option value="$PROJECT_DIR$/feature/camera" />
             <option value="$PROJECT_DIR$/feature/chatbot" />
             <option value="$PROJECT_DIR$/feature/diagnose" />
             <option value="$PROJECT_DIR$/feature/home" />

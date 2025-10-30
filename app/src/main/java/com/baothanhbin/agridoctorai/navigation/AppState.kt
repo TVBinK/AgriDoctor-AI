@@ -5,6 +5,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navOptions
+import com.baothanhbin.feature.camera.navigation.CAMERA_ROUTE
+import com.baothanhbin.feature.camera.navigation.navigateToCamera
 import com.baothanhbin.feature.chatbot.navigation.CHATBOT_ROUTE
 import com.baothanhbin.feature.chatbot.navigation.navigateToChatbot
 import com.baothanhbin.feature.diagnose.navigation.DIAGNOSE_ROUTE

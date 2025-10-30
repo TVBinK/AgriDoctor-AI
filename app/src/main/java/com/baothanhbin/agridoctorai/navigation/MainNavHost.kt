@@ -3,6 +3,7 @@ package com.baothanhbin.agridoctorai.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
+import com.baothanhbin.feature.camera.navigation.cameraScreen
 import com.baothanhbin.feature.chatbot.navigation.chatbotScreen
 import com.baothanhbin.feature.diagnose.navigation.diagnoseScreen
 import com.baothanhbin.feature.home.HomeScreen
@@ -26,5 +27,6 @@ fun MainNavHost(
         diagnoseScreen()
         myplantScreen()
         chatbotScreen()
+        cameraScreen()
     }
 }
