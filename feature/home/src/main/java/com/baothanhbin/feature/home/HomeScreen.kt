@@ -66,9 +66,6 @@ import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.theme.Yellow1
 
-// Constants
-// Removed HomeScreenDefaults
-
 @Composable
 fun HomeRoute() {
     HomeScreen()

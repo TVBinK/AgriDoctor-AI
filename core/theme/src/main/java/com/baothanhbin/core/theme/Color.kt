@@ -14,3 +14,6 @@ val White = Color(0xFFFFFFFF)
  val BlueDefault = Color(0xFF4285F4)
  val Blue1 = Color(0xFFDFF4FF)
  val Yellow1 = Color(0xFFFFF5D8)
+
+val RedErr = Color(0xFFDB4437)
+val Red1 = Color(0xFFFFADA6)

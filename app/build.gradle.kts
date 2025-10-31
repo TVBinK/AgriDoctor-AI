@@ -63,4 +63,7 @@ dependencies {
     implementation(project(":feature:myplants"))
     implementation(project(":feature:diagnose"))
     implementation(project(":feature:camera"))
+    implementation(project(":feature:processimage"))
+    implementation(project(":feature:diagnoseresult"))
+
 }

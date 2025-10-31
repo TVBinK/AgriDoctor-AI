@@ -10,6 +10,8 @@ import com.baothanhbin.feature.home.HomeScreen
 import com.baothanhbin.feature.home.navigation.HOME_ROUTE
 import com.baothanhbin.feature.home.navigation.homeScreen
 import com.baothanhbin.feature.myplants.navigation.myplantScreen
+import com.baothanhbin.feature.processimage.navigation.processImageScreen
+import com.baothanhbin.feature.diagnoseresult.navigation.diagnoseResultScreen
 
 @Composable
 fun MainNavHost(
@@ -27,6 +29,8 @@ fun MainNavHost(
         diagnoseScreen()
         myplantScreen()
         chatbotScreen()
-        cameraScreen()
+        cameraScreen(navController = navController)
+        processImageScreen(navController = navController)
+        diagnoseResultScreen()
     }
 }

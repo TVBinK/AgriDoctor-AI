@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import com.baothanhbin.feature.camera.CameraRoute
+import androidx.navigation.NavHostController
 
 const val CAMERA_ROUTE = "CAMERA_ROUTE"
 
@@ -16,8 +17,9 @@ fun NavController.navigateToCamera(navOptions: NavOptions? = null) {
 }
 
 fun NavGraphBuilder.cameraScreen(
+    navController: NavHostController
 ) {
-    composable(route = CAMERA_ROUTE) {
-        CameraRoute()
+    composable(route = CAMERA_ROUTE) { backStackEntry ->
+        CameraRoute(navController = navController)
     }
 }
