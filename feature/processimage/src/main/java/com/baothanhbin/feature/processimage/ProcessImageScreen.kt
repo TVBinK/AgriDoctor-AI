@@ -1,9 +1,14 @@
 package com.baothanhbin.feature.processimage
 
 import android.net.Uri
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,12 +23,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -34,13 +33,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,32 +50,69 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.navOptions
 import coil.compose.AsyncImage
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.theme.Caption
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.TitleLarge1
-import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
-import kotlinx.coroutines.delay
-import com.baothanhbin.core.network.NetworkDataSource
-import java.net.URLConnection
-import android.util.Log
+import com.baothanhbin.feature.diagnosefailed.navigation.navigateToDiagnoseFailed
+import com.baothanhbin.feature.diagnoseresult.navigation.navigateToDiagnoseResult
 
 @Composable
 fun ProcessImageRoute(
     navController: NavHostController,
-    imageUri: Uri? = null
+    imageUri: Uri? = null,
+    viewModel: ProcessImageViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Handle navigation events
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvent.collect { event ->
+            val currentRoute = navController.currentBackStackEntry?.destination?.route
+            val navOptions = navOptions {
+                if (currentRoute != null) {
+                    popUpTo(currentRoute) { inclusive = true }
+                }
+            }
+
+            when (event) {
+                is ProcessImageNavigationEvent.NavigateToResult -> {
+                    navController.navigateToDiagnoseResult(
+                        imageUri = event.imageUri,
+                        navOptions = navOptions
+                    )
+                }
+                is ProcessImageNavigationEvent.NavigateToFailed -> {
+                    navController.navigateToDiagnoseFailed(
+                        imageUri = event.imageUri,
+                        navOptions = navOptions
+                    )
+                }
+            }
+        }
+    }
+
+    // Process image when URI changes
+    LaunchedEffect(key1 = imageUri) {
+        viewModel.processImage(imageUri)
+    }
+
     ProcessImageScreen(
         imageUri = imageUri,
+        step = uiState.step,
         onBack = { navController.popBackStack() }
     )
 }
@@ -85,49 +120,9 @@ fun ProcessImageRoute(
 @Composable
 fun ProcessImageScreen(
     imageUri: Uri?,
+    step: Int,
     onBack: () -> Unit
 ) {
-    val context = LocalContext.current
-    var apiResult by remember { mutableStateOf<String?>(null) }
-    var step by remember { mutableStateOf(0) }
-
-    LaunchedEffect(key1 = imageUri) {
-        apiResult = null
-        step = 0
-        imageUri ?: return@LaunchedEffect
-        
-        Log.d("ProcessImageScreen", "Image URI: $imageUri")
-        
-        try {
-            step = 0
-            Log.d("ProcessImageScreen", "Reading image bytes from URI...")
-            val bytes = context.contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
-            if (bytes == null) {
-                Log.e("ProcessImageScreen", "Failed to read image bytes")
-                return@LaunchedEffect
-            }
-            Log.d("ProcessImageScreen", "Image bytes read: ${bytes.size} bytes")
-            
-            // Guess mime from URI path
-            val name = imageUri.lastPathSegment ?: "image.jpg"
-            val mime = URLConnection.guessContentTypeFromName(name) ?: "image/jpeg"
-            Log.d("ProcessImageScreen", "File name: $name, Mime type: $mime")
-            
-            step = 1 // uploading
-            Log.d("ProcessImageScreen", "Calling detectImage API...")
-            val result = NetworkDataSource.detectImage(bytes, name, mime)
-            
-            step = 2 // processing done
-            Log.d("ProcessImageScreen", "API result received: $result")
-            apiResult = result
-            step = 3
-            Log.d("ProcessImageScreen", "Process completed successfully")
-        } catch (e: Exception) {
-            Log.e("ProcessImageScreen", "Error processing image: ${e.message}", e)
-            Log.e("ProcessImageScreen", "Stack trace: ${e.stackTraceToString()}")
-            // keep apiResult null
-        }
-    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -146,7 +141,7 @@ fun ProcessImageScreen(
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
 
             CheckItem(
-                text = "Upload image to server",
+                text = stringResource(R.string.upload_image_to_server),
                 state = when {
                     step >= 1 -> StepState.Done
                     step == 0 -> StepState.Loading
@@ -155,7 +150,7 @@ fun ProcessImageScreen(
             )
             Spacer(modifier = Modifier.height(14.dp))
             CheckItem(
-                text = "Processing image on server",
+                text = stringResource(R.string.processing_image_on_server),
                 state = when {
                     step >= 2 -> StepState.Done
                     step == 1 -> StepState.Loading
@@ -164,22 +159,13 @@ fun ProcessImageScreen(
             )
             Spacer(modifier = Modifier.height(14.dp))
             CheckItem(
-                text = "Received result",
+                text = stringResource(R.string.received_result),
                 state = when {
                     step >= 3 -> StepState.Done
                     step == 2 -> StepState.Loading
                     else -> StepState.Pending
                 }
             )
-
-            if (apiResult != null) {
-                Spacer(modifier = Modifier.height(20.dp))
-                Text(
-                    text = apiResult ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = Color(0xFF333333)
-                )
-            }
         }
     }
 }
@@ -189,16 +175,19 @@ private fun TopBar(onBack: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .padding(top = 12.dp),
+            .padding(top = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
-            Icon(imageVector = Icons.Filled.ArrowBack, contentDescription = "Back", tint = GreenSurface)
+            Icon(
+                imageVector = Icons.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.back),
+                tint = GreenSurface
+            )
         }
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = "Disease Diagnosis",
+            text = stringResource(R.string.disease_diagnosis),
             style = MaterialTheme.typography.TitleLarge1,
             color = GreenSurface,
             maxLines = 1,
@@ -257,7 +246,8 @@ private fun ImageCard(imageUri: Uri?) {
                     .fillMaxSize()
                     .onGloballyPositioned { containerHeightPx = it.size.height.toFloat() }
             ) {
-                val translateY = if (containerHeightPx > 0f) (containerHeightPx - barHeightPx) * offsetYFraction else 0f
+                val translateY =
+                    if (containerHeightPx > 0f) (containerHeightPx - barHeightPx) * offsetYFraction else 0f
 
                 // Soft colored band right at the scan line
                 Box(
@@ -284,7 +274,10 @@ private fun ImageCard(imageUri: Uri?) {
                         .fillMaxWidth()
                         .height(2.dp)
                         .align(Alignment.TopStart)
-                        .graphicsLayer { translationY = translateY + (barHeightPx / 2f) - with(density) { 1.dp.toPx() } }
+                        .graphicsLayer {
+                            translationY =
+                                translateY + (barHeightPx / 2f) - with(density) { 1.dp.toPx() }
+                        }
                         .background(Color(0xFF00E0C2).copy(alpha = 0.95f))
                         .zIndex(2f)
                 )
@@ -356,5 +349,9 @@ private fun CheckItem(text: String, state: StepState) {
 @Preview
 @Composable
 private fun ProcessImagePreview() {
-    ProcessImageScreen(imageUri = null, onBack = {})
+    ProcessImageScreen(
+        imageUri = null,
+        step = 0,
+        onBack = { }
+    )
 }

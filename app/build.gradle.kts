@@ -65,5 +65,5 @@ dependencies {
     implementation(project(":feature:camera"))
     implementation(project(":feature:processimage"))
     implementation(project(":feature:diagnoseresult"))
-
+    implementation(project(":feature:diagnosefailed"))
 }

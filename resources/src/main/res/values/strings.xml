@@ -1,11 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AgriDoctor AI</string>
-    <string name="home">Home</string>
-    <string name="diagnose">Diagnose</string>
-    <string name="my_plants">My Plants</string>
-    <string name="chatbot">Chat Bot</string>
-    <string name="camera">Camera</string>
+    <string name="home">Trang chủ</string>
+    <string name="diagnose">Chuẩn đoán</string>
+    <string name="my_plants">Cây của tôi</string>
+    <string name="chatbot">Trợ lý AI</string>
+    <string name="camera">Máy ảnh</string>
+    
+    <!-- Home Screen -->
+    <string name="identify_plant">Nhận diện cây</string>
+    <string name="scan_to_identify">Quét để nhận diện</string>
+    <string name="check_plant_health">Kiểm tra sức khỏe\ncây trồng của bạn</string>
+    <string name="todays_care">Chăm sóc hôm nay</string>
+    <string name="tasks_count">0 Nhiệm vụ</string>
+    <string name="view_all">Xem tất cả</string>
+    <string name="measurement_tools">Công cụ đo lường</string>
+    <string name="water_meter">Máy đo nước</string>
+    <string name="optimize_watering">Tối ưu hóa tưới tiêu cho cây của bạn</string>
+    <string name="light_meter">Máy đo ánh sáng</string>
+    <string name="measure_light_intensity">Đo cường độ ánh sáng</string>
+    <string name="need_plant_help">Cần hỗ trợ về cây trồng? Hỏi AI</string>
+    <string name="get_instant_advice">Nhận lời khuyên ngay bây giờ!</string>
+    <string name="allow_location_tracking">Cho phép theo dõi vị trí</string>
+    <string name="chat_now">Trò chuyện ngay</string>
+    <string name="settings">Cài đặt</string>
+    <string name="back">Quay lại</string>
+    <string name="close">Đóng</string>
+    
+    <!-- Diagnose Screen -->
+    <string name="plant_health">Sức khỏe cây trồng</string>
+    <string name="help_plants_get_health">Giúp cây của bạn phục hồi sức khỏe</string>
+    <string name="auto_diagnose">Tự động Chuẩn đoán</string>
+    <string name="common_problems">Vấn đề thường gặp</string>
+    <string name="health_check_history">Lịch sử kiểm tra sức khỏe</string>
+    <string name="botrytis">Bệnh thối xám</string>
+    <string name="late_blight">Bệnh sương mai</string>
+    <string name="leaf_miner">Sâu đục lá</string>
+    
+    <!-- Process Image Screen -->
+    <string name="disease_diagnosis">Chuẩn đoán bệnh</string>
+    <string name="upload_image_to_server">Tải ảnh lên máy chủ</string>
+    <string name="processing_image_on_server">Đang xử lý ảnh trên máy chủ</string>
+    <string name="received_result">Đã nhận kết quả</string>
+    <string name="success">Thành công</string>
+    <string name="failed">Thất bại</string>
+    
+    <!-- Diagnose Result Screen -->
+    <string name="possible_problems">Các vấn đề có thể</string>
+    <string name="symptoms">Triệu chứng</string>
+    <string name="causes_of_disease">Nguyên nhân bệnh</string>
+    <string name="treatment">Điều trị</string>
+    <string name="recovery_care">Chăm sóc phục hồi</string>
+    <string name="unknown_disease">Bệnh chưa xác định</string>
+    <string name="picture_plant_preview">Xem trước cây trồng</string>
+    <string name="help">Trợ giúp</string>
+    <string name="switch_camera">Đổi camera</string>
+    
+    <!-- Camera Screen -->
+    <string name="photo_saved">Ảnh đã lưu: %1$s</string>
+    
+    <!-- Diagnose Failed Screen -->
+    <string name="diagnose_failed">Chuẩn đoán thất bại</string>
+    <string name="sorry_couldnt_identify">Xin lỗi, không thể nhận diện</string>
+    <string name="try_snap_tips_description">Thử những mẹo chụp ảnh sau để có hình ảnh tốt hơn cho việc nhận diện</string>
+    <string name="snap_tips">Mẹo chụp ảnh</string>
+    <string name="good_example">Ví dụ tốt</string>
+    <string name="too_close">Quá gần</string>
+    <string name="too_far">Quá xa</string>
+    <string name="multi_species">Nhiều loại cây</string>
+    <string name="too_blurry">Quá mờ</string>
+    <string name="try_again">Thử lại</string>
+    
+    <!-- Chatbot Screen -->
+    <string name="ask_botanist">Hỏi Nhà Thực Vật Học</string>
+    <string name="get_expert_plant_advice">Nhận lời khuyên chuyên gia về cây trồng ngay lập tức - được cung cấp bởi AI, được tin cậy bởi các nhà thực vật học</string>
+    <string name="ask_anything">Hỏi bất cứ điều gì</string>
+    <string name="edit">Chỉnh sửa</string>
+    <string name="menu">Menu</string>
+    <string name="chat_history">Lịch sử trò chuyện</string>
+    <string name="no_chat_history">Không có lịch sử trò chuyện</string>
+
+    <!-- Network Log Tags -->
+    <string name="log_tag_detect_image">detectImage</string>
+    <string name="log_tag_detect_image_typed">detectImageTyped</string>
+    <string name="log_tag_process_image">ProcessImageScreen</string>
+    <string name="log_message_api_call_successful">Gọi API thành công</string>
+    <string name="log_message_parsing_error">Lỗi phân tích phản hồi: %1$s</string>
+    <string name="log_message_reading_image">Đang đọc byte ảnh từ URI...</string>
+    <string name="log_message_image_read">Đã đọc byte ảnh: %1$d byte</string>
+    <string name="log_message_file_info">Tên file: %1$s, Loại MIME: %2$s</string>
+    <string name="log_message_api_calling">Đang gọi API detectImageTyped...</string>
+    <string name="log_message_api_result_success">Đã nhận kết quả API thành công</string>
+    <string name="log_message_cached_id">Kết quả đã lưu cache với id: %1$d</string>
+    <string name="log_message_cache_error">Lỗi lưu cache kết quả: %1$s</string>
+    <string name="log_message_process_completed">Quá trình hoàn tất</string>
+    <string name="log_message_error_processing">Lỗi xử lý ảnh: %1$s</string>
+    <string name="log_message_stack_trace">Stack trace: %1$s</string>
+    <string name="log_message_failed_read_bytes">Không thể đọc byte ảnh</string>
+    <string name="log_message_api_result_null">Kết quả API là null</string>
+    <string name="log_message_image_uri">URI ảnh: %1$s</string>
 </resources>
 
 

@@ -12,4 +12,5 @@ dependencies {
     implementation(libs.coil.gif)
     //core
     implementation(project(":core:theme"))
+    implementation(project(":feature:chatbot"))
 }

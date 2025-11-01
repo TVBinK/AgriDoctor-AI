@@ -15,6 +15,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +40,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -159,7 +161,7 @@ fun CameraScreen(
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_close),
-                    contentDescription = "Close",
+                    contentDescription = stringResource(R.string.close),
                     tint = Color.White
                 )
             }
@@ -174,7 +176,7 @@ fun CameraScreen(
             ) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_switch_camera),
-                    contentDescription = "Switch camera",
+                    contentDescription = stringResource(R.string.switch_camera),
                     tint = Color.White
                 )
             }
@@ -201,7 +203,6 @@ private fun PermissionedCamera(
     onPermissionResult: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
         onPermissionResult(isGranted)
     }
@@ -219,7 +220,7 @@ private fun PermissionedCamera(
 @Composable
 private fun SlidingSegmentedToggle(
     modifier: Modifier = Modifier,
-    options: List<String> = listOf("Diagnose", "Identify"),
+    options: List<String> = listOf(stringResource(R.string.diagnose),stringResource(R.string.identify_plant)),
     selectedIndex: Int,
     onOptionSelected: (Int) -> Unit
 ) {
@@ -228,10 +229,11 @@ private fun SlidingSegmentedToggle(
 
     BoxWithConstraints(
         modifier = modifier
-            .height(40.dp)
+            .height(50.dp)
             .clip(RoundedCornerShape(cornerRadius))
             .background(backgroundColor)
             .padding(4.dp)
+
     ) {
         val segmentWidth = this.maxWidth / options.size
         val targetOffset = segmentWidth * selectedIndex
@@ -263,7 +265,10 @@ private fun SlidingSegmentedToggle(
                     color = if (selectedIndex == index) Color(0xFF4CAF50) else Color(0xFF1A1A1A),
                     modifier = Modifier
                         .weight(1f)
-                        .clickable { onOptionSelected(index) }
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ) { onOptionSelected(index) }
                         .padding(vertical = 8.dp),
                     textAlign = TextAlign.Center
                 )
@@ -314,7 +319,7 @@ private fun BottomControlPanel(
                 ) {
                     Image(
                         painter = painterResource(id = R.drawable.img_lavender),
-                        contentDescription = "Plant preview",
+                        contentDescription = stringResource(R.string.picture_plant_preview),
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -330,7 +335,7 @@ private fun BottomControlPanel(
                                 { uri ->
                                     Toast.makeText(
                                         context,
-                                        "Photo saved: $uri",
+                                        context.getString(R.string.photo_saved, uri.toString()),
                                         Toast.LENGTH_SHORT
                                     ).show()
                                 },
@@ -368,7 +373,7 @@ private fun BottomControlPanel(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_help),
-                            contentDescription = "Help",
+                            contentDescription = stringResource(R.string.help),
                             tint = Color.White
                         )
                     }

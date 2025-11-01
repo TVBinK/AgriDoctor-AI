@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -66,13 +67,24 @@ import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.theme.Yellow1
 
+import androidx.navigation.NavController
+
 @Composable
-fun HomeRoute() {
-    HomeScreen()
+fun HomeRoute(
+    navController: NavController? = null,
+    onNavigateToChatbot: (() -> Unit)? = null
+) {
+    HomeScreen(
+        navController = navController,
+        onNavigateToChatbot = onNavigateToChatbot
+    )
 }
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    navController: NavController? = null,
+    onNavigateToChatbot: (() -> Unit)? = null
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -98,7 +110,10 @@ fun HomeScreen() {
             Spacer(modifier = Modifier.height(20.dp))
             TodaysCareSection()
             Spacer(modifier = Modifier.height(20.dp))
-            MeasurementToolsSection()
+            MeasurementToolsSection(
+                navController = navController,
+                onNavigateToChatbot = onNavigateToChatbot
+            )
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
@@ -106,6 +121,7 @@ fun HomeScreen() {
 
 @Composable
 private fun QuickActionsSection() {
+    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -113,16 +129,16 @@ private fun QuickActionsSection() {
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         HomeFeatureCard(
-            title = "Identify Plant",
-            subtitle = "Scan to identify",
+            title = stringResource(R.string.identify_plant),
+            subtitle = stringResource(R.string.scan_to_identify),
             color = Color(0xFFE8F5E9),
             icon = R.drawable.ic_camera,
             backgroundRes = R.drawable.bg_home_identify,
             modifier = Modifier.weight(1f)
         )
         HomeFeatureCard(
-            title = "Diagnose",
-            subtitle = "Check your\nplant's heath",
+            title = stringResource(R.string.diagnose),
+            subtitle = stringResource(R.string.check_plant_health),
             color = Color(0xFFF1F8E9),
             icon = R.drawable.ic_selected_diagnose,
             backgroundRes = R.drawable.bg_home_diagnose,
@@ -135,7 +151,7 @@ private fun QuickActionsSection() {
 private fun TodaysCareSection() {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
-            "Today's Care",
+            stringResource(R.string.todays_care),
             style = MaterialTheme.typography.TitleLarge3
         )
         Card(
@@ -152,13 +168,13 @@ private fun TodaysCareSection() {
                     .padding(16.dp),
             ) {
                 Text(
-                    "0 Tasks",
+                    stringResource(R.string.tasks_count),
                     color = GreenSurface,
                     style = MaterialTheme.typography.TitleLarge3
                 )
                 Spacer(modifier = Modifier.height(5.dp))
                 Text(
-                    "View All",
+                    stringResource(R.string.view_all),
                     color = BlueDefault,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
                     textDecoration = TextDecoration.Underline
@@ -169,24 +185,27 @@ private fun TodaysCareSection() {
 }
 
 @Composable
-private fun MeasurementToolsSection() {
+private fun MeasurementToolsSection(
+    navController: NavController? = null,
+    onNavigateToChatbot: (() -> Unit)? = null
+) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Text("Measurement Tools", style = MaterialTheme.typography.TitleLarge3)
+        Text(stringResource(R.string.measurement_tools), style = MaterialTheme.typography.TitleLarge3)
         Spacer(modifier = Modifier.height(12.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             MeasurementToolCard(
-                title = "Water Meter",
-                description = "Optimize watering for your plant",
+                title = stringResource(R.string.water_meter),
+                description = stringResource(R.string.optimize_watering),
                 icon = R.drawable.ic_water,
                 background = Blue1,
                 modifier = Modifier.weight(1f)
             )
             MeasurementToolCard(
-                title = "Light Meter",
-                description = "Measure light intensity",
+                title = stringResource(R.string.light_meter),
+                description = stringResource(R.string.measure_light_intensity),
                 icon = R.drawable.ic_light,
                 background = Yellow1,
                 modifier = Modifier.weight(1f)
@@ -194,10 +213,13 @@ private fun MeasurementToolsSection() {
         }
         Spacer(modifier = Modifier.height(12.dp))
         ChatCard(
-            title = "Need Plant Help? Ask AI",
-            description = "Get instant advice now!",
+            title = stringResource(R.string.need_plant_help),
+            description = stringResource(R.string.get_instant_advice),
             background = Color.White,
-            animatedRaw = R.raw.ic_tinh_linh
+            animatedRaw = R.raw.ic_tinh_linh,
+            onChatNowClick = {
+                onNavigateToChatbot?.invoke()
+            }
         )
     }
 }
@@ -221,14 +243,14 @@ fun HomeTopBar() {
             )
             Spacer(modifier = Modifier.width(15.dp))
             Text(
-                "Allow location tracking", style = MaterialTheme.typography.Body1
+                stringResource(R.string.allow_location_tracking), style = MaterialTheme.typography.Body1
             )
         }
         Box(modifier = Modifier.clickable { }) {
             IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {
                 Icon(
                     imageVector = Icons.Default.Settings,
-                    contentDescription = "Settings",
+                    contentDescription = stringResource(R.string.settings),
                     tint = GreenSurface
                 )
             }
@@ -315,7 +337,7 @@ fun MeasurementToolCard(
                     contentDescription = null,
                     modifier = Modifier.size(24.dp)
                 )
-                if (title == "Water Meter") {
+                if (title == LocalContext.current.getString(R.string.water_meter)) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_caculator_blue),
                         contentDescription = null,
@@ -350,7 +372,11 @@ fun MeasurementToolCard(
 
 @Composable
 fun ChatCard(
-    title: String, description: String, background: Color, animatedRaw: Int? = null
+    title: String, 
+    description: String, 
+    background: Color, 
+    animatedRaw: Int? = null,
+    onChatNowClick: () -> Unit = {}
 ) {
     val shape = RoundedCornerShape(16.dp)
     Box(
@@ -390,11 +416,11 @@ fun ChatCard(
                     Text(description, style = MaterialTheme.typography.Label4, color = Subtitle)
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
-                        onClick = {},
+                        onClick = onChatNowClick,
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4)),
                         shape = RoundedCornerShape(20.dp)
                     ) {
-                        Text("Chat Now", fontSize = 12.sp, color = Color.White)
+                        Text(stringResource(R.string.chat_now), fontSize = 12.sp, color = Color.White)
                     }
                 }
                 Spacer(modifier = Modifier.width(8.dp))

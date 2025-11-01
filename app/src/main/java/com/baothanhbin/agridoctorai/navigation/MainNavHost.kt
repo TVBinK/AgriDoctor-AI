@@ -12,6 +12,7 @@ import com.baothanhbin.feature.home.navigation.homeScreen
 import com.baothanhbin.feature.myplants.navigation.myplantScreen
 import com.baothanhbin.feature.processimage.navigation.processImageScreen
 import com.baothanhbin.feature.diagnoseresult.navigation.diagnoseResultScreen
+import com.baothanhbin.feature.diagnosefailed.navigation.diagnoseFailedScreen
 
 @Composable
 fun MainNavHost(
@@ -25,12 +26,18 @@ fun MainNavHost(
         startDestination = HOME_ROUTE,
         navController = navController
     ) {
-        homeScreen()
-        diagnoseScreen()
+        homeScreen(
+            navController = navController,
+            onNavigateToChatbot = {
+                appState.navigateToTopLevelDestination(com.baothanhbin.agridoctorai.navigation.TopLevelDestination.CHATBOT)
+            }
+        )
+        diagnoseScreen(navController = navController)
         myplantScreen()
-        chatbotScreen()
+        chatbotScreen(navController = navController)
         cameraScreen(navController = navController)
         processImageScreen(navController = navController)
-        diagnoseResultScreen()
+        diagnoseResultScreen(navController = navController)
+        diagnoseFailedScreen(navController = navController)
     }
 }

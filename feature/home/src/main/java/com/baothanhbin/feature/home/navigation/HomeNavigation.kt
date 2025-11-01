@@ -17,8 +17,13 @@ fun NavController.navigateToHome(navOptions: NavOptions? = null) {
 }
 
 fun NavGraphBuilder.homeScreen(
+    navController: NavController,
+    onNavigateToChatbot: (() -> Unit)? = null
 ) {
     composable(route = HOME_ROUTE) {
-        HomeRoute()
+        HomeRoute(
+            navController = navController,
+            onNavigateToChatbot = onNavigateToChatbot
+        )
     }
 }

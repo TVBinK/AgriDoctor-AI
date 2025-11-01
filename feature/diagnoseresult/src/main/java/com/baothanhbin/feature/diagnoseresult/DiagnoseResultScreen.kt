@@ -1,5 +1,6 @@
 package com.baothanhbin.feature.diagnoseresult
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,18 +27,25 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
 import com.baothanhbin.agridoctorai.resources.R
+import com.baothanhbin.core.model.RecoveryItem
+import com.baothanhbin.core.model.TreatmentItem
 import com.baothanhbin.core.theme.BlueDefault
 import com.baothanhbin.core.theme.Body1
 import com.baothanhbin.core.theme.GreenSurface
@@ -53,64 +61,50 @@ import com.baothanhbin.core.theme.White
 @Composable
 fun DiagnoseResultRoute(
     navController: NavHostController? = null,
-    diseaseName: String = "Golden pothos",
-    possibleProblems: List<String> = listOf("Irregular watering", "Nutrient deficiency"),
-    symptoms: List<String> = listOf(
-        "Stunted growth, dry dark spots, leaf drop, yellowing and wilting"
-    ),
-    causes: List<String> = listOf("Overwatering, Pathogen infection"),
-    treatment: List<TreatmentItem> = listOf(
-        TreatmentItem(
-            title = "\uD83C\uDFE0 Use Home Remedies",
-            subtitle = "Option 1: Baking Soda",
-            steps = listOf(
-                "Step 1: Mix the Solution",
-                "In a container, combine:",
-                "1 liter of clean water",
-                "1 teaspoon of baking soda",
-                "2–3 drops of dish soap (helps the solution stick to leaves)",
-                "\uD83C\uDF31 Tip: Shake or stir well to make sure everything is dissolved."
-            ),
-            linkText = "More Option"
-        ),
-        TreatmentItem(
-            title = "✂\uFE0F Remove Unhealthy Parts",
-            subtitle = null,
-            steps = listOf(
-                "\uD83C\uDF31 Tip: Unhealthy parts can’t recover and may spread disease. Remove them promptly."
-            ),
-            linkText = "Detailed guide"
-        )
-    ),
-    recoveryCare: List<RecoveryItem> = listOf(
-        RecoveryItem(
-            title = "Reduce Watering",
-            steps = listOf(
-                "Stop Watering: Allow the soil to partially dry out before resuming our recommended watering schedule",
-                "2–3 time a week",
-                "Loosen the Soil: Gently insert a blunt-ended wooden stick into the soil around the pot’s edge. Move the stick in circles to loosen compacted soil for better drainage. Do this every few weeks or after"
-            ),
-            linkText = null
-        )
-    )
+    imageUri: Uri? = null,
+    diseaseName: String = "Unknown Disease",
+    possibleProblems: List<String> = emptyList(),
+    symptoms: String = "",
+    causes: String = "",
+    treatment: List<TreatmentItem> = emptyList(),
+    recoveryCare: List<RecoveryItem> = emptyList(),
+    viewModel: DiagnoseResultViewModel = hiltViewModel()
 ) {
-    DiagnoseResultScreen(
+    val loadedResult by viewModel.loadedResult.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadLatestResult()
+    }
+
+    // Use loaded data if available, otherwise use default parameters
+    val finalData = loadedResult ?: LoadedResult(
         diseaseName = diseaseName,
         possibleProblems = possibleProblems,
         symptoms = symptoms,
         causes = causes,
         treatment = treatment,
-        recoveryCare = recoveryCare,
+        recoveryCare = recoveryCare
+    )
+
+    DiagnoseResultScreen(
+        imageUri = imageUri,
+        diseaseName = finalData.diseaseName,
+        possibleProblems = finalData.possibleProblems,
+        symptoms = finalData.symptoms,
+        causes = finalData.causes,
+        treatment = finalData.treatment,
+        recoveryCare = finalData.recoveryCare,
         onBack = { navController?.popBackStack() }
     )
 }
 
 @Composable
 fun DiagnoseResultScreen(
+    imageUri: Uri? = null,
     diseaseName: String,
     possibleProblems: List<String>,
-    symptoms: List<String>,
-    causes: List<String>,
+    symptoms: String,
+    causes: String,
     treatment: List<TreatmentItem>,
     recoveryCare: List<RecoveryItem>,
     onBack: () -> Unit = {}
@@ -122,6 +116,7 @@ fun DiagnoseResultScreen(
             .padding(bottom = 16.dp)
     ) {
         ContentSection(
+            imageUri = imageUri,
             onBack = onBack,
             diseaseName = diseaseName,
             possibleProblems = possibleProblems,
@@ -134,7 +129,10 @@ fun DiagnoseResultScreen(
 }
 
 @Composable
-private fun HeaderImage(onBack: () -> Unit) {
+private fun HeaderImage(
+    imageUri: Uri?,
+    onBack: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -143,21 +141,30 @@ private fun HeaderImage(onBack: () -> Unit) {
         IconButton(
             onClick = onBack, modifier = Modifier
                 .zIndex(1f)
-                .padding(top = 10.dp)
+                .padding(top = 20.dp)
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_back),
-                contentDescription = "Back",
-                tint = Color.Unspecified,
-                modifier = Modifier.size(50.dp)
+        Icon(
+            painter = painterResource(R.drawable.ic_back),
+            contentDescription = stringResource(R.string.back),
+            tint = Color.Unspecified,
+            modifier = Modifier.size(50.dp)
+        )
+        }
+        if (imageUri != null) {
+            AsyncImage(
+                model = imageUri,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Image(
+                painter = painterResource(id = R.drawable.img_ca_chua),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
         }
-        Image(
-            painter = painterResource(id = R.drawable.img_ca_chua),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
 
         // simple bounding box
         Box(
@@ -171,11 +178,12 @@ private fun HeaderImage(onBack: () -> Unit) {
 
 @Composable
 private fun ContentSection(
+    imageUri: Uri?,
     onBack: () -> Unit,
     diseaseName: String,
     possibleProblems: List<String>,
-    symptoms: List<String>,
-    causes: List<String>,
+    symptoms: String,
+    causes: String,
     treatment: List<TreatmentItem>,
     recoveryCare: List<RecoveryItem>
 ) {
@@ -184,7 +192,7 @@ private fun ContentSection(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
     ) {
-        HeaderImage(onBack = {})
+        HeaderImage(imageUri = imageUri, onBack = onBack)
         Spacer(modifier = Modifier.height(8.dp))
         //Tên bệnh
         Text(
@@ -197,7 +205,7 @@ private fun ContentSection(
 
         Spacer(modifier = Modifier.height(14.dp))
         Text(
-            text = "Possible Problems",
+            text = stringResource(R.string.possible_problems),
             style = MaterialTheme.typography.TitleLarge3,
             modifier = Modifier.padding(start = 16.dp),
             color = Color.Red
@@ -214,14 +222,16 @@ private fun ContentSection(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        PillSectionCard(title = "Symptoms", items = symptoms)
+        TextSectionCard(title = stringResource(R.string.symptoms), text = symptoms)
 
-        PillSectionCard(title = "Causes of Disease", items = causes)
+        Spacer(modifier = Modifier.height(14.dp))
+
+        TextSectionCard(title = stringResource(R.string.causes_of_disease), text = causes)
 
         Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "Treatment",
+            text = stringResource(R.string.treatment),
             style = MaterialTheme.typography.TitleLarge3,
             modifier = Modifier.padding(start = 16.dp)
         )
@@ -234,7 +244,7 @@ private fun ContentSection(
         Spacer(modifier = Modifier.height(10.dp))
 
         Text(
-            text = "Recovery Care",
+            text = stringResource(R.string.recovery_care),
             style = MaterialTheme.typography.TitleLarge3,
             modifier = Modifier.padding(start = 16.dp)
         )
@@ -260,39 +270,29 @@ private fun ProblemChip(text: String) {
 }
 
 @Composable
-private fun PillSectionCard(title: String, items: List<String>) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Text(title, style = MaterialTheme.typography.TitleLarge3)
-            Spacer(modifier = Modifier.height(8.dp))
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items.forEach { text ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                    ) {
-                        Text(
-                            text = text,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Subtitle,
-                            modifier = Modifier.padding(12.dp)
-                        )
-                    }
-                }
-            }
+private fun TextSectionCard(title: String, text: String) {
+    if (text.isBlank()) return
+    
+    Column(modifier = Modifier.padding(horizontal = 14.dp)) {
+        Text(title, style = MaterialTheme.typography.TitleLarge3)
+        Spacer(modifier = Modifier.height(8.dp))
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDFD))
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Subtitle,
+                modifier = Modifier.padding(12.dp)
+            )
         }
+    }
 }
 
-data class TreatmentItem(
-    val title: String,
-    val subtitle: String? = null,
-    val steps: List<String>,
-    val linkText: String? = null
-)
+
 
 @Composable
 private fun TreatmentItemCard(item: TreatmentItem) {
@@ -335,17 +335,14 @@ private fun TreatmentItemCard(item: TreatmentItem) {
     }
 }
 
-data class RecoveryItem(
-    val title: String,
-    val steps: List<String>,
-    val linkText: String? = null
-)
+
 
 @Composable
 private fun RecoveryItemCard(item: RecoveryItem) {
     Card(
         modifier = Modifier
-            .fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
+            .fillMaxWidth()
+            .padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
         shape = RoundedCornerShape(10.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -376,5 +373,31 @@ private fun RecoveryItemCard(item: RecoveryItem) {
 @Preview
 @Composable
 private fun PreviewDiagnoseResult() {
-    DiagnoseResultRoute()
+    DiagnoseResultScreen(
+        diseaseName = "Tomato Early Blight",
+        possibleProblems = listOf("Fungal Infection", "Nutrient Deficiency"),
+        symptoms = "Dark spots on leaves\nYellowing of lower leaves\nStunted growth",
+        causes = "Overwatering\nPoor air circulation\nInfected soil",
+        treatment = listOf(
+            TreatmentItem(
+                title = "Fungicide Application",
+                subtitle = "Use a copper-based fungicide",
+                steps = listOf(
+                    "Mix fungicide according to package instructions.",
+                    "Apply to affected plants every 7-10 days."
+                ),
+                linkText = "Buy Fungicide"
+            )
+        ),
+        recoveryCare = listOf(
+            RecoveryItem(
+                title = "Post-Treatment Care",
+                steps = listOf(
+                    "Monitor plants for new symptoms.",
+                    "Ensure proper watering and spacing."
+                ),
+                linkText = "Learn More"
+            )
+        )
+    )
 }

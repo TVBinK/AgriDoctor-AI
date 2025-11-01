@@ -2,6 +2,7 @@ package com.baothanhbin.feature.chatbot.navigation
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import com.baothanhbin.feature.chatbot.ChatbotRoute
@@ -16,8 +17,9 @@ fun NavController.navigateToChatbot(navOptions: NavOptions? = null) {
 }
 
 fun NavGraphBuilder.chatbotScreen(
+    navController: NavHostController? = null
 ) {
     composable(route = CHATBOT_ROUTE) {
-        ChatbotRoute()
+        ChatbotRoute(navController = navController)
     }
 }
