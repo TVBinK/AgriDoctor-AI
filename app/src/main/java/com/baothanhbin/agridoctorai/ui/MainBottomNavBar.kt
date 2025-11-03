@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.baothanhbin.agridoctorai.navigation.TopLevelDestination
 import com.baothanhbin.agridoctorai.resources.R
+import com.baothanhbin.feature.camera.navigation.navigateToCamera
 
 @Composable
 fun MainBottomNavBar(
@@ -108,7 +109,7 @@ fun MainBottomNavBar(
 
             // Center floating action button (camera-like action)
             FloatingActionButton(
-                onClick = { navController.navigate("CAMERA_ROUTE") },
+                onClick = { navController.navigateToCamera(0) },
                 shape = CircleShape,
                 containerColor = Color(0xFF2E7D32),
                 modifier = Modifier

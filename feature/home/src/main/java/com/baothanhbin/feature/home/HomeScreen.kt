@@ -68,6 +68,7 @@ import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.theme.Yellow1
 
 import androidx.navigation.NavController
+import com.baothanhbin.feature.camera.navigation.navigateToCamera
 
 @Composable
 fun HomeRoute(
@@ -106,7 +107,7 @@ fun HomeScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(top = 140.dp, bottom = 24.dp)
         ) {
-            QuickActionsSection()
+            QuickActionsSection(navController = navController)
             Spacer(modifier = Modifier.height(20.dp))
             TodaysCareSection()
             Spacer(modifier = Modifier.height(20.dp))
@@ -120,7 +121,9 @@ fun HomeScreen(
 }
 
 @Composable
-private fun QuickActionsSection() {
+private fun QuickActionsSection(
+    navController: NavController? = null
+) {
     val context = LocalContext.current
     Row(
         modifier = Modifier
@@ -134,7 +137,11 @@ private fun QuickActionsSection() {
             color = Color(0xFFE8F5E9),
             icon = R.drawable.ic_camera,
             backgroundRes = R.drawable.bg_home_identify,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            onClick = {
+                // identify_plant is index 1 (diagnose=0, identify_plant=1)
+                navController?.navigateToCamera(modeIndex = 1)
+            }
         )
         HomeFeatureCard(
             title = stringResource(R.string.diagnose),
@@ -142,7 +149,11 @@ private fun QuickActionsSection() {
             color = Color(0xFFF1F8E9),
             icon = R.drawable.ic_selected_diagnose,
             backgroundRes = R.drawable.bg_home_diagnose,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
+            onClick = {
+                // diagnose is index 0
+                navController?.navigateToCamera(modeIndex = 0)
+            }
         )
     }
 }
@@ -265,12 +276,14 @@ fun HomeFeatureCard(
     color: Color,
     icon: Int,
     backgroundRes: Int? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(110.dp),
+            .height(110.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = color)
     ) {

@@ -13,4 +13,5 @@ dependencies {
     //core
     implementation(project(":core:theme"))
     implementation(project(":feature:chatbot"))
+    implementation(project(":feature:camera"))
 }

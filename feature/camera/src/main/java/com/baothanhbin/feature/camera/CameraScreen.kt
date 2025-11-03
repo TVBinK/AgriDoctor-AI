@@ -58,8 +58,14 @@ import com.baothanhbin.feature.processimage.navigation.navigateToProcessImage
 @Composable
 fun CameraRoute(
     navController: NavHostController,
-    viewModel: CameraViewModel = hiltViewModel()
+    initialModeIndex: Int = 0,
+    viewModel: CameraViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
 ) {
+    // Set initial mode when screen is first composed
+    LaunchedEffect(initialModeIndex) {
+        viewModel.selectMode(initialModeIndex)
+    }
+    
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
     CameraScreen(
         navController = navController,
