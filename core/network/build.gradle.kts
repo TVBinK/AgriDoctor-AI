@@ -5,6 +5,10 @@ plugins {
 
 android {
     namespace = "com.baothanhbin.core.network"
+    
+    buildFeatures {
+        buildConfig = true
+    }
 }
 
 dependencies {
@@ -17,6 +21,7 @@ dependencies {
     // Ktor client
     implementation("io.ktor:ktor-client-core:2.3.12")
     implementation("io.ktor:ktor-client-android:2.3.12")
+    implementation("io.ktor:ktor-client-okhttp:2.3.12")
     implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
     implementation(libs.ktor.serialization.kotlinx.json)
 

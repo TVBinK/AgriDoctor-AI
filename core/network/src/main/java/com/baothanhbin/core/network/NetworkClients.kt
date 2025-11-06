@@ -1,17 +1,72 @@
 package com.baothanhbin.core.network
 
+import android.util.Log
+import com.baothanhbin.core.network.BuildConfig
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.android.Android
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
 
 internal object NetworkClients {
 
-    private fun createClient(baseUrl: String): HttpClient {
-        return HttpClient(Android) {
+    /**
+     * Tạo TrustManager chấp nhận tất cả certificates (chỉ dùng cho development)
+     * CẢNH BÁO: Không sử dụng trong production!
+     */
+    private fun createTrustAllManager(): X509TrustManager {
+        return object : X509TrustManager {
+            override fun checkClientTrusted(
+                chain: Array<out X509Certificate>?,
+                authType: String?
+            ) {
+                // Trust all client certificates
+            }
+
+            override fun checkServerTrusted(
+                chain: Array<out X509Certificate>?,
+                authType: String?
+            ) {
+                // Trust all server certificates (chỉ cho development)
+            }
+
+            override fun getAcceptedIssuers(): Array<X509Certificate> {
+                return arrayOf()
+            }
+        }
+    }
+
+    private fun createClient(
+        baseUrl: String,
+        acceptAllCertificates: Boolean = false
+    ): HttpClient {
+        return HttpClient(OkHttp) {
+            engine {
+                // Cấu hình OkHttp client
+                preconfigured = OkHttpClient.Builder().apply {
+                    if (acceptAllCertificates) {
+                        // Chỉ sử dụng trong debug mode - chấp nhận tất cả certificates
+                        // CẢNH BÁO: Không sử dụng trong production!
+                        val trustAllCerts = arrayOf<TrustManager>(createTrustAllManager())
+                        val sslContext = SSLContext.getInstance("TLS")
+                        sslContext.init(null, trustAllCerts, SecureRandom())
+                        
+                        sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
+                        hostnameVerifier { _, _ -> true }
+                        
+                        Log.w("NetworkClients", "⚠️ Accepting all certificates - DEVELOPMENT MODE ONLY")
+                    }
+                }.build()
+            }
+            
             defaultRequest {
                 url(baseUrl)
             }
@@ -31,7 +86,15 @@ internal object NetworkClients {
 
     // For real device, use actual machine IP: 192.168.34.116
     // For emulator, use: https://10.0.2.2:3000/api/detect
-    val detectClient: HttpClient = createClient("http://192.168.34.116:3000/api/detect")
+    // 
+    // Lưu ý: 
+    // - Trong debug mode: acceptAllCertificates = true để chấp nhận self-signed certificates
+    // - Trong release mode: acceptAllCertificates = false và sử dụng certificate hợp lệ
+    // - Hoặc cài đặt self-signed certificate vào thiết bị và sử dụng network security config
+    val detectClient: HttpClient = createClient(
+        baseUrl = "https://192.168.34.116:3443/api/detect",
+        acceptAllCertificates = BuildConfig.DEBUG // Chỉ chấp nhận self-signed trong debug mode
+    )
 }
 
 

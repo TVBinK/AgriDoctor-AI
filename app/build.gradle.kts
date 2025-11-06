@@ -16,25 +16,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
-        // NDK configuration
-        ndk {
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-        }
-        externalNativeBuild {
-            cmake {
-                cppFlags += "-std=c++17"
-                arguments += "-DANDROID_STL=c++_shared"
-            }
-        }
-    }
-    
-    // External native build configuration
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
     }
 
     buildTypes {
@@ -76,7 +57,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     //Modules
     implementation(project(":core:model"))
-    implementation(project(":core:network"))
     implementation(project(":resources"))
     implementation(project(":feature:home"))
     implementation(project(":feature:chatbot"))

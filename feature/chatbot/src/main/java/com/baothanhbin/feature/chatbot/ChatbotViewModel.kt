@@ -7,18 +7,15 @@ import androidx.lifecycle.viewModelScope
 import com.baothanhbin.core.database.AgriDoctorDatabase
 import com.baothanhbin.core.database.converter.ChatMessageData
 import com.baothanhbin.core.database.model.ChatEntity
-import com.baothanhbin.core.network.SecretProvider
 import com.google.ai.client.generativeai.GenerativeModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
-import kotlin.math.pow
 
 data class ChatMessage(
     val id: String,
@@ -65,8 +62,7 @@ data class ChatbotUiState(
 @HiltViewModel
 class ChatbotViewModel @Inject constructor(
     application: Application,
-    private val database: AgriDoctorDatabase,
-    private val secretProvider: SecretProvider
+    private val database: AgriDoctorDatabase
 ) : AndroidViewModel(application) {
     
     private val chatDao get() = database.chatDao()
@@ -79,9 +75,10 @@ class ChatbotViewModel @Inject constructor(
     }
 
     private val MODEL_NAME =
-        if (BuildConfig.BUILD_TYPE == "debug") secretProvider.getDebugModelName() else secretProvider.getReleaseModelName()
+        if (BuildConfig.BUILD_TYPE == "debug") "gemini-2.0-flash-thinking-exp" else "gemini-1.5-flash"
 
-    private val API_KEY = secretProvider.getGeminiApiKey()
+    private val API_KEY =
+        if (BuildConfig.BUILD_TYPE == "debug") "REMOVED" else "REMOVED"
 
     // Sử dụng lazy initialization với try-catch để tránh lỗi dependency
     private val generativeModel by lazy {
@@ -126,13 +123,14 @@ class ChatbotViewModel @Inject constructor(
             Log.d("ChatbotViewModel", "Updated state with user message. Messages count: ${_uiState.value.messages.size}")
             Log.d("ChatbotViewModel", "Messages list: ${_uiState.value.messages.map { "${it.id}:${it.text.take(20)}" }}")
 
-            // Call Gemini API to get bot response using GenerativeModel with retry
+            // Call Gemini API to get bot response using GenerativeModel
             Log.d("ChatbotViewModel", "Calling Gemini API for response with message: '$message'")
             val botResponse = try {
                 val model = generativeModel
                 if (model != null) {
                     withContext(Dispatchers.IO) {
-                        generateContentWithRetry(model, message)
+                        val response = model.generateContent(message)
+                        response.text ?: "Sorry, I couldn't generate a response."
                     }
                 } else {
                     Log.e("ChatbotViewModel", "GenerativeModel is null, cannot generate response")
@@ -140,7 +138,7 @@ class ChatbotViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e("ChatbotViewModel", "Exception when calling GenerativeModel: ${e.message}", e)
-                getErrorMessage(e)
+                "Sorry, I encountered an error: ${e.message}"
             }
             Log.d("ChatbotViewModel", "Received bot response: ${botResponse?.take(100)}")
             
@@ -305,88 +303,6 @@ class ChatbotViewModel @Inject constructor(
                     Log.e("ChatbotViewModel", "Error deleting chat: ${e.message}", e)
                 }
             }
-        }
-    }
-    
-    /**
-     * Generate content with retry logic for 503 and 429 errors
-     */
-    private suspend fun generateContentWithRetry(model: GenerativeModel, message: String): String {
-        val maxRetries = 3
-        var retryDelay = 1000L // Start with 1 second
-        
-        repeat(maxRetries) { attempt ->
-            try {
-                Log.d("ChatbotViewModel", "Attempt ${attempt + 1}/$maxRetries to generate content")
-                val response = model.generateContent(message)
-                val text = response.text ?: "Sorry, I couldn't generate a response."
-                Log.d("ChatbotViewModel", "Successfully generated content")
-                return text
-            } catch (e: Exception) {
-                Log.w("ChatbotViewModel", "Attempt ${attempt + 1} failed: ${e.message}")
-                
-                // Check if it's a retryable error
-                if (isRetryableError(e) && attempt < maxRetries - 1) {
-                    Log.d("ChatbotViewModel", "Retrying in ${retryDelay}ms...")
-                    delay(retryDelay)
-                    retryDelay = (retryDelay * 2).coerceAtMost(10000L) // Exponential backoff, max 10s
-                } else {
-                    // Last attempt failed or non-retryable error
-                    throw e
-                }
-            }
-        }
-        
-        // This shouldn't be reached, but just in case
-        throw Exception("Failed to generate content after $maxRetries attempts")
-    }
-    
-    /**
-     * Check if an error is retryable (503, 429, network errors)
-     */
-    private fun isRetryableError(exception: Exception): Boolean {
-        val message = exception.message ?: return false
-        
-        // Check for specific Gemini API error codes
-        return when {
-            message.contains("503", ignoreCase = true) -> true // Service Unavailable
-            message.contains("429", ignoreCase = true) -> true // Too Many Requests
-            message.contains("overloaded", ignoreCase = true) -> true
-            message.contains("UNAVAILABLE", ignoreCase = true) -> true
-            message.contains("DEADLINE_EXCEEDED", ignoreCase = true) -> true
-            message.contains("Network", ignoreCase = true) -> true
-            message.contains("timeout", ignoreCase = true) -> true
-            else -> false
-        }
-    }
-    
-    /**
-     * Get user-friendly error message
-     */
-    private fun getErrorMessage(exception: Exception): String {
-        val message = exception.message ?: "Unknown error"
-        
-        return when {
-            message.contains("503", ignoreCase = true) || 
-            message.contains("overloaded", ignoreCase = true) || 
-            message.contains("UNAVAILABLE", ignoreCase = true) -> 
-                "Server đang quá tải. Vui lòng thử lại sau ít phút."
-            
-            message.contains("429", ignoreCase = true) -> 
-                "Quá nhiều yêu cầu. Vui lòng đợi một chút rồi thử lại."
-            
-            message.contains("401", ignoreCase = true) || 
-            message.contains("403", ignoreCase = true) -> 
-                "Lỗi xác thực API. Vui lòng kiểm tra cấu hình."
-            
-            message.contains("Network", ignoreCase = true) || 
-            message.contains("timeout", ignoreCase = true) -> 
-                "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet."
-            
-            message.contains("BLOCKED", ignoreCase = true) -> 
-                "Nội dung bị chặn bởi chính sách an toàn."
-            
-            else -> "Xin lỗi, đã xảy ra lỗi: $message"
         }
     }
 }
