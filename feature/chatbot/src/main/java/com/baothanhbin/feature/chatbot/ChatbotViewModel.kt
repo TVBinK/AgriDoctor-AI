@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.baothanhbin.core.database.AgriDoctorDatabase
 import com.baothanhbin.core.database.converter.ChatMessageData
 import com.baothanhbin.core.database.model.ChatEntity
+import com.baothanhbin.core.data.repository.ApiKeyRepository
 import com.google.ai.client.generativeai.GenerativeModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -62,13 +63,17 @@ data class ChatbotUiState(
 @HiltViewModel
 class ChatbotViewModel @Inject constructor(
     application: Application,
-    private val database: AgriDoctorDatabase
+    private val database: AgriDoctorDatabase,
+    private val apiKeyRepository: ApiKeyRepository
 ) : AndroidViewModel(application) {
     
     private val chatDao get() = database.chatDao()
 
     private val _uiState = MutableStateFlow(ChatbotUiState())
     val uiState: StateFlow<ChatbotUiState> = _uiState.asStateFlow()
+
+    private var _generativeModel: GenerativeModel? = null
+    private var isInitializingApiKey = false
 
     init {
         loadChatHistory()
@@ -77,20 +82,41 @@ class ChatbotViewModel @Inject constructor(
     private val MODEL_NAME =
         if (BuildConfig.BUILD_TYPE == "debug") "gemini-2.0-flash-thinking-exp" else "gemini-1.5-flash"
 
-    private val API_KEY =
-        if (BuildConfig.BUILD_TYPE == "debug") "REMOVED" else "REMOVED"
-
-    // Sử dụng lazy initialization với try-catch để tránh lỗi dependency
-    private val generativeModel by lazy {
-        try {
-            GenerativeModel(
-                modelName = MODEL_NAME,
-                apiKey = API_KEY
-            )
-        } catch (e: Exception) {
-            Log.e("ChatbotViewModel", "Failed to initialize GenerativeModel: ${e.message}")
-            null
+    /**
+     * Khởi tạo GenerativeModel với API key từ repository
+     * Lần đầu vào chat sẽ fetch API key từ server nếu chưa có trong cache
+     */
+    private suspend fun getOrInitializeGenerativeModel(): GenerativeModel? {
+        if (_generativeModel != null) {
+            return _generativeModel
         }
+
+        // Tránh fetch nhiều lần đồng thời
+        if (isInitializingApiKey) {
+            return null
+        }
+
+        isInitializingApiKey = true
+        try {
+            // Lấy API key từ repository (từ cache hoặc từ server)
+            val apiKey = apiKeyRepository.getApiKey()
+            
+            if (apiKey != null) {
+                _generativeModel = GenerativeModel(
+                    modelName = MODEL_NAME,
+                    apiKey = apiKey
+                )
+                Log.d("ChatbotViewModel", "GenerativeModel initialized successfully")
+            } else {
+                Log.e("ChatbotViewModel", "Failed to get API key from repository")
+            }
+        } catch (e: Exception) {
+            Log.e("ChatbotViewModel", "Failed to initialize GenerativeModel: ${e.message}", e)
+        } finally {
+            isInitializingApiKey = false
+        }
+
+        return _generativeModel
     }
 
 
@@ -126,7 +152,11 @@ class ChatbotViewModel @Inject constructor(
             // Call Gemini API to get bot response using GenerativeModel
             Log.d("ChatbotViewModel", "Calling Gemini API for response with message: '$message'")
             val botResponse = try {
-                val model = generativeModel
+                // Lấy hoặc khởi tạo GenerativeModel với API key
+                val model = withContext(Dispatchers.IO) {
+                    getOrInitializeGenerativeModel()
+                }
+                
                 if (model != null) {
                     withContext(Dispatchers.IO) {
                         val response = model.generateContent(message)
@@ -134,7 +164,7 @@ class ChatbotViewModel @Inject constructor(
                     }
                 } else {
                     Log.e("ChatbotViewModel", "GenerativeModel is null, cannot generate response")
-                    "Sorry, I couldn't process your request. The AI service is not available."
+                    "Sorry, I couldn't process your request. The AI service is not available. Please check your connection and try again."
                 }
             } catch (e: Exception) {
                 Log.e("ChatbotViewModel", "Exception when calling GenerativeModel: ${e.message}", e)

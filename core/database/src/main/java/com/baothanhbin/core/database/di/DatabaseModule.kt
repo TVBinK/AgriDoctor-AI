@@ -23,7 +23,7 @@ object DatabaseModule {
             AgriDoctorDatabase::class.java,
             "agridoctor_database"
         )
-        .fallbackToDestructiveMigration()
+        .fallbackToDestructiveMigration(true)
         .build()
     }
 }

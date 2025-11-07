@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.baothanhbin.core.data"
+    namespace = "com.baothanhbin.core.datastore"
 }
 
 protobuf {
@@ -28,9 +28,9 @@ protobuf {
 
 dependencies {
     implementation(project(":core:database"))
-    implementation(project(":core:datastore"))
     implementation(project(":core:model"))
     implementation(project(":core:network"))
-    implementation(project(":core:datastore"))
     implementation(libs.hilt.android)
+    implementation(libs.androidx.datastore)
+    implementation(libs.protobuf.kotlin.lite)
 }

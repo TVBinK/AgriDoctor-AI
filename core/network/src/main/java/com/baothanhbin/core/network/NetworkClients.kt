@@ -18,6 +18,9 @@ import javax.net.ssl.X509TrustManager
 
 internal object NetworkClients {
 
+    // API Endpoints
+    private const val SERVER_BASE_URL = "https://192.168.34.116:3443"
+
     /**
      * Tạo TrustManager chấp nhận tất cả certificates (chỉ dùng cho development)
      * CẢNH BÁO: Không sử dụng trong production!
@@ -92,8 +95,14 @@ internal object NetworkClients {
     // - Trong release mode: acceptAllCertificates = false và sử dụng certificate hợp lệ
     // - Hoặc cài đặt self-signed certificate vào thiết bị và sử dụng network security config
     val detectClient: HttpClient = createClient(
-        baseUrl = "https://192.168.34.116:3443/api/detect",
+        baseUrl = "$SERVER_BASE_URL/api/detect",
         acceptAllCertificates = BuildConfig.DEBUG // Chỉ chấp nhận self-signed trong debug mode
+    )
+    
+    // Client cho API key endpoint
+    val apiKeyClient: HttpClient = createClient(
+        baseUrl = "$SERVER_BASE_URL/api/gemini-key",
+        acceptAllCertificates = BuildConfig.DEBUG
     )
 }
 
