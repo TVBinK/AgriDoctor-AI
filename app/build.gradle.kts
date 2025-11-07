@@ -20,7 +20,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Bật code obfuscation và minification
+            isMinifyEnabled = true
+            isShrinkResources = true // Xóa resources không sử dụng
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
