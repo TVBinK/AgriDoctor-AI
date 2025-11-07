@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Security - KHÔNG commit keystore và passwords lên Git
+*.jks
+*.keystore
+keystore.properties

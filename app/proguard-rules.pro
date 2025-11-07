@@ -269,4 +269,62 @@
     public static *** d(...);
     public static *** v(...);
     public static *** i(...);
+    public static *** w(...);
 }
+
+# ============================================
+# String Obfuscation
+# ============================================
+# Lưu ý: R8/ProGuard không tự động obfuscate string constants
+# Đã sử dụng buildString {} trong NetworkClients để chia nhỏ URL
+# Điều này làm khó đọc hơn khi decompile APK
+# 
+# Nếu cần obfuscate string mạnh hơn, xem xét:
+# - DexGuard (commercial) - có string encryption tự động
+# - Tự implement string encryption/decryption trong code
+
+# ============================================
+# Security & Tampering Detection - OBFUSCATE TẤT CẢ
+# ============================================
+# SecurityManager - Obfuscate TẤT CẢ package name VÀ class name
+# Điều này làm cho hacker khó tìm và bypass security checks
+# SecurityManager sẽ được repackage vào: z9x8w7v6u5t4s3r2q1p0o9n8m7l6k5j4i3h2g1f0e9d8c7b6a5.a
+# Methods sẽ bị obfuscate: performSecurityCheck() -> a(), isSignatureValid() -> b()...
+-keepclassmembers,allowobfuscation class com.baothanhbin.agridoctorai.security.SecurityManager {
+    <methods>;
+    <fields>;
+}
+
+# SecurityCheckResult, SecurityIssue, SecurityIssueType - Obfuscate class names
+# Giữ structure để app hoạt động nhưng ẩn tên class và package
+-keepclassmembers,allowobfuscation class com.baothanhbin.agridoctorai.security.SecurityCheckResult {
+    <init>(...);
+    <methods>;
+    <fields>;
+}
+-keepclassmembers,allowobfuscation class com.baothanhbin.agridoctorai.security.SecurityIssue {
+    <init>(...);
+    <methods>;
+    <fields>;
+}
+-keepclassmembers,allowobfuscation enum com.baothanhbin.agridoctorai.security.SecurityIssueType {
+    **[] $VALUES;
+    public *;
+}
+
+# SecurityWarningDialog - UI Component có thể obfuscate
+-keepclassmembers,allowobfuscation class com.baothanhbin.agridoctorai.ui.SecurityWarningDialog** {
+    <methods>;
+}
+
+# Lưu ý quan trọng:
+# - SecurityManager sẽ bị obfuscate HOÀN TOÀN (package + class + methods)
+# - Hacker khi decompile sẽ khó tìm và hiểu code bảo mật
+# - Thay vì thấy: SecurityManager.performSecurityCheck()
+# - Sẽ thấy: z9x8w7v6u5t4s3r2q1p0o9n8m7l6k5j4i3h2g1f0e9d8c7b6a5.a.a()
+# - Điều này tăng độ khó cho việc bypass security checks
+
+# KẾT HỢP với các biện pháp bảo mật:
+# 1. Signature verification - Kiểm tra chữ ký app (phát hiện re-sign)
+# 2. Installer verification - Kiểm tra nguồn cài đặt (chỉ cho phép Play Store)
+# 3. Code obfuscation - Obfuscate toàn bộ security code (khó tìm và bypass)

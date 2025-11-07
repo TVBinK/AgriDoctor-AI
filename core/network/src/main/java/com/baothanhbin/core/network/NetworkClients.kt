@@ -18,8 +18,15 @@ import javax.net.ssl.X509TrustManager
 
 internal object NetworkClients {
 
-    // API Endpoints
-    private const val SERVER_BASE_URL = "https://192.168.34.116:3443"
+    // API Endpoints - Obfuscated để tránh dịch ngược
+    // Chia nhỏ string để khó đọc hơn khi decompile
+    private val SERVER_BASE_URL: String
+        get() = buildString {
+            append("https://")
+            append("192.168.34")
+            append(".116:")
+            append("3443")
+        }
 
     /**
      * Tạo TrustManager chấp nhận tất cả certificates (chỉ dùng cho development)
@@ -87,21 +94,35 @@ internal object NetworkClients {
         }
     }
 
+    // API paths - Obfuscated để tránh dịch ngược
+    private val API_DETECT_PATH: String
+        get() = buildString {
+            append("/api")
+            append("/detect")
+        }
+    
+    private val API_KEY_PATH: String
+        get() = buildString {
+            append("/api")
+            append("/gemini")
+            append("-key")
+        }
+
     // For real device, use actual machine IP: 192.168.34.116
     // For emulator, use: https://10.0.2.2:3000/api/detect
-    // 
-    // Lưu ý: 
+    //
+    // Lưu ý:
     // - Trong debug mode: acceptAllCertificates = true để chấp nhận self-signed certificates
     // - Trong release mode: acceptAllCertificates = false và sử dụng certificate hợp lệ
     // - Hoặc cài đặt self-signed certificate vào thiết bị và sử dụng network security config
     val detectClient: HttpClient = createClient(
-        baseUrl = "$SERVER_BASE_URL/api/detect",
+        baseUrl = "$SERVER_BASE_URL$API_DETECT_PATH",
         acceptAllCertificates = BuildConfig.DEBUG // Chỉ chấp nhận self-signed trong debug mode
     )
-    
+
     // Client cho API key endpoint
     val apiKeyClient: HttpClient = createClient(
-        baseUrl = "$SERVER_BASE_URL/api/gemini-key",
+        baseUrl = "$SERVER_BASE_URL$API_KEY_PATH",
         acceptAllCertificates = BuildConfig.DEBUG
     )
 }
