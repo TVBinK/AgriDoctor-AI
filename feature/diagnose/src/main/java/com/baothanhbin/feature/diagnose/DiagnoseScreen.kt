@@ -1,5 +1,15 @@
 package com.baothanhbin.feature.diagnose
 
+import android.Manifest
+import android.content.Context
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.net.Uri
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -35,11 +45,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +63,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.database.model.DiagnoseResultEntity
 import com.baothanhbin.core.theme.Body1
@@ -57,12 +73,8 @@ import com.baothanhbin.core.theme.Label4
 import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
-import android.net.Uri
-import android.util.Log
-import androidx.compose.ui.platform.LocalContext
-import coil.request.ImageRequest
+import com.baothanhbin.core.ui.dialog.LocationDialog
 import com.baothanhbin.feature.diagnoseresult.navigation.navigateToDiagnoseResult
-import coil.compose.AsyncImage
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -94,6 +106,65 @@ fun DiagnoseRoute(
 fun DiagnoseScreen(
     viewModel: DiagnoseViewModel = hiltViewModel()
 ) {
+    var showLocationDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    
+    // Function để lấy vị trí
+    fun getCurrentLocation() {
+        try {
+            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            
+            // Thử lấy cached location trước
+            var location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            
+            if (location != null) {
+                Log.d("DiagnoseScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
+            } else {
+                // Request location update một lần
+                val locationListener = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        Log.d("DiagnoseScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
+                        locationManager.removeUpdates(this)
+                    }
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+                
+                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                    locationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER,
+                        0L,
+                        0f,
+                        locationListener
+                    )
+                } else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    locationManager.requestLocationUpdates(
+                        LocationManager.NETWORK_PROVIDER,
+                        0L,
+                        0f,
+                        locationListener
+                    )
+                }
+            }
+        } catch (e: SecurityException) {
+            Log.e("DiagnoseScreen", "Không có quyền truy cập vị trí", e)
+        } catch (e: Exception) {
+            Log.e("DiagnoseScreen", "Lỗi lấy vị trí", e)
+        }
+    }
+    
+    // Launcher để request location permission
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            getCurrentLocation()
+        }
+        showLocationDialog = false
+    }
+    
     // Reload history khi screen được hiển thị lại
     androidx.compose.runtime.LaunchedEffect(Unit) {
         viewModel.loadHistory()
@@ -112,7 +183,11 @@ fun DiagnoseScreen(
                 .wrapContentHeight(),
             contentScale = ContentScale.FillWidth
         )
-        DiagnoseTopBar()
+        DiagnoseTopBar(
+            onLocationClick = { 
+                showLocationDialog = true
+            }
+        )
         Spacer(modifier = Modifier.height(12.dp))
         Column(
             modifier = Modifier
@@ -128,11 +203,25 @@ fun DiagnoseScreen(
                 viewModel = viewModel
             )
         }
+        
+        // Hiển thị LocationDialog
+        if (showLocationDialog) {
+            LocationDialog(
+                onAllowClick = {
+                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                },
+                onCancelClick = {
+                    showLocationDialog = false
+                }
+            )
+        }
     }
 }
 
 @Composable
-private fun DiagnoseTopBar() {
+private fun DiagnoseTopBar(
+    onLocationClick: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -141,7 +230,10 @@ private fun DiagnoseTopBar() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable(onClick = onLocationClick)
+        ) {
             Icon(
                 painter = painterResource(R.drawable.ic_location),
                 contentDescription = null,
@@ -149,7 +241,10 @@ private fun DiagnoseTopBar() {
                 modifier = Modifier.size(50.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
-            Text(stringResource(R.string.allow_location_tracking), style = MaterialTheme.typography.Body1)
+            Text(
+                stringResource(R.string.allow_location_tracking),
+                style = MaterialTheme.typography.Body1
+            )
         }
         Box(modifier = Modifier.clickable { }) {
             IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {

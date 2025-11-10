@@ -40,6 +40,7 @@
             <option value="$PROJECT_DIR$/feature/diagnosefailed" />
             <option value="$PROJECT_DIR$/feature/diagnoseresult" />
             <option value="$PROJECT_DIR$/feature/home" />
+            <option value="$PROJECT_DIR$/feature/lightmeter" />
             <option value="$PROJECT_DIR$/feature/myplants" />
             <option value="$PROJECT_DIR$/feature/processimage" />
             <option value="$PROJECT_DIR$/resources" />

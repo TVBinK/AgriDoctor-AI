@@ -14,4 +14,6 @@ dependencies {
     implementation(project(":core:theme"))
     implementation(project(":feature:chatbot"))
     implementation(project(":feature:camera"))
+    implementation(project(":feature:lightmeter"))
+    implementation(project(":core:ui"))
 }

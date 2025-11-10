@@ -1,7 +1,16 @@
 package com.baothanhbin.feature.home
 
+import android.Manifest
+import android.content.Context
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,7 +41,10 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,6 +52,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -66,9 +79,11 @@ import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.theme.Yellow1
+import com.baothanhbin.core.ui.dialog.LocationDialog
 
 import androidx.navigation.NavController
 import com.baothanhbin.feature.camera.navigation.navigateToCamera
+import com.baothanhbin.feature.lightmeter.navigation.navigateToLightMeter
 
 @Composable
 fun HomeRoute(
@@ -86,6 +101,68 @@ fun HomeScreen(
     navController: NavController? = null,
     onNavigateToChatbot: (() -> Unit)? = null
 ) {
+    var showLocationDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    
+    // Function để lấy vị trí
+    fun getCurrentLocation() {
+        try {
+            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            
+            // Thử lấy cached location trước
+            var location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            
+            if (location != null) {
+                Log.d("HomeScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
+            } else {
+                // Nếu không có cached location, request location update một lần
+                val locationListener = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        Log.d("HomeScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
+                        locationManager.removeUpdates(this)
+                    }
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+                
+                // Request location update
+                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+                    locationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER,
+                        0L,
+                        0f,
+                        locationListener
+                    )
+                } else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    locationManager.requestLocationUpdates(
+                        LocationManager.NETWORK_PROVIDER,
+                        0L,
+                        0f,
+                        locationListener
+                    )
+                } else {
+                    Log.d("HomeScreen", "Location services đang tắt. Vui lòng bật Location trong Settings.")
+                }
+            }
+        } catch (e: SecurityException) {
+            Log.e("HomeScreen", "Không có quyền truy cập vị trí", e)
+        } catch (e: Exception) {
+            Log.e("HomeScreen", "Lỗi lấy vị trí", e)
+        }
+    }
+    
+    // Launcher để request location permission
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            getCurrentLocation()
+        }
+        showLocationDialog = false
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -99,8 +176,8 @@ fun HomeScreen(
                 .wrapContentHeight(),
             contentScale = ContentScale.FillWidth
         )
-        HomeTopBar()
 
+        // Column với padding top để không overlap với TopBar
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -116,6 +193,33 @@ fun HomeScreen(
                 onNavigateToChatbot = onNavigateToChatbot
             )
             Spacer(modifier = Modifier.height(80.dp))
+        }
+        
+        // TopBar - đặt SAU Column để đảm bảo nó nằm trên cùng và có thể nhận touch events
+        // Sử dụng Box với height để cover vùng TopBar và intercept touch events
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+                .align(Alignment.TopStart)
+        ) {
+            HomeTopBar(
+                onLocationClick = { 
+                    showLocationDialog = true
+                }
+            )
+        }
+        
+        // Hiển thị LocationDialog
+        if (showLocationDialog) {
+            LocationDialog(
+                onAllowClick = {
+                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                },
+                onCancelClick = {
+                    showLocationDialog = false
+                }
+            )
         }
     }
 }
@@ -134,7 +238,6 @@ private fun QuickActionsSection(
         HomeFeatureCard(
             title = stringResource(R.string.identify_plant),
             subtitle = stringResource(R.string.scan_to_identify),
-            color = Color(0xFFE8F5E9),
             icon = R.drawable.ic_camera,
             backgroundRes = R.drawable.bg_home_identify,
             modifier = Modifier.weight(1f),
@@ -146,7 +249,6 @@ private fun QuickActionsSection(
         HomeFeatureCard(
             title = stringResource(R.string.diagnose),
             subtitle = stringResource(R.string.check_plant_health),
-            color = Color(0xFFF1F8E9),
             icon = R.drawable.ic_selected_diagnose,
             backgroundRes = R.drawable.bg_home_diagnose,
             modifier = Modifier.weight(1f),
@@ -212,14 +314,20 @@ private fun MeasurementToolsSection(
                 description = stringResource(R.string.optimize_watering),
                 icon = R.drawable.ic_water,
                 background = Blue1,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = {
+
+                }
             )
             MeasurementToolCard(
                 title = stringResource(R.string.light_meter),
                 description = stringResource(R.string.measure_light_intensity),
                 icon = R.drawable.ic_light,
                 background = Yellow1,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    navController?.navigateToLightMeter()
+                }
             )
         }
         Spacer(modifier = Modifier.height(12.dp))
@@ -236,7 +344,9 @@ private fun MeasurementToolsSection(
 }
 
 @Composable
-fun HomeTopBar() {
+fun HomeTopBar(
+    onLocationClick: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -245,7 +355,12 @@ fun HomeTopBar() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(64.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .height(64.dp)
+                .clickable(onClick = onLocationClick)
+        ) {
             Icon(
                 painter = painterResource(R.drawable.ic_location),
                 contentDescription = null,
@@ -254,7 +369,8 @@ fun HomeTopBar() {
             )
             Spacer(modifier = Modifier.width(15.dp))
             Text(
-                stringResource(R.string.allow_location_tracking), style = MaterialTheme.typography.Body1
+                stringResource(R.string.allow_location_tracking),
+                style = MaterialTheme.typography.Body1
             )
         }
         Box(modifier = Modifier.clickable { }) {
@@ -273,7 +389,6 @@ fun HomeTopBar() {
 fun HomeFeatureCard(
     title: String,
     subtitle: String,
-    color: Color,
     icon: Int,
     backgroundRes: Int? = null,
     modifier: Modifier = Modifier,
@@ -285,7 +400,7 @@ fun HomeFeatureCard(
             .height(110.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = color)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             backgroundRes?.let {
@@ -293,8 +408,7 @@ fun HomeFeatureCard(
                     painter = painterResource(id = it),
                     contentDescription = null,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(16.dp)),
+                        .fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
             }
@@ -325,12 +439,14 @@ fun MeasurementToolCard(
     description: String,
     icon: Int,
     background: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = modifier
             .width(190.dp)
-            .height(110.dp),
+            .height(110.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = background)
     ) {

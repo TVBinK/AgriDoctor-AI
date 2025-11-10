@@ -92,4 +92,5 @@ dependencies {
     implementation(project(":feature:processimage"))
     implementation(project(":feature:diagnoseresult"))
     implementation(project(":feature:diagnosefailed"))
+    implementation(project(":feature:lightmeter"))
 }

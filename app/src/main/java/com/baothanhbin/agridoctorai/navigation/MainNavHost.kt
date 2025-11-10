@@ -13,6 +13,7 @@ import com.baothanhbin.feature.myplants.navigation.myplantScreen
 import com.baothanhbin.feature.processimage.navigation.processImageScreen
 import com.baothanhbin.feature.diagnoseresult.navigation.diagnoseResultScreen
 import com.baothanhbin.feature.diagnosefailed.navigation.diagnoseFailedScreen
+import com.baothanhbin.feature.lightmeter.navigation.lightMeterScreen
 
 @Composable
 fun MainNavHost(
@@ -39,5 +40,6 @@ fun MainNavHost(
         processImageScreen(navController = navController)
         diagnoseResultScreen(navController = navController)
         diagnoseFailedScreen(navController = navController)
+        lightMeterScreen(navController = navController)
     }
 }

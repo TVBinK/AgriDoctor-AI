@@ -7,5 +7,6 @@ android {
 }
 
 dependencies {
-    implementation(project(":app"))
+    implementation(project(":resources"))
+    implementation(project(":core:theme"))
 }

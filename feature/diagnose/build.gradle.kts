@@ -12,6 +12,8 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:database"))
     implementation(project(":feature:diagnoseresult"))
+    implementation(project(":core:ui"))
+
     //coil
     implementation(libs.coil.compose)
 }

@@ -59,6 +59,38 @@
     <!-- Camera Screen -->
     <string name="photo_saved">Ảnh đã lưu: %1$s</string>
     
+    <!-- Light Meter Screen -->
+    <string name="light_meter_title">Đo Cường Độ Ánh Sáng</string>
+    <string name="light_level_label">Mức Độ Ánh Sáng</string>
+    <string name="lux_unit">Lux</string>
+    <string name="ev_unit">EV</string>
+    <string name="recommendation_label">Khuyến Nghị</string>
+    <string name="camera_permission_required">Cần quyền truy cập Camera để đo ánh sáng</string>
+    
+    <!-- Light Level Descriptions -->
+    <string name="light_level_complete_darkness">Tối hoàn toàn</string>
+    <string name="light_level_very_dark">Rất tối</string>
+    <string name="light_level_dark">Tối</string>
+    <string name="light_level_dim">Ánh sáng yếu</string>
+    <string name="light_level_moderate">Ánh sáng vừa</string>
+    <string name="light_level_fair">Sáng vừa phải</string>
+    <string name="light_level_bright">Sáng</string>
+    <string name="light_level_very_bright">Rất sáng</string>
+    <string name="light_level_dazzling">Sáng chói</string>
+    <string name="light_level_sunlight">Ánh sáng mặt trời</string>
+    <string name="light_level_extremely_bright">Cực kỳ sáng</string>
+    <string name="light_level_measuring">Đang đo...</string>
+    
+    <!-- Light Recommendations -->
+    <string name="recommendation_too_dark">Quá tối cho cây trồng. Cần bổ sung ánh sáng nhân tạo.</string>
+    <string name="recommendation_shade_plants">Phù hợp cho cây ưa bóng (Dương xỉ, Lan Ý).</string>
+    <string name="recommendation_indoor_plants">Phù hợp cho cây trồng trong nhà thông thường.</string>
+    <string name="recommendation_most_indoor_plants">Tốt cho hầu hết các loại cây trong nhà.</string>
+    <string name="recommendation_light_loving">Lý tưởng cho cây ưa sáng và rau màu.</string>
+    <string name="recommendation_outdoor_plants">Rất tốt cho rau và cây trồng ngoài trời.</string>
+    <string name="recommendation_direct_sunlight">Ánh sáng mặt trời trực tiếp - Tuyệt vời!</string>
+    <string name="recommendation_too_bright">Cực kỳ sáng - Cần che chắn cho cây non.</string>
+    
     <!-- Diagnose Failed Screen -->
     <string name="diagnose_failed">Chuẩn đoán thất bại</string>
     <string name="sorry_couldnt_identify">Xin lỗi, không thể nhận diện</string>
@@ -70,6 +102,19 @@
     <string name="multi_species">Nhiều loại cây</string>
     <string name="too_blurry">Quá mờ</string>
     <string name="try_again">Thử lại</string>
+    
+    <!-- My Plants Screen -->
+    <string name="my_plants_title">Cây của tôi</string>
+    <string name="reminder">Nhắc nhở</string>
+    <string name="no_reminders">Không có nhắc nhở</string>
+    <string name="next_report_on">Báo cáo tiếp theo vào</string>
+    <string name="next_water_on">Tưới nước tiếp theo vào</string>
+    <string name="more_options">Tùy chọn khác</string>
+    <string name="delete">Xóa</string>
+    <string name="set_reminder">Đặt nhắc nhở</string>
+    <string name="no_reminders_set">Chưa có nhắc nhở nào</string>
+    <string name="add_reminder_description">Thêm cây và thiết lập lịch chăm sóc</string>
+    <string name="add_plant">Thêm cây</string>
     
     <!-- Chatbot Screen -->
     <string name="ask_botanist">Hỏi Nhà Thực Vật Học</string>
