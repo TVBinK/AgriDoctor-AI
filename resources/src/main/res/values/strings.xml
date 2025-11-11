@@ -22,6 +22,11 @@
     <string name="need_plant_help">Cần hỗ trợ về cây trồng? Hỏi AI</string>
     <string name="get_instant_advice">Nhận lời khuyên ngay bây giờ!</string>
     <string name="allow_location_tracking">Cho phép theo dõi vị trí</string>
+    <string name="location_dialog_title">Cho phép AgriDoctorAI sử dụng vị trí của bạn?</string>
+    <string name="location_dialog_description">Vị trí của bạn sẽ được sử dụng để xác định vùng khí hậu và cung cấp dữ liệu thời tiết phù hợp</string>
+    <string name="location_dialog_allow">Cho phép</string>
+    <string name="location_dialog_no_thanks">Không, cảm ơn</string>
+    <string name="location_permission_icon">Biểu tượng quyền truy cập vị trí</string>
     <string name="chat_now">Trò chuyện ngay</string>
     <string name="settings">Cài đặt</string>
     <string name="back">Quay lại</string>

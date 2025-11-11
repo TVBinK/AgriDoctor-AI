@@ -12,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import com.baothanhbin.core.data.repository.DiagnoseResultRepository
 import com.baothanhbin.core.database.model.toEntity
 import com.baothanhbin.core.network.NetworkDataSource
+import com.baothanhbin.core.ui.util.LocationHelper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -96,9 +97,17 @@ class ProcessImageViewModel @Inject constructor(
                             copyImageToAppStorage(context, imageUri)
                         }
                         
+                        // Lấy location hiện tại nếu có quyền
+                        val currentLocation = withContext(Dispatchers.IO) {
+                            getCurrentLocationAddress(context)
+                        }
+                        
                         // Use saved URI if available, otherwise use original (for camera images)
                         val uriToSave = savedImageUri ?: imageUri
-                        val entity = result.data.toEntity(imageUri = uriToSave.toString())
+                        val entity = result.data.toEntity(
+                            imageUri = uriToSave.toString(),
+                            location = currentLocation
+                        )
                         diagnoseResultRepository.insertDiagnoseResult(entity)
                         
                         // Navigate with saved URI if available
@@ -194,6 +203,61 @@ class ProcessImageViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.e("ProcessImage", "Error copying image: ${e.message}", e)
             null
+        }
+    }
+    
+    /**
+     * Lấy địa chỉ vị trí hiện tại nếu có quyền
+     * Returns địa chỉ string hoặc null nếu không có quyền hoặc lỗi
+     */
+    private suspend fun getCurrentLocationAddress(context: Application): String? = withContext(Dispatchers.IO) {
+        try {
+            // Kiểm tra quyền
+            if (!LocationHelper.hasLocationPermission(context)) {
+                Log.d("ProcessImage", "Không có quyền location, bỏ qua lưu location")
+                return@withContext null
+            }
+            
+            var locationResult: android.location.Location? = null
+            var locationError: Exception? = null
+            
+            // Lấy location
+            LocationHelper.getCurrentLocation(
+                context = context,
+                onLocationReceived = { location ->
+                    locationResult = location
+                },
+                onError = { exception ->
+                    locationError = exception
+                }
+            )
+            
+            // Đợi một chút để location được lấy (tối đa 3 giây)
+            var waitCount = 0
+            while (locationResult == null && locationError == null && waitCount < 30) {
+                kotlinx.coroutines.delay(100)
+                waitCount++
+            }
+            
+            if (locationError != null) {
+                Log.e("ProcessImage", "Lỗi lấy location: ${locationError?.message}")
+                return@withContext null
+            }
+            
+            val location = locationResult ?: return@withContext null
+            
+            // Lấy địa chỉ từ tọa độ
+            val address = LocationHelper.getAddressFromLocation(
+                context = context,
+                latitude = location.latitude,
+                longitude = location.longitude
+            )
+            
+            Log.d("ProcessImage", "Đã lấy location: $address")
+            return@withContext address
+        } catch (e: Exception) {
+            Log.e("ProcessImage", "Lỗi khi lấy location address: ${e.message}", e)
+            return@withContext null
         }
     }
 }

@@ -42,7 +42,7 @@ import kotlin.math.sin
 @Composable
 fun LightMeterRoute(
     navController: NavHostController,
-    viewModel: LightMeterViewModel = hiltViewModel()
+    viewModel: LightMeterViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     

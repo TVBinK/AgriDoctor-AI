@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -39,6 +40,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -68,6 +70,7 @@ fun DiagnoseResultRoute(
     causes: String = "",
     treatment: List<TreatmentItem> = emptyList(),
     recoveryCare: List<RecoveryItem> = emptyList(),
+    location: String? = null,
     viewModel: DiagnoseResultViewModel = hiltViewModel()
 ) {
     val loadedResult by viewModel.loadedResult.collectAsState()
@@ -83,7 +86,8 @@ fun DiagnoseResultRoute(
         symptoms = symptoms,
         causes = causes,
         treatment = treatment,
-        recoveryCare = recoveryCare
+        recoveryCare = recoveryCare,
+        location = location
     )
 
     DiagnoseResultScreen(
@@ -94,6 +98,7 @@ fun DiagnoseResultRoute(
         causes = finalData.causes,
         treatment = finalData.treatment,
         recoveryCare = finalData.recoveryCare,
+        location = finalData.location,
         onBack = { navController?.popBackStack() }
     )
 }
@@ -107,6 +112,7 @@ fun DiagnoseResultScreen(
     causes: String,
     treatment: List<TreatmentItem>,
     recoveryCare: List<RecoveryItem>,
+    location: String? = null,
     onBack: () -> Unit = {}
 ) {
     Column(
@@ -123,7 +129,8 @@ fun DiagnoseResultScreen(
             symptoms = symptoms,
             causes = causes,
             treatment = treatment,
-            recoveryCare = recoveryCare
+            recoveryCare = recoveryCare,
+            location = location
         )
     }
 }
@@ -167,12 +174,12 @@ private fun HeaderImage(
         }
 
         // simple bounding box
-        Box(
+        /*Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .size(110.dp, 70.dp)
                 .border(2.dp, Color(0xFFE53935))
-        )
+        )*/
     }
 }
 
@@ -185,7 +192,8 @@ private fun ContentSection(
     symptoms: String,
     causes: String,
     treatment: List<TreatmentItem>,
-    recoveryCare: List<RecoveryItem>
+    recoveryCare: List<RecoveryItem>,
+    location: String?
 ) {
     Column(
         modifier = Modifier
@@ -202,6 +210,31 @@ private fun ContentSection(
                 .padding(start = 16.dp)
                 .align(Alignment.CenterHorizontally)
         )
+
+        if (!location.isNullOrBlank()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_location),
+                    contentDescription = null,
+                    tint = GreenSurface,
+                    modifier = Modifier.size(40.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = location,
+                    style = MaterialTheme.typography.Label4.copy(fontSize = 15.sp),
+                    color = Subtitle,
+                    maxLines = 2
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(14.dp))
         Text(
@@ -398,6 +431,7 @@ private fun PreviewDiagnoseResult() {
                 ),
                 linkText = "Learn More"
             )
-        )
+        ),
+        location = "Hà Đông, Hà Nội"
     )
 }

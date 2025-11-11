@@ -17,7 +17,8 @@ data class LoadedResult(
     val symptoms: String,
     val causes: String,
     val treatment: List<com.baothanhbin.core.model.TreatmentItem>,
-    val recoveryCare: List<com.baothanhbin.core.model.RecoveryItem>
+    val recoveryCare: List<com.baothanhbin.core.model.RecoveryItem>,
+    val location: String?
 )
 
 @HiltViewModel
@@ -53,7 +54,8 @@ class DiagnoseResultViewModel @Inject constructor(
                             steps = it.steps,
                             linkText = it.linkText
                         )
-                    }
+                    },
+                    location = latestResult.location
                 )
             }
         }

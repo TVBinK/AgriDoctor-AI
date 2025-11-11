@@ -1,13 +1,8 @@
 package com.baothanhbin.feature.home
 
 import android.Manifest
-import android.content.Context
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.net.Uri
 import android.os.Build
-import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,18 +37,19 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -60,6 +57,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.GifDecoder
@@ -80,10 +78,10 @@ import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.theme.Yellow1
 import com.baothanhbin.core.ui.dialog.LocationDialog
-
-import androidx.navigation.NavController
+import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.feature.camera.navigation.navigateToCamera
 import com.baothanhbin.feature.lightmeter.navigation.navigateToLightMeter
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeRoute(
@@ -102,54 +100,38 @@ fun HomeScreen(
     onNavigateToChatbot: (() -> Unit)? = null
 ) {
     var showLocationDialog by remember { mutableStateOf(false) }
+    var currentAddress by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     
-    // Function để lấy vị trí
+    // Function để lấy vị trí và địa chỉ
     fun getCurrentLocation() {
-        try {
-            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            
-            // Thử lấy cached location trước
-            var location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            
-            if (location != null) {
+        LocationHelper.getCurrentLocation(
+            context = context,
+            onLocationReceived = { location ->
                 Log.d("HomeScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
-            } else {
-                // Nếu không có cached location, request location update một lần
-                val locationListener = object : LocationListener {
-                    override fun onLocationChanged(location: Location) {
-                        Log.d("HomeScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
-                        locationManager.removeUpdates(this)
-                    }
-                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-                    override fun onProviderEnabled(provider: String) {}
-                    override fun onProviderDisabled(provider: String) {}
-                }
                 
-                // Request location update
-                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                    locationManager.requestLocationUpdates(
-                        LocationManager.GPS_PROVIDER,
-                        0L,
-                        0f,
-                        locationListener
+                // Lấy địa chỉ từ tọa độ
+                coroutineScope.launch {
+                    val address = LocationHelper.getAddressFromLocation(
+                        context = context,
+                        latitude = location.latitude,
+                        longitude = location.longitude
                     )
-                } else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                    locationManager.requestLocationUpdates(
-                        LocationManager.NETWORK_PROVIDER,
-                        0L,
-                        0f,
-                        locationListener
-                    )
-                } else {
-                    Log.d("HomeScreen", "Location services đang tắt. Vui lòng bật Location trong Settings.")
+                    currentAddress = address
+                    Log.d("HomeScreen", "Địa chỉ: $address")
                 }
+            },
+            onError = { exception ->
+                Log.e("HomeScreen", "Lỗi lấy vị trí: ${exception.message}", exception)
             }
-        } catch (e: SecurityException) {
-            Log.e("HomeScreen", "Không có quyền truy cập vị trí", e)
-        } catch (e: Exception) {
-            Log.e("HomeScreen", "Lỗi lấy vị trí", e)
+        )
+    }
+    
+    // Kiểm tra permission khi khởi động
+    LaunchedEffect(Unit) {
+        if (LocationHelper.hasLocationPermission(context)) {
+            getCurrentLocation()
         }
     }
     
@@ -204,8 +186,15 @@ fun HomeScreen(
                 .align(Alignment.TopStart)
         ) {
             HomeTopBar(
+                currentAddress = currentAddress,
                 onLocationClick = { 
-                    showLocationDialog = true
+                    // Chỉ hiển thị dialog nếu chưa có quyền
+                    if (!LocationHelper.hasLocationPermission(context)) {
+                        showLocationDialog = true
+                    } else {
+                        // Nếu đã có quyền, refresh location
+                        getCurrentLocation()
+                    }
                 }
             )
         }
@@ -345,6 +334,7 @@ private fun MeasurementToolsSection(
 
 @Composable
 fun HomeTopBar(
+    currentAddress: String? = null,
     onLocationClick: () -> Unit = {}
 ) {
     Row(
@@ -359,7 +349,12 @@ fun HomeTopBar(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .height(64.dp)
-                .clickable(onClick = onLocationClick)
+                .weight(1f)
+                .clickable(
+                    onClick = onLocationClick,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                )
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_location),
@@ -369,8 +364,9 @@ fun HomeTopBar(
             )
             Spacer(modifier = Modifier.width(15.dp))
             Text(
-                stringResource(R.string.allow_location_tracking),
-                style = MaterialTheme.typography.Body1
+                text = currentAddress ?: stringResource(R.string.allow_location_tracking),
+                style = MaterialTheme.typography.Body1,
+                maxLines = 2
             )
         }
         Box(modifier = Modifier.clickable { }) {

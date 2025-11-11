@@ -74,10 +74,15 @@ import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.ui.dialog.LocationDialog
+import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.feature.diagnoseresult.navigation.navigateToDiagnoseResult
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.interaction.MutableInteractionSource
 
 @Composable
 fun DiagnoseRoute(
@@ -107,51 +112,39 @@ fun DiagnoseScreen(
     viewModel: DiagnoseViewModel = hiltViewModel()
 ) {
     var showLocationDialog by remember { mutableStateOf(false) }
+    var currentAddress by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     
-    // Function để lấy vị trí
+    // Function để lấy vị trí và địa chỉ
     fun getCurrentLocation() {
-        try {
-            val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            
-            // Thử lấy cached location trước
-            var location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-                ?: locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
-            
-            if (location != null) {
+        LocationHelper.getCurrentLocation(
+            context = context,
+            onLocationReceived = { location ->
                 Log.d("DiagnoseScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
-            } else {
-                // Request location update một lần
-                val locationListener = object : LocationListener {
-                    override fun onLocationChanged(location: Location) {
-                        Log.d("DiagnoseScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
-                        locationManager.removeUpdates(this)
-                    }
-                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-                    override fun onProviderEnabled(provider: String) {}
-                    override fun onProviderDisabled(provider: String) {}
-                }
                 
-                if (locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-                    locationManager.requestLocationUpdates(
-                        LocationManager.GPS_PROVIDER,
-                        0L,
-                        0f,
-                        locationListener
+                // Lấy địa chỉ từ tọa độ
+                coroutineScope.launch {
+                    val address = LocationHelper.getAddressFromLocation(
+                        context = context,
+                        latitude = location.latitude,
+                        longitude = location.longitude
                     )
-                } else if (locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-                    locationManager.requestLocationUpdates(
-                        LocationManager.NETWORK_PROVIDER,
-                        0L,
-                        0f,
-                        locationListener
-                    )
+                    currentAddress = address
+                    Log.d("DiagnoseScreen", "Địa chỉ: $address")
                 }
+            },
+            onError = { exception ->
+                Log.e("DiagnoseScreen", "Lỗi lấy vị trí: ${exception.message}", exception)
             }
-        } catch (e: SecurityException) {
-            Log.e("DiagnoseScreen", "Không có quyền truy cập vị trí", e)
-        } catch (e: Exception) {
-            Log.e("DiagnoseScreen", "Lỗi lấy vị trí", e)
+        )
+    }
+    
+    // Kiểm tra permission khi khởi động
+    LaunchedEffect(Unit) {
+        viewModel.loadHistory()
+        if (LocationHelper.hasLocationPermission(context)) {
+            getCurrentLocation()
         }
     }
     
@@ -163,11 +156,6 @@ fun DiagnoseScreen(
             getCurrentLocation()
         }
         showLocationDialog = false
-    }
-    
-    // Reload history khi screen được hiển thị lại
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        viewModel.loadHistory()
     }
     
     Box(
@@ -184,8 +172,15 @@ fun DiagnoseScreen(
             contentScale = ContentScale.FillWidth
         )
         DiagnoseTopBar(
+            currentAddress = currentAddress,
             onLocationClick = { 
-                showLocationDialog = true
+                // Chỉ hiển thị dialog nếu chưa có quyền
+                if (!LocationHelper.hasLocationPermission(context)) {
+                    showLocationDialog = true
+                } else {
+                    // Nếu đã có quyền, refresh location
+                    getCurrentLocation()
+                }
             }
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -220,6 +215,7 @@ fun DiagnoseScreen(
 
 @Composable
 private fun DiagnoseTopBar(
+    currentAddress: String? = null,
     onLocationClick: () -> Unit = {}
 ) {
     Row(
@@ -232,7 +228,13 @@ private fun DiagnoseTopBar(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable(onClick = onLocationClick)
+            modifier = Modifier
+                .weight(1f)
+                .clickable(
+                    onClick = onLocationClick,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                )
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_location),
@@ -242,8 +244,9 @@ private fun DiagnoseTopBar(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                stringResource(R.string.allow_location_tracking),
-                style = MaterialTheme.typography.Body1
+                text = currentAddress ?: stringResource(R.string.allow_location_tracking),
+                style = MaterialTheme.typography.Body1,
+                maxLines = 2
             )
         }
         Box(modifier = Modifier.clickable { }) {

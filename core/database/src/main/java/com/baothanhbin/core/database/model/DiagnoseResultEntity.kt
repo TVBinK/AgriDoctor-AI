@@ -20,6 +20,7 @@ data class DiagnoseResultEntity(
     val diseaseName: String,
     val timestamp: Long = System.currentTimeMillis(),
     val imageUri: String? = null, // URI của ảnh đã chụp hoặc chọn từ thư viện
+    val location: String? = null, // Địa chỉ vị trí khi chụp ảnh
     @TypeConverters(StringListConverter::class)
     val possibleProblems: List<String>,
     val symptoms: String,
@@ -41,10 +42,11 @@ data class DiagnoseResultEntity(
     }
 }
 
-fun DiagnoseData.toEntity(imageUri: String? = null): DiagnoseResultEntity {
+fun DiagnoseData.toEntity(imageUri: String? = null, location: String? = null): DiagnoseResultEntity {
     return DiagnoseResultEntity(
         diseaseName = diseaseName,
         imageUri = imageUri,
+        location = location,
         possibleProblems = possibleProblems,
         symptoms = symptoms,
         causes = causes,

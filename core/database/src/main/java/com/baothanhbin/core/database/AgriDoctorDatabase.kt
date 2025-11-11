@@ -14,7 +14,7 @@ import com.baothanhbin.core.database.model.DiagnoseResultEntity
 
 @Database(
     entities = [DiagnoseResultEntity::class, ChatEntity::class],
-    version = 4, // Tăng version vì thêm ChatEntity
+    version = 5, // Tăng version vì thêm field location vào DiagnoseResultEntity
     exportSchema = false
 )
 @TypeConverters(

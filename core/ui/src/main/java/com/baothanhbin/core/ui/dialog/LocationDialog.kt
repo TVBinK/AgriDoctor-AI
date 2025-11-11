@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -54,7 +55,7 @@ fun LocationDialog(
                 // Icon
                 Image(
                     painter = painterResource(id = R.drawable.ic_permission), // Thay bằng icon thực tế của bạn
-                    contentDescription = "Location Permission Icon",
+                    contentDescription = stringResource(R.string.location_permission_icon),
                     modifier = Modifier.size(96.dp) // Kích thước icon như trong UI
                 )
 
@@ -62,7 +63,7 @@ fun LocationDialog(
 
                 // Tiêu đề
                 Text(
-                    text = "Allow “PlanQ” to use your location?",
+                    text = stringResource(R.string.location_dialog_title),
                     style = MaterialTheme.typography.TitleLarge3,
                     textAlign = TextAlign.Center,
                 )
@@ -71,7 +72,7 @@ fun LocationDialog(
 
                 // Mô tả
                 Text(
-                    text = "Your location will be used to determine your\nhardiness zone and provide you with relevant\nweather data",
+                    text = stringResource(R.string.location_dialog_description),
                     style = MaterialTheme.typography.Body3,
                     textAlign = TextAlign.Center,
                 )
@@ -91,7 +92,7 @@ fun LocationDialog(
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
                 ) {
                     Text(
-                        text = "Allow",
+                        text = stringResource(R.string.location_dialog_allow),
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
@@ -119,7 +120,7 @@ fun LocationDialog(
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp) // Không đổ bóng
                 ) {
                     Text(
-                        text = "No, Thanks",
+                        text = stringResource(R.string.location_dialog_no_thanks),
                         color = Color.Gray,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold

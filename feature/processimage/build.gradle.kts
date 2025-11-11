@@ -13,6 +13,7 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:data"))
     implementation(project(":core:database"))
+    implementation(project(":core:ui"))
     implementation(project(":feature:diagnoseresult"))
     implementation(project(":feature:diagnosefailed"))
     //coil
