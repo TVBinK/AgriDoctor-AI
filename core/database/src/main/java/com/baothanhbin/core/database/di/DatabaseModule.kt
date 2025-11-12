@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.room.Room
-import androidx.sqlite.db.SupportSQLiteOpenHelper
 import com.baothanhbin.core.database.AgriDoctorDatabase
 import dagger.Module
 import dagger.Provides

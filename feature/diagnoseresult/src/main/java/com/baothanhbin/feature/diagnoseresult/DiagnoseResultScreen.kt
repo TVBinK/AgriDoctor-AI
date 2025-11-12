@@ -356,14 +356,6 @@ private fun TreatmentItemCard(item: TreatmentItem) {
                 Text(text = step, style = MaterialTheme.typography.Body1, color = Subtitle)
                 if (index != item.steps.lastIndex) Spacer(modifier = Modifier.height(6.dp))
             }
-            if (!item.linkText.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = item.linkText!! + " \u2193",
-                    style = MaterialTheme.typography.Label4,
-                    color = BlueDefault
-                )
-            }
         }
     }
 }
@@ -390,14 +382,6 @@ private fun RecoveryItemCard(item: RecoveryItem) {
             item.steps.forEachIndexed { index, s ->
                 Text(s, style = MaterialTheme.typography.Body1, color = Subtitle)
                 if (index != item.steps.lastIndex) Spacer(modifier = Modifier.height(6.dp))
-            }
-            if (!item.linkText.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = item.linkText!! + " \u2193",
-                    style = MaterialTheme.typography.Body1.copy(fontWeight = FontWeight.SemiBold),
-                    color = Color(0xFF1976D2)
-                )
             }
         }
     }
