@@ -93,4 +93,5 @@ dependencies {
     implementation(project(":feature:diagnoseresult"))
     implementation(project(":feature:diagnosefailed"))
     implementation(project(":feature:lightmeter"))
+    implementation(project(":core:ui"))
 }

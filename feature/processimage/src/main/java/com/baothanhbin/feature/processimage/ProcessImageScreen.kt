@@ -67,6 +67,7 @@ import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.TitleLarge1
 import com.baothanhbin.core.theme.White
+import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.feature.diagnosefailed.navigation.navigateToDiagnoseFailed
 import com.baothanhbin.feature.diagnoseresult.navigation.navigateToDiagnoseResult
 
@@ -74,6 +75,7 @@ import com.baothanhbin.feature.diagnoseresult.navigation.navigateToDiagnoseResul
 fun ProcessImageRoute(
     navController: NavHostController,
     imageUri: Uri? = null,
+    locationStateHolder: LocationStateHolder,
     viewModel: ProcessImageViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -107,7 +109,11 @@ fun ProcessImageRoute(
 
     // Process image when URI changes
     LaunchedEffect(key1 = imageUri) {
-        viewModel.processImage(imageUri)
+        viewModel.processImage(
+            imageUri = imageUri,
+            currentAddress = locationStateHolder.currentAddress,
+            locationStateHolder = locationStateHolder
+        )
     }
 
     ProcessImageScreen(

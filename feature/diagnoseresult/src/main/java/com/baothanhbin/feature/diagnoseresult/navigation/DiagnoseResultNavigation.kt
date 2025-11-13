@@ -8,6 +8,7 @@ import androidx.navigation.NavOptions
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.feature.diagnoseresult.DiagnoseResultRoute
 
 const val DIAGNOSE_RESULT_ROUTE = "DIAGNOSE_RESULT_ROUTE"
@@ -27,7 +28,10 @@ fun NavController.navigateToDiagnoseResult(
     navigate(route, navOptions)
 }
 
-fun NavGraphBuilder.diagnoseResultScreen(navController: NavHostController? = null) {
+fun NavGraphBuilder.diagnoseResultScreen(
+    navController: NavHostController? = null,
+    locationStateHolder: LocationStateHolder
+) {
     // Route with imageUri argument
     composable(
         route = DIAGNOSE_RESULT_ROUTE_WITH_ARG,
@@ -42,14 +46,16 @@ fun NavGraphBuilder.diagnoseResultScreen(navController: NavHostController? = nul
         val imageUri = uriString?.let { s -> Uri.parse(Uri.decode(s)) }
         DiagnoseResultRoute(
             navController = navController,
-            imageUri = imageUri
+            imageUri = imageUri,
+            locationStateHolder = locationStateHolder
         )
     }
     // Route without argument (for backward compatibility)
     composable(route = DIAGNOSE_RESULT_ROUTE) {
         DiagnoseResultRoute(
             navController = navController,
-            imageUri = null
+            imageUri = null,
+            locationStateHolder = locationStateHolder
         )
     }
 }

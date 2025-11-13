@@ -9,4 +9,7 @@ android {
 dependencies {
     implementation(project(":resources"))
     implementation(project(":core:theme"))
+    
+    // Google Play Services Location for Fused Location Provider
+    implementation(libs.play.services.location)
 }

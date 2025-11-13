@@ -3,6 +3,7 @@ package com.baothanhbin.feature.processimage.navigation
 import android.net.Uri
 import androidx.navigation.*
 import androidx.navigation.compose.composable
+import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.feature.processimage.ProcessImageRoute
 
 const val PROCESS_IMAGE_ROUTE = "PROCESS_IMAGE_ROUTE"
@@ -14,14 +15,21 @@ fun NavController.navigateToProcessImage(imageUri: Uri, navOptions: NavOptions? 
     navigate("$PROCESS_IMAGE_ROUTE/$encoded", navOptions)
 }
 
-fun NavGraphBuilder.processImageScreen(navController: NavHostController) {
+fun NavGraphBuilder.processImageScreen(
+    navController: NavHostController,
+    locationStateHolder: LocationStateHolder
+) {
     composable(
         route = PROCESS_IMAGE_ROUTE_WITH_ARG,
         arguments = listOf(navArgument(ARG_IMAGE_URI) { type = NavType.StringType })
     ) {
         val uriString = it.arguments?.getString(ARG_IMAGE_URI)
         val uri = uriString?.let { s -> Uri.parse(Uri.decode(s)) }
-        ProcessImageRoute(navController = navController, imageUri = uri)
+        ProcessImageRoute(
+            navController = navController,
+            imageUri = uri,
+            locationStateHolder = locationStateHolder
+        )
     }
 }
 

@@ -79,6 +79,7 @@ import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.theme.Yellow1
 import com.baothanhbin.core.ui.dialog.LocationDialog
 import com.baothanhbin.core.ui.util.LocationHelper
+import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.feature.camera.navigation.navigateToCamera
 import com.baothanhbin.feature.lightmeter.navigation.navigateToLightMeter
 import kotlinx.coroutines.launch
@@ -86,24 +87,26 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeRoute(
     navController: NavController? = null,
+    locationStateHolder: LocationStateHolder,
     onNavigateToChatbot: (() -> Unit)? = null
 ) {
     HomeScreen(
         navController = navController,
+        locationStateHolder = locationStateHolder,
         onNavigateToChatbot = onNavigateToChatbot
     )
 }
 
-@Composable
+@Composable   
 fun HomeScreen(
     navController: NavController? = null,
+    locationStateHolder: LocationStateHolder,
     onNavigateToChatbot: (() -> Unit)? = null
 ) {
     var showLocationDialog by remember { mutableStateOf(false) }
-    var currentAddress by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    
+
     // Function để lấy vị trí và địa chỉ
     fun getCurrentLocation() {
         LocationHelper.getCurrentLocation(
@@ -118,7 +121,7 @@ fun HomeScreen(
                         latitude = location.latitude,
                         longitude = location.longitude
                     )
-                    currentAddress = address
+                    locationStateHolder.updateAddress(address)
                     Log.d("HomeScreen", "Địa chỉ: $address")
                 }
             },
@@ -128,9 +131,9 @@ fun HomeScreen(
         )
     }
     
-    // Kiểm tra permission khi khởi động
+    // Kiểm tra permission khi khởi động - chỉ load nếu chưa có address
     LaunchedEffect(Unit) {
-        if (LocationHelper.hasLocationPermission(context)) {
+        if (LocationHelper.hasLocationPermission(context) && locationStateHolder.currentAddress == null) {
             getCurrentLocation()
         }
     }
@@ -186,7 +189,7 @@ fun HomeScreen(
                 .align(Alignment.TopStart)
         ) {
             HomeTopBar(
-                currentAddress = currentAddress,
+                currentAddress = locationStateHolder.currentAddress,
                 onLocationClick = { 
                     // Chỉ hiển thị dialog nếu chưa có quyền
                     if (!LocationHelper.hasLocationPermission(context)) {
@@ -588,5 +591,7 @@ private fun GifImage(animatedRaw: Int) {
 @Preview
 @Composable
 fun HomeScreenPreview() {
-    HomeScreen()
+    HomeScreen(
+        locationStateHolder = LocationStateHolder()
+    )
 }

@@ -16,8 +16,9 @@ fun NavController.navigateToMyplants(navOptions: NavOptions? = null) {
 }
 
 fun NavGraphBuilder.myplantScreen(
+    locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder
 ) {
     composable(route = MY_PLANTS_ROUTE) {
-        MyplantRoute()
+        MyplantRoute(locationStateHolder = locationStateHolder)
     }
 }

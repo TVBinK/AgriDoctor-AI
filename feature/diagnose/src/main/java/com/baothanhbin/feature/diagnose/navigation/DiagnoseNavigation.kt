@@ -17,9 +17,13 @@ fun NavController.navigateToDiagnose(navOptions: NavOptions? = null) {
 }
 
 fun NavGraphBuilder.diagnoseScreen(
-    navController: NavHostController? = null
+    navController: NavHostController? = null,
+    locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder
 ) {
     composable(route = DIAGNOSE_ROUTE) {
-        DiagnoseRoute(navController = navController)
+        DiagnoseRoute(
+            navController = navController,
+            locationStateHolder = locationStateHolder
+        )
     }
 }

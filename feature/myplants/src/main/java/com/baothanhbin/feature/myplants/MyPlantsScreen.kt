@@ -58,15 +58,18 @@ data class Plant(
 )
 
 @Composable
-fun MyplantRoute() {
-    MyplantScreen()
+fun MyplantRoute(
+    locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder
+) {
+    MyplantScreen(locationStateHolder = locationStateHolder)
 }
 
 @Composable
-fun MyplantScreen() {
+fun MyplantScreen(
+    locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder
+) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var showLocationDialog by remember { mutableStateOf(false) }
-    var currentAddress by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
@@ -84,7 +87,7 @@ fun MyplantScreen() {
                         latitude = location.latitude,
                         longitude = location.longitude
                     )
-                    currentAddress = address
+                    locationStateHolder.updateAddress(address)
                     Log.d("MyPlantsScreen", "Địa chỉ: $address")
                 }
             },
@@ -94,9 +97,9 @@ fun MyplantScreen() {
         )
     }
     
-    // Kiểm tra permission khi khởi động
+    // Kiểm tra permission khi khởi động - chỉ load nếu chưa có address
     LaunchedEffect(Unit) {
-        if (LocationHelper.hasLocationPermission(context)) {
+        if (LocationHelper.hasLocationPermission(context) && locationStateHolder.currentAddress == null) {
             getCurrentLocation()
         }
     }
@@ -156,7 +159,7 @@ fun MyplantScreen() {
         )
         // Top Bar
         MyPlantsTopBar(
-            currentAddress = currentAddress,
+            currentAddress = locationStateHolder.currentAddress,
             onLocationClick = { 
                 // Chỉ hiển thị dialog nếu chưa có quyền
                 if (!LocationHelper.hasLocationPermission(context)) {
@@ -470,6 +473,8 @@ private fun ReminderContent() {
 @Preview(showBackground = true)
 @Composable
 private fun MyPlantsScreenPreview() {
-    MyplantScreen()
+    MyplantScreen(
+        locationStateHolder = com.baothanhbin.core.ui.util.LocationStateHolder()
+    )
 }
 

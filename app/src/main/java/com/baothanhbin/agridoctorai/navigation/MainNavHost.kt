@@ -29,16 +29,26 @@ fun MainNavHost(
     ) {
         homeScreen(
             navController = navController,
+            locationStateHolder = appState.locationStateHolder,
             onNavigateToChatbot = {
                 appState.navigateToTopLevelDestination(com.baothanhbin.agridoctorai.navigation.TopLevelDestination.CHATBOT)
             }
         )
-        diagnoseScreen(navController = navController)
-        myplantScreen()
+        diagnoseScreen(
+            navController = navController,
+            locationStateHolder = appState.locationStateHolder
+        )
+        myplantScreen(locationStateHolder = appState.locationStateHolder)
         chatbotScreen(navController = navController)
         cameraScreen(navController = navController)
-        processImageScreen(navController = navController)
-        diagnoseResultScreen(navController = navController)
+        processImageScreen(
+            navController = navController,
+            locationStateHolder = appState.locationStateHolder
+        )
+        diagnoseResultScreen(
+            navController = navController,
+            locationStateHolder = appState.locationStateHolder
+        )
         diagnoseFailedScreen(navController = navController)
         lightMeterScreen(navController = navController)
     }

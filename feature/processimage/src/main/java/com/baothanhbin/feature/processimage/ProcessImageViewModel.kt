@@ -13,6 +13,7 @@ import com.baothanhbin.core.data.repository.DiagnoseResultRepository
 import com.baothanhbin.core.database.model.toEntity
 import com.baothanhbin.core.network.NetworkDataSource
 import com.baothanhbin.core.ui.util.LocationHelper
+import com.baothanhbin.core.ui.util.LocationStateHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -52,7 +53,11 @@ class ProcessImageViewModel @Inject constructor(
     private val _navigationEvent = MutableSharedFlow<ProcessImageNavigationEvent>()
     val navigationEvent: SharedFlow<ProcessImageNavigationEvent> = _navigationEvent.asSharedFlow()
 
-    fun processImage(imageUri: Uri?) {
+    fun processImage(
+        imageUri: Uri?,
+        currentAddress: String?,
+        locationStateHolder: LocationStateHolder?
+    ) {
         viewModelScope.launch {
             _uiState.value = ProcessImageUiState(step = 0)
             if (imageUri == null) return@launch
@@ -98,8 +103,12 @@ class ProcessImageViewModel @Inject constructor(
                         }
                         
                         // Lấy location hiện tại nếu có quyền
-                        val currentLocation = withContext(Dispatchers.IO) {
+                        val locationFromState = currentAddress ?: locationStateHolder?.currentAddress
+                        val currentLocation = locationFromState ?: withContext(Dispatchers.IO) {
                             getCurrentLocationAddress(context)
+                        }
+                        if (currentLocation != null && locationStateHolder?.currentAddress != currentLocation) {
+                            locationStateHolder?.updateAddress(currentLocation)
                         }
                         
                         // Use saved URI if available, otherwise use original (for camera images)

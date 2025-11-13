@@ -18,11 +18,13 @@ fun NavController.navigateToHome(navOptions: NavOptions? = null) {
 
 fun NavGraphBuilder.homeScreen(
     navController: NavController,
+    locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder,
     onNavigateToChatbot: (() -> Unit)? = null
 ) {
     composable(route = HOME_ROUTE) {
         HomeRoute(
             navController = navController,
+            locationStateHolder = locationStateHolder,
             onNavigateToChatbot = onNavigateToChatbot
         )
     }

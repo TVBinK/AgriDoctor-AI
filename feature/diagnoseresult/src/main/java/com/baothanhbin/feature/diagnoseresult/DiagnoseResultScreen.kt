@@ -45,6 +45,7 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.model.RecoveryItem
 import com.baothanhbin.core.model.TreatmentItem
@@ -71,6 +72,7 @@ fun DiagnoseResultRoute(
     treatment: List<TreatmentItem> = emptyList(),
     recoveryCare: List<RecoveryItem> = emptyList(),
     location: String? = null,
+    locationStateHolder: LocationStateHolder = LocationStateHolder(),
     viewModel: DiagnoseResultViewModel = hiltViewModel()
 ) {
     val loadedResult by viewModel.loadedResult.collectAsState()
@@ -89,6 +91,13 @@ fun DiagnoseResultRoute(
         recoveryCare = recoveryCare,
         location = location
     )
+    val displayLocation = locationStateHolder.currentAddress ?: finalData.location
+
+    LaunchedEffect(displayLocation) {
+        if (!displayLocation.isNullOrBlank() && locationStateHolder.currentAddress != displayLocation) {
+            locationStateHolder.updateAddress(displayLocation)
+        }
+    }
 
     DiagnoseResultScreen(
         imageUri = imageUri,
@@ -98,7 +107,7 @@ fun DiagnoseResultRoute(
         causes = finalData.causes,
         treatment = finalData.treatment,
         recoveryCare = finalData.recoveryCare,
-        location = finalData.location,
+        location = displayLocation,
         onBack = { navController?.popBackStack() }
     )
 }

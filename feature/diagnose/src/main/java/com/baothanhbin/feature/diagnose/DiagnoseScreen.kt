@@ -87,6 +87,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 @Composable
 fun DiagnoseRoute(
     navController: NavHostController? = null,
+    locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder,
     viewModel: DiagnoseViewModel = hiltViewModel()
 ) {
     // Handle navigation events
@@ -103,16 +104,17 @@ fun DiagnoseRoute(
     }
     
     DiagnoseScreen(
-        viewModel = viewModel
+        viewModel = viewModel,
+        locationStateHolder = locationStateHolder
     )
 }
 
 @Composable
 fun DiagnoseScreen(
-    viewModel: DiagnoseViewModel = hiltViewModel()
+    viewModel: DiagnoseViewModel = hiltViewModel(),
+    locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder
 ) {
     var showLocationDialog by remember { mutableStateOf(false) }
-    var currentAddress by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
@@ -130,7 +132,7 @@ fun DiagnoseScreen(
                         latitude = location.latitude,
                         longitude = location.longitude
                     )
-                    currentAddress = address
+                    locationStateHolder.updateAddress(address)
                     Log.d("DiagnoseScreen", "Địa chỉ: $address")
                 }
             },
@@ -140,10 +142,10 @@ fun DiagnoseScreen(
         )
     }
     
-    // Kiểm tra permission khi khởi động
+    // Kiểm tra permission khi khởi động - chỉ load nếu chưa có address
     LaunchedEffect(Unit) {
         viewModel.loadHistory()
-        if (LocationHelper.hasLocationPermission(context)) {
+        if (LocationHelper.hasLocationPermission(context) && locationStateHolder.currentAddress == null) {
             getCurrentLocation()
         }
     }
@@ -172,7 +174,7 @@ fun DiagnoseScreen(
             contentScale = ContentScale.FillWidth
         )
         DiagnoseTopBar(
-            currentAddress = currentAddress,
+            currentAddress = locationStateHolder.currentAddress,
             onLocationClick = { 
                 // Chỉ hiển thị dialog nếu chưa có quyền
                 if (!LocationHelper.hasLocationPermission(context)) {
