@@ -1,15 +1,12 @@
-package com.baothanhbin.feature.diagnose
+package com.baothanhbin.feature.myplants
 
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
 import android.location.Location
-import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.baothanhbin.core.data.repository.DiagnoseResultRepository
-import com.baothanhbin.core.database.model.DiagnoseResultEntity
 import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,45 +19,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-sealed class DiagnoseNavigationEvent {
-    data class NavigateToResult(val imageUri: Uri?) : DiagnoseNavigationEvent()
-}
-
 @HiltViewModel
-class DiagnoseViewModel @Inject constructor(
-    application: Application,
-    private val diagnoseResultRepository: DiagnoseResultRepository
+class MyPlantsViewModel @Inject constructor(
+    application: Application
 ) : AndroidViewModel(application) {
-
-    private val _historyItems = MutableStateFlow<List<DiagnoseResultEntity>>(emptyList())
-    val historyItems: StateFlow<List<DiagnoseResultEntity>> = _historyItems.asStateFlow()
-
-    private val _navigationEvent = MutableSharedFlow<DiagnoseNavigationEvent>()
-    val navigationEvent: SharedFlow<DiagnoseNavigationEvent> = _navigationEvent.asSharedFlow()
 
     private val _showLocationDialog = MutableStateFlow(false)
     val showLocationDialog: StateFlow<Boolean> = _showLocationDialog.asStateFlow()
 
     private val _locationError = MutableSharedFlow<String>()
     val locationError: SharedFlow<String> = _locationError.asSharedFlow()
-
-    init {
-        loadHistory()
-    }
-
-    fun loadHistory() {
-        viewModelScope.launch {
-            val results = diagnoseResultRepository.getAllDiagnoseResults()
-            _historyItems.value = results
-        }
-    }
-
-    fun onHistoryItemClick(entity: DiagnoseResultEntity) {
-        viewModelScope.launch {
-            val uri = entity.imageUri?.let { Uri.parse(it) }
-            _navigationEvent.emit(DiagnoseNavigationEvent.NavigateToResult(uri))
-        }
-    }
 
     fun checkAndGetLocation(context: Context, locationStateHolder: LocationStateHolder) {
         if (!LocationHelper.hasLocationPermission(context)) {
@@ -78,7 +46,7 @@ class DiagnoseViewModel @Inject constructor(
         LocationHelper.getCurrentLocation(
             context = context,
             onLocationReceived = { location ->
-                Log.d("DiagnoseViewModel", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
+                Log.d("MyPlantsViewModel", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
                 
                 // Lấy địa chỉ từ tọa độ
                 viewModelScope.launch {
@@ -88,11 +56,11 @@ class DiagnoseViewModel @Inject constructor(
                         longitude = location.longitude
                     )
                     locationStateHolder.updateAddress(address)
-                    Log.d("DiagnoseViewModel", "Địa chỉ: $address")
+                    Log.d("MyPlantsViewModel", "Địa chỉ: $address")
                 }
             },
             onError = { exception ->
-                Log.e("DiagnoseViewModel", "Lỗi lấy vị trí: ${exception.message}", exception)
+                Log.e("MyPlantsViewModel", "Lỗi lấy vị trí: ${exception.message}", exception)
                 viewModelScope.launch {
                     _locationError.emit(exception.message ?: "Không thể lấy vị trí")
                 }

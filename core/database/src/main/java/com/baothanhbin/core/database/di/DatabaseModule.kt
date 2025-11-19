@@ -42,7 +42,54 @@ object DatabaseModule {
         return if (savedPassword != null) {
             // Decode base64 password
             try {
-                android.util.Base64.decode(savedPassword, android.util.Base64.NO_WRAP)
+                val passwordBytes = android.util.Base64.decode(savedPassword, android.util.Base64.NO_WRAP)
+                
+                // DEBUG: Log password để có thể dùng trong DB Browser (CHỈ TRONG DEBUG BUILD)
+                // Lưu ý: SQLCipher trong DB Browser cần password dạng string, nhưng password hiện tại là ByteArray
+                // Có thể thử dùng Base64 string hoặc hex string
+                try {
+                    val debugClass = Class.forName("com.baothanhbin.agridoctorai.BuildConfig")
+                    val debugField = debugClass.getField("DEBUG")
+                    val isDebug = debugField.getBoolean(null)
+                    
+                    if (isDebug) {
+                        Log.d(TAG, "=== DATABASE PASSWORD (DEBUG ONLY) ===")
+                        Log.d(TAG, "⚠️ CHỈ SỬ DỤNG TRONG DEBUG - XÓA LOG NÀY TRONG PRODUCTION!")
+                        Log.d(TAG, "")
+                        
+                        // Password gốc (Base64) - THỬ CÁCH NÀY TRƯỚC
+                        Log.d(TAG, "1. Base64 password (THỬ TRƯỚC):")
+                        Log.d(TAG, "   $savedPassword")
+                        Log.d(TAG, "")
+                        
+                        // Hex string
+                        val hexString = passwordBytes.joinToString("") { "%02x".format(it) }
+                        Log.d(TAG, "2. Hex password (THỬ NẾU CÁCH 1 KHÔNG ĐƯỢC):")
+                        Log.d(TAG, "   $hexString")
+                        Log.d(TAG, "")
+                        
+                        // Thử convert sang UTF-8 string (có thể không valid)
+                        try {
+                            val utf8String = String(passwordBytes, Charsets.UTF_8)
+                            Log.d(TAG, "3. UTF-8 string (CÓ THỂ KHÔNG VALID):")
+                            Log.d(TAG, "   $utf8String")
+                            Log.d(TAG, "")
+                        } catch (e: Exception) {
+                            Log.d(TAG, "3. UTF-8 string: Không thể convert (không phải valid UTF-8)")
+                            Log.d(TAG, "")
+                        }
+                        
+                        Log.d(TAG, "HƯỚNG DẪN:")
+                        Log.d(TAG, "- Copy Base64 password (cách 1) và paste vào DB Browser")
+                        Log.d(TAG, "- Nếu không được, thử Hex password (cách 2)")
+                        Log.d(TAG, "- Đảm bảo chọn 'SQLCipher 4 defaults' trong DB Browser")
+                        Log.d(TAG, "=== END PASSWORD ===")
+                    }
+                } catch (e: Exception) {
+                    // Nếu không tìm thấy BuildConfig, không log (production build)
+                }
+                
+                passwordBytes
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to decode database password, generating new one", e)
                 generateAndSavePassword(context, prefs)

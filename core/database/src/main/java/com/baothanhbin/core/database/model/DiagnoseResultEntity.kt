@@ -29,18 +29,7 @@ data class DiagnoseResultEntity(
     val treatment: List<TreatmentData>,
     @TypeConverters(RecoveryCareDataListConverter::class)
     val recoveryCare: List<RecoveryCareData>
-) {
-    fun toDiagnoseData(): DiagnoseData {
-        return DiagnoseData(
-            diseaseName = diseaseName,
-            possibleProblems = possibleProblems,
-            symptoms = symptoms,
-            causes = causes,
-            treatment = treatment,
-            recoveryCare = recoveryCare
-        )
-    }
-}
+)
 
 fun DiagnoseData.toEntity(imageUri: String? = null, location: String? = null): DiagnoseResultEntity {
     return DiagnoseResultEntity(

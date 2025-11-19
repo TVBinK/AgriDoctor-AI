@@ -1,12 +1,6 @@
 package com.baothanhbin.feature.myplants
 
 import android.Manifest
-import android.content.Context
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
-import android.os.Bundle
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
@@ -24,6 +18,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,7 +37,6 @@ import androidx.compose.ui.unit.sp
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.theme.Body1
 import com.baothanhbin.core.ui.dialog.LocationDialog
-import com.baothanhbin.core.ui.util.LocationHelper
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.interaction.MutableInteractionSource
 
@@ -66,41 +62,17 @@ fun MyplantRoute(
 
 @Composable
 fun MyplantScreen(
-    locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder
+    locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder,
+    viewModel: MyPlantsViewModel = hiltViewModel()
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    var showLocationDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    
-    // Function để lấy vị trí và địa chỉ
-    fun getCurrentLocation() {
-        LocationHelper.getCurrentLocation(
-            context = context,
-            onLocationReceived = { location ->
-                Log.d("MyPlantsScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
-                
-                // Lấy địa chỉ từ tọa độ
-                coroutineScope.launch {
-                    val address = LocationHelper.getAddressFromLocation(
-                        context = context,
-                        latitude = location.latitude,
-                        longitude = location.longitude
-                    )
-                    locationStateHolder.updateAddress(address)
-                    Log.d("MyPlantsScreen", "Địa chỉ: $address")
-                }
-            },
-            onError = { exception ->
-                Log.e("MyPlantsScreen", "Lỗi lấy vị trí: ${exception.message}", exception)
-            }
-        )
-    }
+    val showLocationDialog by viewModel.showLocationDialog.collectAsState()
     
     // Kiểm tra permission khi khởi động - chỉ load nếu chưa có address
     LaunchedEffect(Unit) {
-        if (LocationHelper.hasLocationPermission(context) && locationStateHolder.currentAddress == null) {
-            getCurrentLocation()
+        if (viewModel.shouldLoadLocationOnStart(context, locationStateHolder)) {
+            viewModel.getCurrentLocation(context, locationStateHolder)
         }
     }
     
@@ -109,9 +81,10 @@ fun MyplantScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            getCurrentLocation()
+            viewModel.onPermissionGranted(context, locationStateHolder)
+        } else {
+            viewModel.onPermissionDenied()
         }
-        showLocationDialog = false
     }
     
     val tabs = listOf(
@@ -161,13 +134,7 @@ fun MyplantScreen(
         MyPlantsTopBar(
             currentAddress = locationStateHolder.currentAddress,
             onLocationClick = { 
-                // Chỉ hiển thị dialog nếu chưa có quyền
-                if (!LocationHelper.hasLocationPermission(context)) {
-                    showLocationDialog = true
-                } else {
-                    // Nếu đã có quyền, refresh location
-                    getCurrentLocation()
-                }
+                viewModel.checkAndGetLocation(context, locationStateHolder)
             }
         )
         Column(
@@ -218,7 +185,7 @@ fun MyplantScreen(
                     locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                 },
                 onCancelClick = {
-                    showLocationDialog = false
+                    viewModel.hideLocationDialog()
                 }
             )
         }

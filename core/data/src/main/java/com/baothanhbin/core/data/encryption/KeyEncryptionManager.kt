@@ -17,7 +17,8 @@ import javax.crypto.spec.GCMParameterSpec
 class KeyEncryptionManager(private val context: Context) {
 
     companion object {
-        private const val KEYSTORE_ALIAS = "api_key_encryption_key"
+        private const val KEYSTORE_ALIAS_API_KEY = "api_key_encryption_key"
+        private const val KEYSTORE_ALIAS_LOCATION = "location_encryption_key"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val IV_LENGTH = 12
@@ -33,8 +34,8 @@ class KeyEncryptionManager(private val context: Context) {
     /**
      * Lấy hoặc tạo secret key từ Android Keystore
      */
-    private fun getOrCreateSecretKey(): SecretKey {
-        val existingKey = keyStore.getEntry(KEYSTORE_ALIAS, null) as? KeyStore.SecretKeyEntry
+    private fun getOrCreateSecretKey(alias: String): SecretKey {
+        val existingKey = keyStore.getEntry(alias, null) as? KeyStore.SecretKeyEntry
         if (existingKey != null) {
             return existingKey.secretKey
         }
@@ -46,7 +47,7 @@ class KeyEncryptionManager(private val context: Context) {
         )
 
         val keyGenParameterSpec = KeyGenParameterSpec.Builder(
-            KEYSTORE_ALIAS,
+            alias,
             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
         )
             .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
@@ -56,18 +57,18 @@ class KeyEncryptionManager(private val context: Context) {
         keyGenerator.init(keyGenParameterSpec)
         return keyGenerator.generateKey()
     }
-
+    
     /**
-     * Mã hóa API key
+     * Mã hóa string generic
      */
-    fun encryptApiKey(apiKey: String): String? {
+    private fun encryptString(text: String, alias: String): String? {
         return try {
-            val secretKey = getOrCreateSecretKey()
+            val secretKey = getOrCreateSecretKey(alias)
             val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.ENCRYPT_MODE, secretKey)
 
             val iv = cipher.iv
-            val encryptedBytes = cipher.doFinal(apiKey.toByteArray(Charsets.UTF_8))
+            val encryptedBytes = cipher.doFinal(text.toByteArray(Charsets.UTF_8))
 
             // Kết hợp IV và encrypted data
             val combined = ByteArray(IV_LENGTH + encryptedBytes.size)
@@ -76,17 +77,17 @@ class KeyEncryptionManager(private val context: Context) {
 
             Base64.encodeToString(combined, Base64.NO_WRAP)
         } catch (e: Exception) {
-            Log.e(TAG, "Error encrypting API key: ${e.message}", e)
+            Log.e(TAG, "Error encrypting string with alias $alias: ${e.message}", e)
             null
         }
     }
-
+    
     /**
-     * Giải mã API key
+     * Giải mã string generic
      */
-    fun decryptApiKey(encryptedApiKey: String): String? {
+    private fun decryptString(encryptedText: String, alias: String): String? {
         return try {
-            val combined = Base64.decode(encryptedApiKey, Base64.NO_WRAP)
+            val combined = Base64.decode(encryptedText, Base64.NO_WRAP)
 
             // Tách IV và encrypted data
             val iv = ByteArray(IV_LENGTH)
@@ -94,7 +95,7 @@ class KeyEncryptionManager(private val context: Context) {
             System.arraycopy(combined, 0, iv, 0, IV_LENGTH)
             System.arraycopy(combined, IV_LENGTH, encryptedBytes, 0, encryptedBytes.size)
 
-            val secretKey = getOrCreateSecretKey()
+            val secretKey = getOrCreateSecretKey(alias)
             val cipher = Cipher.getInstance(TRANSFORMATION)
             val spec = GCMParameterSpec(128, iv)
             cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
@@ -102,9 +103,37 @@ class KeyEncryptionManager(private val context: Context) {
             val decryptedBytes = cipher.doFinal(encryptedBytes)
             String(decryptedBytes, Charsets.UTF_8)
         } catch (e: Exception) {
-            Log.e(TAG, "Error decrypting API key: ${e.message}", e)
+            Log.e(TAG, "Error decrypting string with alias $alias: ${e.message}", e)
             null
         }
+    }
+
+    /**
+     * Mã hóa API key
+     */
+    fun encryptApiKey(apiKey: String): String? {
+        return encryptString(apiKey, KEYSTORE_ALIAS_API_KEY)
+    }
+
+    /**
+     * Giải mã API key
+     */
+    fun decryptApiKey(encryptedApiKey: String): String? {
+        return decryptString(encryptedApiKey, KEYSTORE_ALIAS_API_KEY)
+    }
+    
+    /**
+     * Mã hóa location (địa chỉ)
+     */
+    fun encryptLocation(location: String): String? {
+        return encryptString(location, KEYSTORE_ALIAS_LOCATION)
+    }
+    
+    /**
+     * Giải mã location (địa chỉ)
+     */
+    fun decryptLocation(encryptedLocation: String): String? {
+        return decryptString(encryptedLocation, KEYSTORE_ALIAS_LOCATION)
     }
 }
 

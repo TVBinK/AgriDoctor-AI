@@ -38,11 +38,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -78,7 +80,6 @@ import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.theme.Yellow1
 import com.baothanhbin.core.ui.dialog.LocationDialog
-import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.feature.camera.navigation.navigateToCamera
 import com.baothanhbin.feature.lightmeter.navigation.navigateToLightMeter
@@ -101,41 +102,15 @@ fun HomeRoute(
 fun HomeScreen(
     navController: NavController? = null,
     locationStateHolder: LocationStateHolder,
-    onNavigateToChatbot: (() -> Unit)? = null
+    onNavigateToChatbot: (() -> Unit)? = null,
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
-    var showLocationDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    val showLocationDialog by viewModel.showLocationDialog.collectAsState()
 
-    // Function để lấy vị trí và địa chỉ
-    fun getCurrentLocation() {
-        LocationHelper.getCurrentLocation(
-            context = context,
-            onLocationReceived = { location ->
-                Log.d("HomeScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
-                
-                // Lấy địa chỉ từ tọa độ
-                coroutineScope.launch {
-                    val address = LocationHelper.getAddressFromLocation(
-                        context = context,
-                        latitude = location.latitude,
-                        longitude = location.longitude
-                    )
-                    locationStateHolder.updateAddress(address)
-                    Log.d("HomeScreen", "Địa chỉ: $address")
-                }
-            },
-            onError = { exception ->
-                Log.e("HomeScreen", "Lỗi lấy vị trí: ${exception.message}", exception)
-            }
-        )
-    }
-    
-    // Kiểm tra permission khi khởi động - chỉ load nếu chưa có address
+    // Khởi tạo location khi screen start
     LaunchedEffect(Unit) {
-        if (LocationHelper.hasLocationPermission(context) && locationStateHolder.currentAddress == null) {
-            getCurrentLocation()
-        }
+        viewModel.initializeLocation(context, locationStateHolder)
     }
     
     // Launcher để request location permission
@@ -143,9 +118,10 @@ fun HomeScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            getCurrentLocation()
+            viewModel.onPermissionGranted(context, locationStateHolder)
+        } else {
+            viewModel.onPermissionDenied()
         }
-        showLocationDialog = false
     }
     
     Box(
@@ -191,13 +167,7 @@ fun HomeScreen(
             HomeTopBar(
                 currentAddress = locationStateHolder.currentAddress,
                 onLocationClick = { 
-                    // Chỉ hiển thị dialog nếu chưa có quyền
-                    if (!LocationHelper.hasLocationPermission(context)) {
-                        showLocationDialog = true
-                    } else {
-                        // Nếu đã có quyền, refresh location
-                        getCurrentLocation()
-                    }
+                    viewModel.checkAndGetLocation(context, locationStateHolder)
                 }
             )
         }
@@ -209,7 +179,7 @@ fun HomeScreen(
                     locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                 },
                 onCancelClick = {
-                    showLocationDialog = false
+                    viewModel.hideLocationDialog()
                 }
             )
         }

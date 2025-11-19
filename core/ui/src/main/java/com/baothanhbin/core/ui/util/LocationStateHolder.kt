@@ -17,10 +17,6 @@ class LocationStateHolder {
     fun updateAddress(address: String?) {
         currentAddress = address
     }
-    
-    fun clearAddress() {
-        currentAddress = null
-    }
 }
 
 @Composable

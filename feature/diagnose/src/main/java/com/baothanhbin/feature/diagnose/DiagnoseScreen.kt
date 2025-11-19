@@ -1,12 +1,7 @@
 package com.baothanhbin.feature.diagnose
 
 import android.Manifest
-import android.content.Context
-import android.location.Location
-import android.location.LocationListener
-import android.location.LocationManager
 import android.net.Uri
-import android.os.Bundle
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -44,10 +39,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,7 +73,6 @@ import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.ui.dialog.LocationDialog
-import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.feature.diagnoseresult.navigation.navigateToDiagnoseResult
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -114,39 +112,14 @@ fun DiagnoseScreen(
     viewModel: DiagnoseViewModel = hiltViewModel(),
     locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder
 ) {
-    var showLocationDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    
-    // Function để lấy vị trí và địa chỉ
-    fun getCurrentLocation() {
-        LocationHelper.getCurrentLocation(
-            context = context,
-            onLocationReceived = { location ->
-                Log.d("DiagnoseScreen", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
-                
-                // Lấy địa chỉ từ tọa độ
-                coroutineScope.launch {
-                    val address = LocationHelper.getAddressFromLocation(
-                        context = context,
-                        latitude = location.latitude,
-                        longitude = location.longitude
-                    )
-                    locationStateHolder.updateAddress(address)
-                    Log.d("DiagnoseScreen", "Địa chỉ: $address")
-                }
-            },
-            onError = { exception ->
-                Log.e("DiagnoseScreen", "Lỗi lấy vị trí: ${exception.message}", exception)
-            }
-        )
-    }
+    val showLocationDialog by viewModel.showLocationDialog.collectAsState()
     
     // Kiểm tra permission khi khởi động - chỉ load nếu chưa có address
     LaunchedEffect(Unit) {
         viewModel.loadHistory()
-        if (LocationHelper.hasLocationPermission(context) && locationStateHolder.currentAddress == null) {
-            getCurrentLocation()
+        if (viewModel.shouldLoadLocationOnStart(context, locationStateHolder)) {
+            viewModel.getCurrentLocation(context, locationStateHolder)
         }
     }
     
@@ -155,9 +128,10 @@ fun DiagnoseScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            getCurrentLocation()
+            viewModel.onPermissionGranted(context, locationStateHolder)
+        } else {
+            viewModel.onPermissionDenied()
         }
-        showLocationDialog = false
     }
     
     Box(
@@ -176,13 +150,7 @@ fun DiagnoseScreen(
         DiagnoseTopBar(
             currentAddress = locationStateHolder.currentAddress,
             onLocationClick = { 
-                // Chỉ hiển thị dialog nếu chưa có quyền
-                if (!LocationHelper.hasLocationPermission(context)) {
-                    showLocationDialog = true
-                } else {
-                    // Nếu đã có quyền, refresh location
-                    getCurrentLocation()
-                }
+                viewModel.checkAndGetLocation(context, locationStateHolder)
             }
         )
         Spacer(modifier = Modifier.height(12.dp))
@@ -208,7 +176,7 @@ fun DiagnoseScreen(
                     locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                 },
                 onCancelClick = {
-                    showLocationDialog = false
+                    viewModel.hideLocationDialog()
                 }
             )
         }

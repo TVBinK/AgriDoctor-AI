@@ -23,13 +23,8 @@ import java.util.Locale
 
 object LocationHelper {
     private const val TAG = "LocationHelper"
-    private const val LOCATION_TIMEOUT_MS = 5_000L // 5 giây timeout
-
     /**
      * Kiểm tra xem có quyền truy cập location không
-     * 
-     * @param context Context của ứng dụng
-     * @return true nếu có quyền ACCESS_FINE_LOCATION, false nếu không
      */
     fun hasLocationPermission(context: Context): Boolean {
         return ContextCompat.checkSelfPermission(
@@ -40,13 +35,8 @@ object LocationHelper {
 
     /**
      * Lấy location hiện tại của thiết bị sử dụng Fused Location Provider API
-     * 
      * Fused Location Provider tự động chọn nguồn tốt nhất (GPS, Network, WiFi)
      * để đảm bảo tốc độ nhanh và độ chính xác cao, đồng thời tiết kiệm pin
-     * 
-     * @param context Context của ứng dụng
-     * @param onLocationReceived Callback được gọi khi nhận được location
-     * @param onError Callback được gọi khi có lỗi xảy ra
      */
     @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
     fun getCurrentLocation(
@@ -54,15 +44,6 @@ object LocationHelper {
         onLocationReceived: (Location) -> Unit,
         onError: (Exception) -> Unit
     ) {
-        Log.d(TAG, "getCurrentLocation() -> bắt đầu request location với Fused Location Provider")
-
-        // Kiểm tra quyền truy cập location trước khi thực hiện
-        if (!hasLocationPermission(context)) {
-            Log.w(TAG, "getCurrentLocation() -> thiếu quyền ACCESS_FINE_LOCATION")
-            onError(SecurityException("Không có quyền truy cập vị trí"))
-            return
-        }
-
         try {
             // Tạo FusedLocationProviderClient - API hiện đại của Google Play Services
             val fusedLocationClient: FusedLocationProviderClient = 
@@ -71,10 +52,7 @@ object LocationHelper {
             var locationReceived = false
             val cancellationTokenSource = com.google.android.gms.tasks.CancellationTokenSource()
 
-            // Sử dụng getCurrentLocation() - API mới nhất, nhanh hơn requestLocationUpdates()
-            // getCurrentLocation() tối ưu để lấy location một lần, không cần callback phức tạp
-            Log.d(TAG, "getCurrentLocation() -> request location từ Fused Location Provider (single request)")
-            
+            // getCurrentLocation() tối ưu để lấy location một lần
             fusedLocationClient.getCurrentLocation(
                 Priority.PRIORITY_HIGH_ACCURACY, // Ưu tiên GPS cho độ chính xác cao
                 cancellationTokenSource.token // Token để có thể cancel request nếu cần
@@ -126,13 +104,8 @@ object LocationHelper {
 
     /**
      * Lấy địa chỉ từ tọa độ (Geocoding - chuyển đổi tọa độ thành địa chỉ)
-     * 
      * Chuyển đổi latitude/longitude thành địa chỉ văn bản (ví dụ: "123 Đường ABC, Quận XYZ, TP.HCM")
      * Sử dụng Geocoder API của Android để query Google Maps API
-     * 
-     * @param context Context của ứng dụng
-     * @param latitude Vĩ độ
-     * @param longitude Kinh độ
      * @return Địa chỉ dạng string hoặc null nếu không tìm thấy
      */
     suspend fun getAddressFromLocation(
@@ -211,10 +184,8 @@ object LocationHelper {
 
     /**
      * Format địa chỉ từ Address object thành string dễ đọc
-     * 
      * Address object chứa nhiều thông tin chi tiết (số nhà, đường, quận, thành phố, v.v.)
      * Hàm này chọn các thông tin quan trọng nhất và ghép lại thành string
-     * 
      * @param address Address object từ Geocoder
      * @return String địa chỉ đã được format (ví dụ: "123 Đường ABC, Quận XYZ, TP.HCM")
      */
