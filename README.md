@@ -123,7 +123,20 @@ build-logic/         : Gradle convention plugins
   3. So sánh với hash kỳ vọng.
   4. Khác biệt ⇒ cảnh báo app bị re-sign.
 
-### 2. Bảo vệ API Key Gemini
+### 2. Mã hóa database với SQLCipher + Android Keystore
+
+- Room database trong `core/database` được mã hóa bằng **SQLCipher**.
+- Password database là **32 bytes random** sinh bằng `SecureRandom` (256-bit), được:
+  - Encode Base64.
+  - **Mã hóa bằng `KeyEncryptionManager` (AES/GCM, Android Keystore, alias riêng cho DB)**.
+  - Lưu vào `SharedPreferences` dưới dạng ciphertext (`database_password_prefs.xml`), đã exclude khỏi backup.
+- Khi app khởi chạy:
+  1. Đọc ciphertext password từ SharedPreferences.
+  2. Giải mã bằng Android Keystore để lấy lại Base64 gốc.
+  3. Decode thành `ByteArray` và truyền vào `SQLCipher SupportFactory` cho Room.
+- Key AES trong Keystore **không thể export** ra ngoài app, giúp giảm rủi ro nếu chỉ bị lộ file DB + SharedPreferences.
+
+### 3. Bảo vệ API Key Gemini
 
 - API key được mã hóa AES-256 với khóa sinh từ Android Keystore (hardware-backed).  
 - Ciphertext lưu trong Proto DataStore (`core/datastore`).  
@@ -138,7 +151,7 @@ val cipher = dataStore.read()
 val plain = keyEncryptionManager.decrypt(cipher)
 ```
 
-### 3. Obfuscation bằng R8/ProGuard
+### 4. Obfuscation bằng R8/ProGuard
 
 ```proguard
 -repackageclasses 'z9x8w7v6u5t4s3r2q1p0o9n8m7l6k5j4i3h2g1f0e9d8c7b6a5'
@@ -150,7 +163,7 @@ val plain = keyEncryptionManager.decrypt(cipher)
 - Đổi tên class/method, xóa code thừa, khó đọc khi decompile.
 - Kết hợp shrink + optimize giúp APK nhỏ gọn hơn.
 
-### 4. Phát hiện APK bị chỉnh sửa
+### 5. Phát hiện APK bị chỉnh sửa
 
 Khi hacker recompile & re-sign:
 

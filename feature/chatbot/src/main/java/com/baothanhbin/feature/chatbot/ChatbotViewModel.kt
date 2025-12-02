@@ -79,8 +79,10 @@ class ChatbotViewModel @Inject constructor(
         loadChatHistory()
     }
 
-    private val MODEL_NAME =
-        if (BuildConfig.BUILD_TYPE == "debug") "gemini-2.0-flash-thinking-exp" else "gemini-1.5-flash"
+    // Model name cho Gemini API
+    // SDK 0.9.0 tự động thêm prefix "models/" nên chỉ cần tên model không có prefix
+    // Sử dụng gemini-2.5-flash - model nhanh và được hỗ trợ tốt trong API v1beta
+    private val MODEL_NAME = "gemini-2.5-flash"
 
     /**
      * Khởi tạo GenerativeModel với API key từ repository
@@ -168,7 +170,27 @@ class ChatbotViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e("ChatbotViewModel", "Exception when calling GenerativeModel: ${e.message}", e)
-                "Sorry, I encountered an error: ${e.message}"
+                
+                // Xử lý các lỗi phổ biến với message rõ ràng hơn
+                val errorMessage = when {
+                    e.message?.contains("429") == true || 
+                    e.message?.contains("quota") == true || 
+                    e.message?.contains("RESOURCE_EXHAUSTED") == true -> {
+                        "Đã vượt quá giới hạn sử dụng API. Vui lòng thử lại sau hoặc kiểm tra quota của bạn."
+                    }
+                    e.message?.contains("401") == true || 
+                    e.message?.contains("403") == true -> {
+                        "API key không hợp lệ hoặc không có quyền truy cập. Vui lòng kiểm tra cài đặt API key."
+                    }
+                    e.message?.contains("404") == true -> {
+                        "Model không tìm thấy. Vui lòng kiểm tra cấu hình model name."
+                    }
+                    else -> {
+                        "Xin lỗi, đã xảy ra lỗi: ${e.message ?: "Unknown error"}"
+                    }
+                }
+                
+                errorMessage
             }
             Log.d("ChatbotViewModel", "Received bot response: ${botResponse?.take(100)}")
             

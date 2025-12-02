@@ -19,6 +19,7 @@ class KeyEncryptionManager(private val context: Context) {
     companion object {
         private const val KEYSTORE_ALIAS_API_KEY = "api_key_encryption_key"
         private const val KEYSTORE_ALIAS_LOCATION = "location_encryption_key"
+        private const val KEYSTORE_ALIAS_DB_PASSWORD = "db_password_encryption_key"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val IV_LENGTH = 12
@@ -134,6 +135,20 @@ class KeyEncryptionManager(private val context: Context) {
      */
     fun decryptLocation(encryptedLocation: String): String? {
         return decryptString(encryptedLocation, KEYSTORE_ALIAS_LOCATION)
+    }
+
+    /**
+     * Mã hóa database password (đã được encode Base64 trước đó)
+     */
+    fun encryptDatabasePassword(passwordBase64: String): String? {
+        return encryptString(passwordBase64, KEYSTORE_ALIAS_DB_PASSWORD)
+    }
+
+    /**
+     * Giải mã database password, trả về Base64 string gốc
+     */
+    fun decryptDatabasePassword(encryptedPassword: String): String? {
+        return decryptString(encryptedPassword, KEYSTORE_ALIAS_DB_PASSWORD)
     }
 }
 
