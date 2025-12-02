@@ -83,6 +83,7 @@ import com.baothanhbin.core.ui.dialog.LocationDialog
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.feature.camera.navigation.navigateToCamera
 import com.baothanhbin.feature.lightmeter.navigation.navigateToLightMeter
+import com.baothanhbin.feature.settings.navigation.navigateToSettings
 import kotlinx.coroutines.launch
 
 @Composable
@@ -168,6 +169,9 @@ fun HomeScreen(
                 currentAddress = locationStateHolder.currentAddress,
                 onLocationClick = { 
                     viewModel.checkAndGetLocation(context, locationStateHolder)
+                },
+                onSettingsClick = {
+                    navController?.navigateToSettings()
                 }
             )
         }
@@ -308,7 +312,8 @@ private fun MeasurementToolsSection(
 @Composable
 fun HomeTopBar(
     currentAddress: String? = null,
-    onLocationClick: () -> Unit = {}
+    onLocationClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -342,8 +347,8 @@ fun HomeTopBar(
                 maxLines = 2
             )
         }
-        Box(modifier = Modifier.clickable { }) {
-            IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {
+        Box {
+            IconButton(onClick = onSettingsClick, modifier = Modifier.size(40.dp)) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = stringResource(R.string.settings),

@@ -43,6 +43,7 @@
             <option value="$PROJECT_DIR$/feature/lightmeter" />
             <option value="$PROJECT_DIR$/feature/myplants" />
             <option value="$PROJECT_DIR$/feature/processimage" />
+            <option value="$PROJECT_DIR$/feature/settings" />
             <option value="$PROJECT_DIR$/resources" />
           </set>
         </option>

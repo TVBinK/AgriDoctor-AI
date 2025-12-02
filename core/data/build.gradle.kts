@@ -32,4 +32,5 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:network"))
     implementation(libs.hilt.android)
+    implementation(libs.protobuf.kotlin.lite)
 }

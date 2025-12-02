@@ -31,6 +31,35 @@
     <string name="settings">Cài đặt</string>
     <string name="back">Quay lại</string>
     <string name="close">Đóng</string>
+    <string name="biometric_lock_title">Khóa ứng dụng bằng vân tay</string>
+    <string name="biometric_lock_description">Bắt buộc quét vân tay mỗi lần mở AgriDoctorAI để bảo vệ API key và dữ liệu chẩn đoán.</string>
+    <string name="biometric_lock_add_fingerprint">Thêm vân tay trong cài đặt hệ thống</string>
+    <string name="biometric_not_enrolled">Thiết bị chưa đăng ký vân tay. Vui lòng thêm trước khi bật.</string>
+    <string name="biometric_not_supported">Thiết bị của bạn không hỗ trợ sinh trắc học.</string>
+    <string name="biometric_retry">Quét lại</string>
+    <string name="biometric_lock_required_title">Yêu cầu xác thực</string>
+    <string name="biometric_lock_required_description">Vui lòng quét vân tay để tiếp tục sử dụng AgriDoctorAI.</string>
+    <string name="biometric_prompt_title">Xác thực vân tay</string>
+    <string name="biometric_prompt_subtitle">Mở khóa AgriDoctorAI</string>
+    <string name="biometric_prompt_failed">Vân tay không khớp, vui lòng thử lại.</string>
+    <string name="biometric_prompt_cancel">Huỷ</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_premium_title">Khám phá thêm tiện ích!</string>
+    <string name="settings_premium_subtitle">Mang đến trải nghiệm tốt hơn</string>
+
+    <string name="settings_language">Ngôn ngữ</string>
+    <string name="settings_language_value">Tiếng Việt</string>
+
+    <string name="settings_clear_caches">Xóa bộ nhớ đệm</string>
+    <string name="settings_clear_caches_value">(0B)</string>
+
+    <string name="settings_feedback">Góp ý</string>
+    <string name="settings_privacy_policy">Chính sách quyền riêng tư</string>
+    <string name="settings_contact">Liên hệ</string>
+    <string name="settings_rate_app">Đánh giá ứng dụng</string>
+
+    <string name="settings_premium_illustration_cd">Minh họa gói Premium</string>
     
     <!-- Diagnose Screen -->
     <string name="plant_health">Sức khỏe cây trồng</string>

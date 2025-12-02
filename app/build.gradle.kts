@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.biometric)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -83,6 +84,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     //Modules
     implementation(project(":core:model"))
+    implementation(project(":core:data"))
     implementation(project(":resources"))
     implementation(project(":feature:home"))
     implementation(project(":feature:chatbot"))
@@ -93,5 +95,7 @@ dependencies {
     implementation(project(":feature:diagnoseresult"))
     implementation(project(":feature:diagnosefailed"))
     implementation(project(":feature:lightmeter"))
+    implementation(project(":feature:settings"))
     implementation(project(":core:ui"))
+    implementation(project(":core:theme"))
 }

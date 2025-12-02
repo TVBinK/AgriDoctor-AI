@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+option java_package = "com.baothanhbin.core.datastore";
+option java_multiple_files = true;
+
+message SecuritySettingsProto {
+  bool biometrics_enabled = 1;
+  int64 last_unlock_timestamp = 2;
+}
+
