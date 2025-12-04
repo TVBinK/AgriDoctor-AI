@@ -7,8 +7,11 @@ import androidx.lifecycle.viewModelScope
 import com.baothanhbin.core.database.AgriDoctorDatabase
 import com.baothanhbin.core.database.converter.ChatMessageData
 import com.baothanhbin.core.database.model.ChatEntity
+import com.baothanhbin.core.database.model.DiseaseListEntity
 import com.baothanhbin.core.data.repository.ApiKeyRepository
+import com.baothanhbin.core.network.NetworkDataSource
 import com.google.ai.client.generativeai.GenerativeModel
+import com.google.ai.client.generativeai.type.content
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,9 +77,20 @@ class ChatbotViewModel @Inject constructor(
 
     private var _generativeModel: GenerativeModel? = null
     private var isInitializingApiKey = false
+    private var isInitializingDiseaseCache = false
 
     init {
         loadChatHistory()
+
+        // Lần đầu mở chatbot: chuẩn bị sẵn API key và cache danh sách bệnh cây
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                getOrInitializeGenerativeModel()
+                ensureDiseaseCacheLoaded()
+            } catch (e: Exception) {
+                Log.e("ChatbotViewModel", "Error initializing chatbot data: ${e.message}", e)
+            }
+        }
     }
 
     // Model name cho Gemini API
@@ -106,7 +120,28 @@ class ChatbotViewModel @Inject constructor(
             if (apiKey != null) {
                 _generativeModel = GenerativeModel(
                     modelName = MODEL_NAME,
-                    apiKey = apiKey
+                    apiKey = apiKey,
+                    systemInstruction = content {
+                        text(
+                            """
+                            Bạn là bác sĩ cây trồng (chuyên gia bệnh cây) trong ứng dụng AgriDoctorAI.
+                            Nhiệm vụ của bạn:
+                            - Chỉ tập trung vào các chủ đề liên quan đến cây trồng, nông nghiệp, sâu bệnh, dinh dưỡng và chăm sóc cây.
+                            - Khi người dùng hỏi một câu hỏi chung chung hoặc không liên quan đến cây trồng, hãy nhẹ nhàng hướng lại chủ đề bằng cách gợi ý họ mô tả:
+                              + Loại cây trồng
+                              + Triệu chứng, biểu hiện bất thường
+                              + Điều kiện đất, nước, thời tiết, phân bón đã sử dụng
+                            - Trả lời **bằng tiếng Việt**, rõ ràng, dễ hiểu, ưu tiên nông dân Việt Nam.
+                            - Với mỗi câu hỏi về bệnh cây, cố gắng trình bày theo cấu trúc:
+                              1) Khả năng bệnh / vấn đề chính
+                              2) Giải thích ngắn gọn
+                              3) Hướng xử lý khuyến nghị
+                              4) Cách phòng ngừa trong tương lai
+                            - Nếu thông tin người dùng cung cấp chưa đủ để chẩn đoán chính xác, hãy nói rõ điều đó và hỏi thêm các thông tin cần thiết.
+                            - Không trả lời các chủ đề nhạy cảm, chính trị, tôn giáo, hoặc ngoài phạm vi sức khỏe cây trồng.
+                            """.trimIndent()
+                        )
+                    }
                 )
                 Log.d("ChatbotViewModel", "GenerativeModel initialized successfully")
             } else {
@@ -121,16 +156,102 @@ class ChatbotViewModel @Inject constructor(
         return _generativeModel
     }
 
+    /**
+     * Tóm tắt JSON danh sách bệnh thành chuỗi RẤT ngắn gọn:
+     * - Chỉ lấy một vài bệnh đầu tiên.
+     * - Mỗi bệnh: tên + code + 1–2 keyword từ symptoms.
+     * - Giới hạn tổng độ dài nhỏ để giảm token tối đa.
+     */
+    private fun buildDiseaseSummary(diseasesJson: String): String {
+        return try {
+            // Regex đơn giản bắt "code": "..." và "diseaseName": "..."
+            val codeRegex = """"code"\s*:\s*"([^"]+)"""".toRegex()
+            val nameRegex = """"diseaseName"\s*:\s*"([^"]+)"""".toRegex()
+            val symptomsRegex = """"symptoms"\s*:\s*"([^"]+)"""".toRegex()
+
+            val codes = codeRegex.findAll(diseasesJson).toList()
+            val names = nameRegex.findAll(diseasesJson).toList()
+            val symptoms = symptomsRegex.findAll(diseasesJson).toList()
+
+            if (names.isEmpty()) {
+                return diseasesJson.take(500)
+            }
+
+            val count = minOf(names.size, codes.size, symptoms.size, 5) // chỉ lấy tối đa 5 bệnh
+
+            val summaryLines = (0 until count).map { index ->
+                val code = codes.getOrNull(index)?.groupValues?.getOrNull(1) ?: "N/A"
+                val name = names.getOrNull(index)?.groupValues?.getOrNull(1) ?: "Unknown"
+                val symptomText = symptoms.getOrNull(index)?.groupValues?.getOrNull(1) ?: ""
+                // Lấy rất ngắn: chỉ vài keyword đầu tiên từ symptoms
+                val shortSymptoms = symptomText
+                    .replace("\\n", " ")
+                    .replace("\n", " ")
+                    .split(Regex("[,.]"))
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .take(2) // tối đa 2 mảnh mô tả
+                    .joinToString(separator = ", ")
+                    .take(60)
+
+                "- $name ($code): triệu chứng chính: $shortSymptoms"
+            }
+
+            // Tổng độ dài summary giới hạn rất thấp
+            summaryLines.joinToString(separator = "\n").take(400)
+        } catch (e: Exception) {
+            Log.e("ChatbotViewModel", "Error summarizing diseasesJson: ${e.message}", e)
+            diseasesJson.take(300)
+        }
+    }
+
+    /**
+     * Đảm bảo đã có cache danh sách bệnh cây trong Room.
+     * Nếu chưa có thì gọi API /api/diseases và lưu raw JSON vào bảng diseases_cache.
+     */
+    private suspend fun ensureDiseaseCacheLoaded() {
+        if (isInitializingDiseaseCache) return
+
+        isInitializingDiseaseCache = true
+        try {
+            val diseaseDao = database.diseaseDao()
+
+            // Nếu đã có cache thì không cần gọi API lại
+            val existingCache = withContext(Dispatchers.IO) {
+                diseaseDao.getLatestDiseaseList()
+            }
+            if (existingCache != null && existingCache.json.isNotBlank()) {
+                Log.d("ChatbotViewModel", "Disease cache already exists, skip fetching")
+                return
+            }
+
+            Log.d("ChatbotViewModel", "Fetching diseases list from server")
+            val diseasesJson = NetworkDataSource.getDiseasesJson()
+
+            if (diseasesJson != null && diseasesJson.isNotBlank()) {
+                withContext(Dispatchers.IO) {
+                    diseaseDao.upsertDiseaseList(
+                        DiseaseListEntity(
+                            id = 0,
+                            json = diseasesJson,
+                            updatedAt = System.currentTimeMillis()
+                        )
+                    )
+                }
+                Log.d("ChatbotViewModel", "Disease cache saved to database")
+            } else {
+                Log.e("ChatbotViewModel", "Failed to fetch diseases list from server")
+            }
+        } catch (e: Exception) {
+            Log.e("ChatbotViewModel", "Error loading disease cache: ${e.message}", e)
+        } finally {
+            isInitializingDiseaseCache = false
+        }
+    }
+
 
     fun onMessageSent(message: String) {
-        Log.d("ChatbotViewModel", "onMessageSent called with message: '$message'")
-        if (message.isBlank()) {
-            Log.d("ChatbotViewModel", "Message is blank, returning")
-            return
-        }
-
         viewModelScope.launch {
-            Log.d("ChatbotViewModel", "Processing message in coroutine")
             // Add user message
             val userMessage = ChatMessage(
                 id = "user_${System.currentTimeMillis()}",
@@ -140,7 +261,6 @@ class ChatbotViewModel @Inject constructor(
             
             val currentMessages = _uiState.value.messages.toMutableList()
             currentMessages.add(userMessage)
-            Log.d("ChatbotViewModel", "Added user message. Total messages: ${currentMessages.size}")
             
             _uiState.value = _uiState.value.copy(
                 messages = currentMessages.toList(), // Convert to immutable list
@@ -148,52 +268,67 @@ class ChatbotViewModel @Inject constructor(
                 showWelcomeScreen = false,
                 isLoading = true
             )
-            Log.d("ChatbotViewModel", "Updated state with user message. Messages count: ${_uiState.value.messages.size}")
-            Log.d("ChatbotViewModel", "Messages list: ${_uiState.value.messages.map { "${it.id}:${it.text.take(20)}" }}")
 
             // Call Gemini API to get bot response using GenerativeModel
-            Log.d("ChatbotViewModel", "Calling Gemini API for response with message: '$message'")
-            val botResponse = try {
+            val botResponse = withContext(Dispatchers.Default) {
                 // Lấy hoặc khởi tạo GenerativeModel với API key
                 val model = withContext(Dispatchers.IO) {
                     getOrInitializeGenerativeModel()
                 }
-                
+
                 if (model != null) {
+                    // Đảm bảo đã có cache danh sách bệnh (nếu chưa có thì fetch)
+                    ensureDiseaseCacheLoaded()
+
+                    // Lấy danh sách bệnh từ Room (raw JSON) để làm ngữ cảnh cho Gemini
+                    val diseasesJson = withContext(Dispatchers.IO) {
+                        try {
+                            database.diseaseDao().getLatestDiseaseList()?.json
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
                     withContext(Dispatchers.IO) {
-                        val response = model.generateContent(message)
-                        response.text ?: "Sorry, I couldn't generate a response."
+                        // Rút gọn / tóm tắt JSON bệnh cây để tránh gửi quá dài mỗi lần gọi
+                        val response = if (diseasesJson.isNullOrBlank()) {
+                            // Nếu chưa có dữ liệu bệnh, fallback về gọi như cũ
+                            model.generateContent(message)
+                        } else {
+                            val summary = buildDiseaseSummary(diseasesJson)
+
+                            // Build disease context prompt
+                            val diseaseContextPrompt = """
+                                Đây là danh sách bệnh cây trồng đã được tóm tắt từ hệ thống backend AgriDoctorAI.
+                                Hãy dùng thông tin tóm tắt này như một cơ sở tham chiếu khi tư vấn bệnh cây cho người dùng:
+                                
+                                $summary
+                                """.trimIndent()
+
+                            // Log chỉ phần [CONTEXT - Disease Summary] đầy đủ trong một log duy nhất
+                            val contextToLog = "[CONTEXT - Disease Summary]:\n\n$diseaseContextPrompt"
+                            Log.d("ChatbotViewModel", contextToLog)
+
+                            // Truyền thêm danh sách bệnh (đã tóm tắt) để Gemini tham chiếu khi trả lời
+                            model.generateContent(
+                                content {
+                                    text(diseaseContextPrompt)
+                                },
+                                content {
+                                    text(message)
+                                }
+                            )
+                        }
+
+                        // Loại bỏ toàn bộ ký tự '*' trong câu trả lời để tránh markdown bullet
+                        val rawText = response.text ?: "Sorry, I couldn't generate a response."
+                        rawText.replace("*", "")
                     }
                 } else {
-                    Log.e("ChatbotViewModel", "GenerativeModel is null, cannot generate response")
                     "Sorry, I couldn't process your request. The AI service is not available. Please check your connection and try again."
                 }
-            } catch (e: Exception) {
-                Log.e("ChatbotViewModel", "Exception when calling GenerativeModel: ${e.message}", e)
-                
-                // Xử lý các lỗi phổ biến với message rõ ràng hơn
-                val errorMessage = when {
-                    e.message?.contains("429") == true || 
-                    e.message?.contains("quota") == true || 
-                    e.message?.contains("RESOURCE_EXHAUSTED") == true -> {
-                        "Đã vượt quá giới hạn sử dụng API. Vui lòng thử lại sau hoặc kiểm tra quota của bạn."
-                    }
-                    e.message?.contains("401") == true || 
-                    e.message?.contains("403") == true -> {
-                        "API key không hợp lệ hoặc không có quyền truy cập. Vui lòng kiểm tra cài đặt API key."
-                    }
-                    e.message?.contains("404") == true -> {
-                        "Model không tìm thấy. Vui lòng kiểm tra cấu hình model name."
-                    }
-                    else -> {
-                        "Xin lỗi, đã xảy ra lỗi: ${e.message ?: "Unknown error"}"
-                    }
-                }
-                
-                errorMessage
             }
-            Log.d("ChatbotViewModel", "Received bot response: ${botResponse?.take(100)}")
-            
+
             val botMessage = ChatMessage(
                 id = "bot_${System.currentTimeMillis()}",
                 text = botResponse ?: "Sorry, I couldn't process your request. Please try again.",
@@ -205,8 +340,6 @@ class ChatbotViewModel @Inject constructor(
                 messages = currentMessages.toList(), // Convert to immutable list
                 isLoading = false
             )
-            Log.d("ChatbotViewModel", "Added bot message. Total messages: ${currentMessages.size}")
-            Log.d("ChatbotViewModel", "Messages list: ${currentMessages.map { "${it.id}:${it.text.take(20)}" }}")
             
             // Save chat to Room database
             saveCurrentChatToDatabase(currentMessages)
@@ -247,21 +380,7 @@ class ChatbotViewModel @Inject constructor(
     }
 
     fun onInputTextChanged(text: String) {
-        Log.d("ChatbotViewModel", "onInputTextChanged called with text: '$text'")
         _uiState.value = _uiState.value.copy(inputText = text)
-        Log.d("ChatbotViewModel", "Updated inputText in state: '${_uiState.value.inputText}'")
-    }
-
-    fun onSuggestedPromptClicked(prompt: String) {
-        Log.d("ChatbotViewModel", "onSuggestedPromptClicked: '$prompt'")
-        onMessageSent(prompt)
-    }
-
-    fun onClose() {
-        Log.d("ChatbotViewModel", "onClose called")
-        viewModelScope.launch {
-            _uiState.value = ChatbotUiState()
-        }
     }
 
     fun loadChatHistory() {

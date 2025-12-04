@@ -191,12 +191,8 @@ fun ChatbotScreen(
                     text = uiState.inputText,
                     onTextChange = viewModel::onInputTextChanged,
                     onSendClick = {
-                        android.util.Log.d("ChatbotScreen", "ChatInputBar onSendClick called. Current text: '${uiState.inputText}'")
                         if (uiState.inputText.isNotBlank()) {
-                            android.util.Log.d("ChatbotScreen", "Sending message: '${uiState.inputText}'")
                             viewModel.onMessageSent(uiState.inputText)
-                        } else {
-                            android.util.Log.d("ChatbotScreen", "Input text is blank, not sending")
                         }
                     }
                 )

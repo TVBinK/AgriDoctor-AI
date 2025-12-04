@@ -108,6 +108,12 @@ internal object NetworkClients {
             append("-key")
         }
 
+    private val API_DISEASES_PATH: String
+        get() = buildString {
+            append("/api")
+            append("/diseases")
+        }
+
     // For real device, use actual machine IP: 192.168.34.116
     // For emulator, use: https://10.0.2.2:3000/api/detect
     //
@@ -123,6 +129,12 @@ internal object NetworkClients {
     // Client cho API key endpoint
     val apiKeyClient: HttpClient = createClient(
         baseUrl = "$SERVER_BASE_URL$API_KEY_PATH",
+        acceptAllCertificates = BuildConfig.DEBUG
+    )
+
+    // Client cho API danh sách bệnh
+    val diseasesClient: HttpClient = createClient(
+        baseUrl = "$SERVER_BASE_URL$API_DISEASES_PATH",
         acceptAllCertificates = BuildConfig.DEBUG
     )
 }

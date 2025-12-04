@@ -102,6 +102,26 @@ object NetworkDataSource {
             null
         }
     }
+
+    /**
+     * Lấy danh sách bệnh cây (raw JSON) từ API /api/diseases.
+     * Trả về String JSON để lưu vào Room, tránh phụ thuộc chặt vào schema server.
+     */
+    suspend fun getDiseasesJson(): String? = withContext(Dispatchers.IO) {
+        try {
+            val response = NetworkClients.diseasesClient.get("")
+
+            if (response.status == HttpStatusCode.OK) {
+                response.bodyAsText()
+            } else {
+                Log.e("getDiseasesJson", "Failed with status: ${response.status}")
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("getDiseasesJson", "Error getting diseases: ${e.message}", e)
+            null
+        }
+    }
 }
 
 
