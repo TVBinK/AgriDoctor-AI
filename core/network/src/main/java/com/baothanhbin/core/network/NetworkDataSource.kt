@@ -3,6 +3,7 @@ package com.baothanhbin.core.network
 import android.util.Log
 import com.baothanhbin.core.model.ApiKeyResponse
 import com.baothanhbin.core.model.DiagnoseApiResponse
+import com.baothanhbin.core.model.ClassifyApiResponse
 import com.baothanhbin.core.model.GeminiRequest
 import com.baothanhbin.core.model.GeminiResponse
 import com.baothanhbin.core.model.GeminiContent
@@ -119,6 +120,64 @@ object NetworkDataSource {
             }
         } catch (e: Exception) {
             Log.e("getDiseasesJson", "Error getting diseases: ${e.message}", e)
+            null
+        }
+    }
+    
+    /**
+     * Nhận diện cây từ ảnh
+     * Gọi API /api/classify với ảnh được upload
+     */
+    suspend fun classifyImageTyped(
+        imageBytes: ByteArray,
+        fileName: String,
+        mimeTypeString: String
+    ): ClassifyApiResponse? = classifyImageTyped(imageBytes, fileName, ContentType.parse(mimeTypeString))
+
+    suspend fun classifyImageTyped(
+        imageBytes: ByteArray,
+        fileName: String = "image.jpg",
+        mimeType: ContentType = ContentType.Image.JPEG
+    ): ClassifyApiResponse? = withContext(Dispatchers.IO) {
+        try {
+            val ensuredFileName = run {
+                val hasExt = fileName.contains('.')
+                if (hasExt) fileName else {
+                    val mimeString = mimeType.toString().lowercase()
+                    val extension = when {
+                        mimeString.contains("jpeg") || mimeString.contains("jpg") -> ".jpg"
+                        mimeString.contains("png") -> ".png"
+                        mimeString.contains("webp") -> ".webp"
+                        mimeString.contains("gif") -> ".gif"
+                        else -> ".jpg"
+                    }
+                    "$fileName$extension"
+                }
+            }
+            val contentTypeHeader = mimeType.toString()
+            val contentDispositionHeader = "filename=\"$ensuredFileName\""
+            val response = NetworkClients.classifyClient.submitFormWithBinaryData(
+                formData = formData {
+                    append(
+                        key = "image",
+                        value = imageBytes,
+                        headers = Headers.build {
+                            append(HttpHeaders.ContentType, contentTypeHeader)
+                            append(HttpHeaders.ContentDisposition, contentDispositionHeader)
+                        }
+                    )
+                }
+            )
+
+            if (response.status == HttpStatusCode.OK) {
+                Log.d("classifyImageTyped", "API call successful")
+                val result: ClassifyApiResponse = response.body()
+                result
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("classifyImageTyped", "Error parsing response: ${e.message}", e)
             null
         }
     }

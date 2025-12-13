@@ -11,6 +11,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.baothanhbin.core.data.repository.DiagnoseResultRepository
 import com.baothanhbin.core.database.model.toEntity
+import com.baothanhbin.core.model.ApiType
+import com.baothanhbin.core.model.ClassifyData
 import com.baothanhbin.core.network.NetworkDataSource
 import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.core.ui.util.LocationStateHolder
@@ -37,8 +39,12 @@ data class ProcessImageUiState(
 )
 
 sealed class ProcessImageNavigationEvent {
-    data class NavigateToResult(val imageUri: Uri?) : ProcessImageNavigationEvent()
-    data class NavigateToFailed(val imageUri: Uri?) : ProcessImageNavigationEvent()
+    data class NavigateToResult(
+        val imageUri: Uri?, 
+        val apiType: ApiType = ApiType.DETECT,
+        val classifyData: com.baothanhbin.core.model.ClassifyData? = null // For CLASSIFY API - chứa tất cả thông tin
+    ) : ProcessImageNavigationEvent()
+    data class NavigateToFailed(val imageUri: Uri?, val apiType: ApiType = ApiType.DETECT) : ProcessImageNavigationEvent()
 }
 
 @HiltViewModel
@@ -56,7 +62,8 @@ class ProcessImageViewModel @Inject constructor(
     fun processImage(
         imageUri: Uri?,
         currentAddress: String?,
-        locationStateHolder: LocationStateHolder?
+        locationStateHolder: LocationStateHolder?,
+        apiType: ApiType = ApiType.DETECT
     ) {
         viewModelScope.launch {
             _uiState.value = ProcessImageUiState(step = 0)
@@ -75,26 +82,32 @@ class ProcessImageViewModel @Inject constructor(
 
                 _uiState.value = ProcessImageUiState(step = 1) // uploading
 
-                val result = NetworkDataSource.detectImageTyped(bytes, name, mime)
+                // Log apiType received
+                Log.d("ProcessImage", "Processing image with apiType: $apiType (DETECT=${apiType == ApiType.DETECT}, CLASSIFY=${apiType == ApiType.CLASSIFY})")
 
-                // Log API response
-                Log.d("ProcessImage", "API Response received")
-                if (result != null) {
-                    Log.d("ProcessImage", "Result: success=${result.success}, diseaseName=${result.data.diseaseName}")
-                    Log.d("ProcessImage", "Full result: $result")
-                } else {
-                    Log.d("ProcessImage", "Result is null")
-                }
+                // For detect API, use existing logic
+                if (apiType == ApiType.DETECT) {
+                    Log.d("ProcessImage", "Calling DETECT API")
+                    val detectResult = NetworkDataSource.detectImageTyped(bytes, name, mime)
 
-                _uiState.value = ProcessImageUiState(step = 2) // processing done
-                delay(500) // Small delay to show processing state
+                    // Log API response
+                    Log.d("ProcessImage", "API Response received")
+                    if (detectResult != null) {
+                        Log.d("ProcessImage", "Result: success=${detectResult.success}, diseaseName=${detectResult.data.diseaseName}")
+                        Log.d("ProcessImage", "Full result: $detectResult")
+                    } else {
+                        Log.d("ProcessImage", "Result is null")
+                    }
 
-                // Check if result is valid (success and not "No disease detected")
-                val isValidResult = result != null &&
-                    result.success &&
-                    result.data.diseaseName != "No disease detected"
+                    _uiState.value = ProcessImageUiState(step = 2) // processing done
+                    delay(500) // Small delay to show processing state
 
-                if (isValidResult) {
+                    // Check if result is valid (success and not "No disease detected")
+                    val isValidResult = detectResult != null &&
+                        detectResult.success &&
+                        detectResult.data.diseaseName != "No disease detected"
+
+                    if (isValidResult) {
                     // Cache to Room database - must save before navigating
                     try {
                         // Copy image to app storage to ensure persistent access
@@ -113,7 +126,7 @@ class ProcessImageViewModel @Inject constructor(
                         
                         // Use saved URI if available, otherwise use original (for camera images)
                         val uriToSave = savedImageUri ?: imageUri
-                        val entity = result.data.toEntity(
+                        val entity = detectResult.data.toEntity(
                             imageUri = uriToSave.toString(),
                             location = currentLocation
                         )
@@ -121,22 +134,83 @@ class ProcessImageViewModel @Inject constructor(
                         
                         // Navigate with saved URI if available
                         val navigationUri = savedImageUri ?: imageUri
-                        _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(navigationUri))
+                        _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(navigationUri, apiType))
                     } catch (dbError: Exception) {
                         Log.e("ProcessImage", "Database save error: ${dbError.message}", dbError)
                         // Continue even if database save fails
-                        _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(imageUri))
+                        _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(imageUri, apiType))
+                    }
+                    } else {
+                        val reason = when {
+                            detectResult == null -> "result is null"
+                            !detectResult.success -> "success=false"
+                            detectResult.data.diseaseName == "No disease detected" -> "No disease detected"
+                            else -> "unknown reason"
+                        }
+                        Log.d("ProcessImage", "Navigating to DiagnoseFailedScreen - $reason")
+                        // Navigate to failed screen (fail case, null result, or no disease detected)
+                        _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToFailed(imageUri, apiType))
                     }
                 } else {
-                    val reason = when {
-                        result == null -> "result is null"
-                        !result.success -> "success=false"
-                        result.data.diseaseName == "No disease detected" -> "No disease detected"
-                        else -> "unknown reason"
+                    // Handle classify API
+                    Log.d("ProcessImage", "Calling CLASSIFY API")
+                    val classifyResult = NetworkDataSource.classifyImageTyped(bytes, name, mime)
+                    
+                    Log.d("ProcessImage", "Classify API Response received")
+                    if (classifyResult != null) {
+                        Log.d("ProcessImage", "Result: success=${classifyResult.success}, plantName=${classifyResult.data.plantName}")
+                    } else {
+                        Log.d("ProcessImage", "Classify result is null")
                     }
-                    Log.d("ProcessImage", "Navigating to DiagnoseFailedScreen - $reason")
-                    // Navigate to failed screen (fail case, null result, or no disease detected)
-                    _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToFailed(imageUri))
+                    
+                    _uiState.value = ProcessImageUiState(step = 2) // processing done
+                    delay(500)
+                    
+                    // Check if classify result is valid
+                    if (classifyResult != null && classifyResult.success) {
+                        val classifyData = classifyResult.data
+                        Log.d("ProcessImage", "Classify successful: plantName=${classifyData.plantName}, plantNameVN=${classifyData.plantNameVN}, confidence=${classifyData.confidence}")
+                        // Navigate to result screen (DiagnoseResultScreen will handle displaying classify data)
+                        try {
+                            // Copy image to app storage to ensure persistent access
+                            val savedImageUri = withContext(Dispatchers.IO) {
+                                copyImageToAppStorage(context, imageUri)
+                            }
+                            
+                            // Lấy location hiện tại nếu có quyền
+                            val locationFromState = currentAddress ?: locationStateHolder?.currentAddress
+                            val currentLocation = locationFromState ?: withContext(Dispatchers.IO) {
+                                getCurrentLocationAddress(context)
+                            }
+                            if (currentLocation != null && locationStateHolder?.currentAddress != currentLocation) {
+                                locationStateHolder?.updateAddress(currentLocation)
+                            }
+                            
+                            // Navigate with saved URI if available
+                            val navigationUri = savedImageUri ?: imageUri
+                            _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(
+                                navigationUri, 
+                                apiType,
+                                classifyData = classifyData
+                            ))
+                        } catch (dbError: Exception) {
+                            Log.e("ProcessImage", "Error saving classify result: ${dbError.message}", dbError)
+                            // Continue even if save fails
+                            _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(
+                                imageUri, 
+                                apiType,
+                                classifyData = classifyData
+                            ))
+                        }
+                    } else {
+                        val reason = when {
+                            classifyResult == null -> "result is null"
+                            !classifyResult.success -> "success=false"
+                            else -> "unknown reason"
+                        }
+                        Log.d("ProcessImage", "Classify failed - $reason")
+                        _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToFailed(imageUri, apiType))
+                    }
                 }
 
                 _uiState.value = ProcessImageUiState(step = 3)
@@ -145,7 +219,7 @@ class ProcessImageViewModel @Inject constructor(
                 Log.e("ProcessImage", "Exception occurred: ${e.message}", e)
                 _uiState.value = ProcessImageUiState(step = 2) // Mark as processing done even on error
                 delay(500)
-                _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToFailed(imageUri))
+                _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToFailed(imageUri, apiType))
                 _uiState.value = ProcessImageUiState(step = 3)
             }
         }

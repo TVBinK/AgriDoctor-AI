@@ -113,6 +113,12 @@ internal object NetworkClients {
             append("/api")
             append("/diseases")
         }
+    
+    private val API_CLASSIFY_PATH: String
+        get() = buildString {
+            append("/api")
+            append("/classify")
+        }
 
     // For real device, use actual machine IP: 192.168.34.116
     // For emulator, use: https://10.0.2.2:3000/api/detect
@@ -135,6 +141,12 @@ internal object NetworkClients {
     // Client cho API danh sách bệnh
     val diseasesClient: HttpClient = createClient(
         baseUrl = "$SERVER_BASE_URL$API_DISEASES_PATH",
+        acceptAllCertificates = BuildConfig.DEBUG
+    )
+    
+    // Client cho API nhận diện cây
+    val classifyClient: HttpClient = createClient(
+        baseUrl = "$SERVER_BASE_URL$API_CLASSIFY_PATH",
         acceptAllCertificates = BuildConfig.DEBUG
     )
 }

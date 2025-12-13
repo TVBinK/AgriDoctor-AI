@@ -86,12 +86,21 @@
     <string name="treatment">Điều trị</string>
     <string name="recovery_care">Chăm sóc phục hồi</string>
     <string name="unknown_disease">Bệnh chưa xác định</string>
+    
+    <!-- Classify Result Screen -->
+    <string name="status_identified">Trạng thái: Đã nhận diện</string>
+    <string name="status_diagnosed">Trạng thái: Đã chuẩn đoán</string>
+    <string name="confidence">Độ tin cậy</string>
+    <string name="description">Mô tả</string>
+    <string name="view_details">Xem chi tiết</string>
     <string name="picture_plant_preview">Xem trước cây trồng</string>
     <string name="help">Trợ giúp</string>
     <string name="switch_camera">Đổi camera</string>
     
     <!-- Camera Screen -->
     <string name="photo_saved">Ảnh đã lưu: %1$s</string>
+    <string name="select_action">Chọn hành động</string>
+    <string name="cancel">Hủy</string>
     
     <!-- Light Meter Screen -->
     <string name="light_meter_title">Đo Cường Độ Ánh Sáng</string>

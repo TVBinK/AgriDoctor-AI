@@ -1,6 +1,7 @@
 package com.baothanhbin.feature.camera
 
 import android.Manifest
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.baothanhbin.agridoctorai.resources.R
+import com.baothanhbin.feature.processimage.ProcessImageViewModel
 import com.baothanhbin.feature.processimage.navigation.navigateToProcessImage
 
 @Composable
@@ -67,9 +69,12 @@ fun CameraRoute(
     }
     
     val uiState = viewModel.uiState.collectAsStateWithLifecycle()
+    
+    val currentSelectedIndex = uiState.value.selectedModeIndex
+    
     CameraScreen(
         navController = navController,
-        selectedIndex = uiState.value.selectedModeIndex,
+        selectedIndex = currentSelectedIndex,
         permissionGranted = uiState.value.permissionGranted,
         onOptionSelected = viewModel::selectMode,
         onBindPreview = viewModel::bindPreview,
@@ -78,7 +83,13 @@ fun CameraRoute(
             viewModel.takePhoto(pw, ph, fw, fh,
                 { uri ->
                     onSaved(uri)
-                    navController.navigateToProcessImage(uri)
+                    // Sử dụng currentSelectedIndex để quyết định API type: 0 = DETECT, 1 = CLASSIFY
+                    // Đọc lại từ uiState để đảm bảo có giá trị mới nhất
+                    val selectedIndex = viewModel.uiState.value.selectedModeIndex
+                    val apiType = if (selectedIndex == 0) "DETECT" else "CLASSIFY"
+                    val modeName = if (selectedIndex == 0) "Chuẩn đoán (DETECT)" else "Nhận diện cây (CLASSIFY)"
+                    Log.d("CameraRoute", "Chụp ảnh với tab: index=$selectedIndex, mode=$modeName, apiType=$apiType")
+                    navController.navigateToProcessImage(uri, apiType)
                 },
                 onError
             )
@@ -106,12 +117,15 @@ fun CameraScreen(
     var previewWidth by remember { mutableStateOf(0) }
     var previewHeight by remember { mutableStateOf(0) }
     
-    // Image picker launcher
+    // Image picker launcher - sử dụng selectedIndex hiện tại để quyết định apiType
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri: android.net.Uri? ->
         uri?.let {
-            navController.navigateToProcessImage(it)
+            val apiType = if (selectedIndex == 0) "DETECT" else "CLASSIFY"
+            val modeName = if (selectedIndex == 0) "Chuẩn đoán (DETECT)" else "Nhận diện cây (CLASSIFY)"
+            Log.d("CameraScreen", "Chọn ảnh từ gallery với tab: index=$selectedIndex, mode=$modeName, apiType=$apiType")
+            navController.navigateToProcessImage(it, apiType)
         }
     }
     
@@ -274,7 +288,11 @@ private fun SlidingSegmentedToggle(
                         .clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() }
-                        ) { onOptionSelected(index) }
+                        ) { 
+                            val modeName = if (index == 0) "Chuẩn đoán (DETECT)" else "Nhận diện cây (CLASSIFY)"
+                            Log.d("BottomControlPanel", "Tab được click: index=$index, mode=$modeName, text=$text")
+                            onOptionSelected(index) 
+                        }
                         .padding(vertical = 8.dp),
                     textAlign = TextAlign.Center
                 )

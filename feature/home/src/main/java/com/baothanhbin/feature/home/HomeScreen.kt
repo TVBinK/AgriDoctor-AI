@@ -143,7 +143,6 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(top = 140.dp, bottom = 24.dp)
         ) {
             QuickActionsSection(navController = navController)

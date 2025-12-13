@@ -13,6 +13,7 @@ import androidx.camera.core.Preview as CameraXPreview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LifecycleOwner
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -43,6 +44,8 @@ class CameraViewModel @javax.inject.Inject constructor(
 
     fun selectMode(index: Int) {
         if (index == _uiState.value.selectedModeIndex) return
+        val modeName = if (index == 0) "Chuẩn đoán (DETECT)" else "Nhận diện cây (CLASSIFY)"
+        Log.d("CameraViewModel", "Tab được chọn: index=$index, mode=$modeName")
         _uiState.value = _uiState.value.copy(selectedModeIndex = index)
     }
 

@@ -126,8 +126,17 @@ object LocationHelper {
                     override fun onGeocode(addresses: List<Address>) {
                         Log.d(TAG, "onGeocode() -> nhận được ${addresses.size} address(es)")
                         if (addresses.isNotEmpty()) {
-                            // Lấy địa chỉ đầu tiên và format nó
-                            addressResult = formatAddress(addresses[0])
+                            // Tìm địa chỉ chi tiết nhất (có nhiều thông tin nhất)
+                            val bestAddress = addresses.maxByOrNull { address ->
+                                var score = 0
+                                if (!address.getAddressLine(0).isNullOrBlank()) score += 10
+                                if (!address.thoroughfare.isNullOrBlank()) score += 5
+                                if (!address.subLocality.isNullOrBlank()) score += 3
+                                if (!address.locality.isNullOrBlank()) score += 2
+                                if (!address.subAdminArea.isNullOrBlank()) score += 2
+                                score
+                            } ?: addresses[0]
+                            addressResult = formatAddress(bestAddress)
                         }
                     }
 
@@ -138,11 +147,12 @@ object LocationHelper {
                 }
 
                 // Gọi API geocoding async (không blocking)
+                // Tăng maxResults lên 3 để có nhiều kết quả hơn, chọn kết quả chi tiết nhất
                 Log.d(
                     TAG,
-                    "getAddressFromLocation() -> gọi geocoder.getFromLocation(lat=$latitude, lon=$longitude)"
+                    "getAddressFromLocation() -> gọi geocoder.getFromLocation(lat=$latitude, lon=$longitude, maxResults=3)"
                 )
-                geocoder.getFromLocation(latitude, longitude, 1, geocodeListener)
+                geocoder.getFromLocation(latitude, longitude, 3, geocodeListener)
                 
                 // Đợi kết quả (polling - tối đa 5 giây: 50 lần x 100ms)
                 // Lưu ý: Đây là cách đơn giản để đợi async callback, có thể cải thiện bằng coroutines
@@ -163,14 +173,26 @@ object LocationHelper {
                 @Suppress("DEPRECATION")
                 Log.d(
                     TAG,
-                    "getAddressFromLocation() -> (API<=32) gọi geocoder.getFromLocation(lat=$latitude, lon=$longitude)"
+                    "getAddressFromLocation() -> (API<=32) gọi geocoder.getFromLocation(lat=$latitude, lon=$longitude, maxResults=3)"
                 )
-                val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+                val addresses = geocoder.getFromLocation(latitude, longitude, 3)
                 
                 // getFromLocation() trả về List<Address> hoặc null
                 if (addresses != null && addresses.isNotEmpty()) {
                     Log.d(TAG, "getAddressFromLocation() -> geocoding thành công (${addresses.size} address)")
-                    return@withContext formatAddress(addresses[0])
+                    // Tìm địa chỉ chi tiết nhất (có nhiều thông tin nhất)
+                    val bestAddress = addresses.maxByOrNull { address ->
+                        var score = 0
+                        try {
+                            if (!address.getAddressLine(0).isNullOrBlank()) score += 10
+                        } catch (e: Exception) {}
+                        if (!address.thoroughfare.isNullOrBlank()) score += 5
+                        if (!address.subLocality.isNullOrBlank()) score += 3
+                        if (!address.locality.isNullOrBlank()) score += 2
+                        if (!address.subAdminArea.isNullOrBlank()) score += 2
+                        score
+                    } ?: addresses[0]
+                    return@withContext formatAddress(bestAddress)
                 }
                 Log.w(TAG, "getAddressFromLocation() -> không tìm thấy address nào")
             }
@@ -190,30 +212,75 @@ object LocationHelper {
      * @return String địa chỉ đã được format (ví dụ: "123 Đường ABC, Quận XYZ, TP.HCM")
      */
     private fun formatAddress(address: Address): String {
+        // Thử lấy địa chỉ đầy đủ từ getAddressLine(0) trước (nếu có)
+        // getAddressLine(0) thường chứa địa chỉ đầy đủ nhất
+        try {
+            val fullAddress = address.getAddressLine(0)
+            if (!fullAddress.isNullOrBlank()) {
+                Log.d(TAG, "formatAddress() -> sử dụng getAddressLine(0): $fullAddress")
+                return fullAddress
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "formatAddress() -> getAddressLine(0) không có, dùng format thủ công")
+        }
+
         val parts = mutableListOf<String>()
 
-        // Thêm địa chỉ chi tiết (số nhà, đường) - ví dụ: "123 Đường ABC"
-        address.thoroughfare?.let { parts.add(it) }
+        // Thêm số nhà và tên đường (featureName + thoroughfare)
+        // featureName: tên địa điểm (ví dụ: "Chợ", "Trường học")
+        // premises: số nhà
+        // thoroughfare: tên đường
+        val streetParts = mutableListOf<String>()
+        address.premises?.let { streetParts.add(it) } // Số nhà
+        address.featureName?.let { 
+            if (!it.equals(address.thoroughfare, ignoreCase = true)) {
+                streetParts.add(it) 
+            }
+        } // Tên địa điểm
+        address.thoroughfare?.let { streetParts.add(it) } // Tên đường
+        
+        if (streetParts.isNotEmpty()) {
+            parts.add(streetParts.joinToString(" "))
+        }
 
-        // Thêm quận/huyện - ví dụ: "Quận XYZ"
-        address.subAdminArea?.let { parts.add(it) }
+        // Thêm subLocality (phường/xã) hoặc locality (quận/huyện)
+        address.subLocality?.let { parts.add(it) } // Phường/xã
+        address.locality?.let { 
+            // Chỉ thêm nếu chưa có trong parts
+            if (!parts.contains(it)) {
+                parts.add(it) 
+            }
+        } // Quận/huyện/địa danh
+
+        // Thêm subAdminArea (quận/huyện) nếu chưa có
+        address.subAdminArea?.let { 
+            if (!parts.contains(it)) {
+                parts.add(it) 
+            }
+        }
 
         // Thêm thành phố/tỉnh - ví dụ: "TP.HCM" hoặc "Hà Nội"
-        address.adminArea?.let { parts.add(it) }
+        address.adminArea?.let { 
+            if (!parts.contains(it)) {
+                parts.add(it) 
+            }
+        }
 
-        // Nếu không có thông tin chi tiết (thoroughfare, subAdminArea), 
-        // thử dùng locality (địa danh) và adminArea
+        // Nếu vẫn không có thông tin chi tiết, thử lấy country name
         if (parts.isEmpty()) {
-            address.locality?.let { parts.add(it) }  // Địa danh (ví dụ: "Hà Đông")
-            address.adminArea?.let { parts.add(it) }  // Tỉnh/thành phố
+            address.countryName?.let { parts.add(it) }
         }
 
         // Nếu có ít nhất một phần, ghép lại bằng dấu phẩy
         return if (parts.isNotEmpty()) {
-            parts.joinToString(", ")
+            val formatted = parts.joinToString(", ")
+            Log.d(TAG, "formatAddress() -> format thủ công: $formatted")
+            formatted
         } else {
             // Fallback: nếu không có thông tin địa chỉ nào, hiển thị tọa độ
-            "Lat: ${"%.4f".format(address.latitude)}, Lon: ${"%.4f".format(address.longitude)}"
+            val fallback = "Lat: ${"%.4f".format(address.latitude)}, Lon: ${"%.4f".format(address.longitude)}"
+            Log.w(TAG, "formatAddress() -> không có thông tin, dùng fallback: $fallback")
+            fallback
         }
     }
 }

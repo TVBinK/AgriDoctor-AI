@@ -66,6 +66,8 @@ import com.baothanhbin.core.theme.Caption
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.TitleLarge1
+import com.baothanhbin.core.model.ApiType
+import com.baothanhbin.core.model.ClassifyData
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.feature.diagnosefailed.navigation.navigateToDiagnoseFailed
@@ -76,6 +78,7 @@ fun ProcessImageRoute(
     navController: NavHostController,
     imageUri: Uri? = null,
     locationStateHolder: LocationStateHolder,
+    apiType: ApiType = ApiType.DETECT,
     viewModel: ProcessImageViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -94,12 +97,15 @@ fun ProcessImageRoute(
                 is ProcessImageNavigationEvent.NavigateToResult -> {
                     navController.navigateToDiagnoseResult(
                         imageUri = event.imageUri,
+                        apiType = event.apiType,
+                        classifyData = event.classifyData,
                         navOptions = navOptions
                     )
                 }
                 is ProcessImageNavigationEvent.NavigateToFailed -> {
                     navController.navigateToDiagnoseFailed(
                         imageUri = event.imageUri,
+                        apiType = event.apiType,
                         navOptions = navOptions
                     )
                 }
@@ -108,17 +114,19 @@ fun ProcessImageRoute(
     }
 
     // Process image when URI changes
-    LaunchedEffect(key1 = imageUri) {
+    LaunchedEffect(key1 = imageUri, key2 = apiType) {
         viewModel.processImage(
             imageUri = imageUri,
             currentAddress = locationStateHolder.currentAddress,
-            locationStateHolder = locationStateHolder
+            locationStateHolder = locationStateHolder,
+            apiType = apiType
         )
     }
 
     ProcessImageScreen(
         imageUri = imageUri,
         step = uiState.step,
+        apiType = apiType,
         onBack = { navController.popBackStack() }
     )
 }
@@ -127,6 +135,7 @@ fun ProcessImageRoute(
 fun ProcessImageScreen(
     imageUri: Uri?,
     step: Int,
+    apiType: ApiType = ApiType.DETECT,
     onBack: () -> Unit
 ) {
     Column(
@@ -136,7 +145,10 @@ fun ProcessImageScreen(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 24.dp)
     ) {
-        TopBar(onBack = onBack)
+        TopBar(
+            onBack = onBack,
+            apiType = apiType
+        )
 
         Spacer(modifier = Modifier.height(50.dp))
 
@@ -177,11 +189,14 @@ fun ProcessImageScreen(
 }
 
 @Composable
-private fun TopBar(onBack: () -> Unit) {
+private fun TopBar(
+    onBack: () -> Unit,
+    apiType: ApiType
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 20.dp),
+            .padding(top = 25.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
@@ -193,7 +208,11 @@ private fun TopBar(onBack: () -> Unit) {
         }
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = stringResource(R.string.disease_diagnosis),
+            text = if (apiType == ApiType.DETECT) {
+                stringResource(R.string.disease_diagnosis)
+            } else {
+                stringResource(R.string.identify_plant)
+            },
             style = MaterialTheme.typography.TitleLarge1,
             color = GreenSurface,
             maxLines = 1,
@@ -358,6 +377,7 @@ private fun ProcessImagePreview() {
     ProcessImageScreen(
         imageUri = null,
         step = 0,
+        apiType = ApiType.DETECT,
         onBack = { }
     )
 }

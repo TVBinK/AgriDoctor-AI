@@ -16,4 +16,6 @@ dependencies {
     implementation(project(":core:ui"))
     //coil
     implementation(libs.coil.compose)
+    //kotlinx serialization
+    implementation(libs.kotlinx.serialization.json)
 }

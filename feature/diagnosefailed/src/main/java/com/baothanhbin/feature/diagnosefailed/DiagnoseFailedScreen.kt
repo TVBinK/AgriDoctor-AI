@@ -45,6 +45,7 @@ import androidx.compose.ui.zIndex
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.baothanhbin.agridoctorai.resources.R
+import com.baothanhbin.core.model.ApiType
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.TitleLarge1
 import com.baothanhbin.core.theme.White
@@ -52,10 +53,12 @@ import com.baothanhbin.core.theme.White
 @Composable
 fun DiagnoseFailedRoute(
     navController: NavHostController,
-    imageUri: Uri? = null
+    imageUri: Uri? = null,
+    apiType: ApiType = ApiType.DETECT
 ) {
     DiagnoseFailedScreen(
         imageUri = imageUri,
+        apiType = apiType,
         onBack = { navController.popBackStack() },
         onTryAgain = { navController.popBackStack() }
     )
@@ -64,6 +67,7 @@ fun DiagnoseFailedRoute(
 @Composable
 fun DiagnoseFailedScreen(
     imageUri: Uri? = null,
+    apiType: ApiType = ApiType.DETECT,
     onBack: () -> Unit = {},
     onTryAgain: () -> Unit = {}
 ) {
@@ -91,7 +95,11 @@ fun DiagnoseFailedScreen(
             }
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = stringResource(R.string.diagnose_failed),
+                text = if (apiType == ApiType.DETECT) {
+                    stringResource(R.string.diagnose_failed)
+                } else {
+                    stringResource(R.string.identify_plant) + " " + stringResource(R.string.failed)
+                },
                 style = MaterialTheme.typography.TitleLarge1,
                 color = GreenSurface,
                 fontWeight = FontWeight.Medium
