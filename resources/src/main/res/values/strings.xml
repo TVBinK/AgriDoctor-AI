@@ -92,6 +92,11 @@
     <string name="status_diagnosed">Trạng thái: Đã chuẩn đoán</string>
     <string name="confidence">Độ tin cậy</string>
     <string name="description">Mô tả</string>
+    <string name="plant_info">Thông tin cây</string>
+    <string name="scientific_name">Tên khoa học</string>
+    <string name="family">Họ</string>
+    <string name="care_tips">Mẹo chăm sóc</string>
+    <string name="common_diseases">Bệnh thường gặp</string>
     <string name="view_details">Xem chi tiết</string>
     <string name="picture_plant_preview">Xem trước cây trồng</string>
     <string name="help">Trợ giúp</string>

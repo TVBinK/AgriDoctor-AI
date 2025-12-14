@@ -75,8 +75,16 @@ import java.util.Locale
 @Composable
 fun ChatbotRoute(
     navController: NavHostController? = null,
-    viewModel: ChatbotViewModel = hiltViewModel()
+    viewModel: ChatbotViewModel = hiltViewModel(),
+    initialMessage: String? = null
 ) {
+    // Process initialMessage only once using ViewModel's tracking mechanism
+    LaunchedEffect(initialMessage) {
+        if (!initialMessage.isNullOrBlank()) {
+            viewModel.processInitialMessageIfNeeded(initialMessage)
+        }
+    }
+
     ChatbotScreen(
         navController = navController,
         viewModel = viewModel,
@@ -112,10 +120,7 @@ fun ChatbotScreen(
     }
     
     LaunchedEffect(uiState.messages.size) {
-        android.util.Log.d("ChatbotScreen", "uiState.messages.size changed to: ${uiState.messages.size}")
-        android.util.Log.d("ChatbotScreen", "Messages: ${uiState.messages.map { "${it.id}:${it.text.take(20)}" }}")
         if (uiState.messages.isNotEmpty()) {
-            android.util.Log.d("ChatbotScreen", "Scrolling to item ${uiState.messages.size - 1}")
             listState.animateScrollToItem(uiState.messages.size - 1)
         }
     }
@@ -178,7 +183,6 @@ fun ChatbotScreen(
 
                 // Content - Always show chat messages list
                 Box(modifier = Modifier.weight(1f)) {
-                    android.util.Log.d("ChatbotScreen", "Rendering ChatMessagesList with ${uiState.messages.size} messages")
                     ChatMessagesList(
                         messages = uiState.messages,
                         isLoading = uiState.isLoading,

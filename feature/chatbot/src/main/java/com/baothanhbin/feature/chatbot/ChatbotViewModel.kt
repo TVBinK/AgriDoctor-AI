@@ -78,6 +78,9 @@ class ChatbotViewModel @Inject constructor(
     private var _generativeModel: GenerativeModel? = null
     private var isInitializingApiKey = false
     private var isInitializingDiseaseCache = false
+    
+    // Track processed initial messages to prevent re-processing
+    private val processedInitialMessages = mutableSetOf<String>()
 
     init {
         loadChatHistory()
@@ -305,16 +308,26 @@ class ChatbotViewModel @Inject constructor(
                                 $summary
                                 """.trimIndent()
 
-                            // Log chỉ phần [CONTEXT - Disease Summary] đầy đủ trong một log duy nhất
-                            val contextToLog = "[CONTEXT - Disease Summary]:\n\n$diseaseContextPrompt"
-                            Log.d("ChatbotViewModel", contextToLog)
+                            // Log toàn bộ nội dung gửi lên Gemini
+                            val fullPromptLog = """
+                                === [GEMINI PROMPT SENT] ===
+                                [SYSTEM CONTEXT]:
+                                $diseaseContextPrompt
+                                
+                                [USER MESSAGE]:
+                                $message
+                                ============================
+                            """.trimIndent()
+                            Log.d("ChatbotViewModel", fullPromptLog)
 
                             // Truyền thêm danh sách bệnh (đã tóm tắt) để Gemini tham chiếu khi trả lời
                             model.generateContent(
                                 content {
+                                    role = "user"
                                     text(diseaseContextPrompt)
                                 },
                                 content {
+                                    role = "user"
                                     text(message)
                                 }
                             )
@@ -322,6 +335,13 @@ class ChatbotViewModel @Inject constructor(
 
                         // Loại bỏ toàn bộ ký tự '*' trong câu trả lời để tránh markdown bullet
                         val rawText = response.text ?: "Sorry, I couldn't generate a response."
+                        
+                        Log.d("ChatbotViewModel", """
+                            === [GEMINI RESPONSE] ===
+                            $rawText
+                            =========================
+                        """.trimIndent())
+                        
                         rawText.replace("*", "")
                     }
                 } else {
@@ -383,6 +403,26 @@ class ChatbotViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(inputText = text)
     }
 
+    /**
+     * Xử lý initialMessage chỉ một lần để tránh gửi lại khi navigate qua lại giữa các tab
+     * @return true nếu message đã được xử lý, false nếu đã được xử lý trước đó
+     */
+    fun processInitialMessageIfNeeded(message: String?): Boolean {
+        if (message.isNullOrBlank()) {
+            return false
+        }
+        
+        // Kiểm tra xem message này đã được xử lý chưa
+        if (processedInitialMessages.contains(message)) {
+            return false
+        }
+        
+        // Đánh dấu đã xử lý và gửi message
+        processedInitialMessages.add(message)
+        onMessageSent(message)
+        return true
+    }
+
     fun loadChatHistory() {
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -411,6 +451,10 @@ class ChatbotViewModel @Inject constructor(
                     val chat = chatDao.getChatById(chatId)
                     if (chat != null) {
                         val messages = chat.messages.map { it.toChatMessage() }
+                        // Clear processed initial messages when loading a different chat
+                        // This prevents issues when switching between chats
+                        processedInitialMessages.clear()
+                        
                         _uiState.value = _uiState.value.copy(
                             messages = messages,
                             currentChatId = chat.id,
@@ -431,6 +475,10 @@ class ChatbotViewModel @Inject constructor(
             if (_uiState.value.messages.isNotEmpty()) {
                 saveCurrentChatToDatabase(_uiState.value.messages)
             }
+            
+            // Clear processed initial messages when creating new chat
+            // This allows users to ask the same question again if they navigate from DiagnoseResultScreen
+            processedInitialMessages.clear()
             
             _uiState.value = _uiState.value.copy(
                 messages = emptyList(),

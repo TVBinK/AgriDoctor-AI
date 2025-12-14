@@ -1,6 +1,8 @@
 package com.baothanhbin.feature.diagnoseresult
 
 import android.net.Uri
+import android.os.Build
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,120 +28,115 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.request.ImageRequest
 import com.baothanhbin.core.model.ApiType
 import com.baothanhbin.core.model.ClassifyData
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.model.RecoveryItem
 import com.baothanhbin.core.model.TreatmentItem
-import com.baothanhbin.core.theme.BlueDefault
-import com.baothanhbin.core.theme.Body1
+import com.baothanhbin.core.theme.Button1
 import com.baothanhbin.core.theme.GreenSurface
-import com.baothanhbin.core.theme.Label1
 import com.baothanhbin.core.theme.Label4
-import com.baothanhbin.core.theme.Red1
-import com.baothanhbin.core.theme.RedErr
 import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.TitleLarge1
 import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
+import kotlinx.serialization.json.Json
+import android.util.Base64
 
 @Composable
 fun DiagnoseResultRoute(
     navController: NavHostController? = null,
     imageUri: Uri? = null,
-    diseaseName: String = "Unknown Disease",
-    possibleProblems: List<String> = emptyList(),
-    symptoms: String = "",
-    causes: String = "",
-    treatment: List<TreatmentItem> = emptyList(),
-    recoveryCare: List<RecoveryItem> = emptyList(),
-    location: String? = null,
-    locationStateHolder: LocationStateHolder = LocationStateHolder(),
+    locationStateHolder: LocationStateHolder,
+    viewModel: DiagnoseResultViewModel = hiltViewModel(),
     apiType: ApiType = ApiType.DETECT,
     classifyData: ClassifyData? = null,
-    viewModel: DiagnoseResultViewModel = hiltViewModel()
+    onChatWithAi: (String) -> Unit = {}
 ) {
-    val loadedResult by viewModel.loadedResult.collectAsState()
-
-    LaunchedEffect(Unit) {
-        // Only load from database if it's DETECT API
-        if (apiType == ApiType.DETECT) {
-            viewModel.loadLatestResult()
-        }
-    }
-
-    // Use loaded data if available, otherwise use default parameters
-    // For CLASSIFY API, use classifyData
-    val finalData = if (apiType == ApiType.CLASSIFY && classifyData != null) {
-        LoadedResult(
-            diseaseName = classifyData.plantNameVN ?: classifyData.plantName,
-            possibleProblems = classifyData.commonDiseases ?: emptyList(),
-            symptoms = "",
-            causes = "",
-            treatment = emptyList(),
-            recoveryCare = emptyList(),
-            location = location
+    val uiState by viewModel.uiState.collectAsState()
+    
+    // If apiType is CLASSIFY and we have classifyData, we don't need to fetch
+    val effectiveUiState = if (apiType == ApiType.CLASSIFY && classifyData != null) {
+        DiagnoseResultUiState(
+            isLoading = false,
+            // We don't have detection fields in classifyData, so we use defaults or empty
+             diseaseName = "",
+             possibleProblems = emptyList(),
+             symptoms = "",
+             causes = "",
+             treatment = emptyList(),
+             recoveryCare = emptyList()
         )
     } else {
-        loadedResult ?: LoadedResult(
-            diseaseName = diseaseName,
-            possibleProblems = possibleProblems,
-            symptoms = symptoms,
-            causes = causes,
-            treatment = treatment,
-            recoveryCare = recoveryCare,
-            location = location
-        )
+        uiState
     }
-    val displayLocation = locationStateHolder.currentAddress ?: finalData.location
 
-    LaunchedEffect(displayLocation) {
-        if (!displayLocation.isNullOrBlank() && locationStateHolder.currentAddress != displayLocation) {
-            locationStateHolder.updateAddress(displayLocation)
+    // Only fetch if DETECT type
+    LaunchedEffect(Unit) {
+        if (apiType == ApiType.DETECT) {
+            viewModel.loadDiagnoseResult(imageUri)
         }
     }
+
+    // Get current location
+    val context = LocalContext.current
+    val displayLocation = locationStateHolder.currentAddress ?: "Unknown Location"
 
     DiagnoseResultScreen(
         imageUri = imageUri,
-        diseaseName = finalData.diseaseName,
-        possibleProblems = finalData.possibleProblems,
-        symptoms = finalData.symptoms,
-        causes = finalData.causes,
-        treatment = finalData.treatment,
-        recoveryCare = finalData.recoveryCare,
+        diseaseName = effectiveUiState.diseaseName,
+        possibleProblems = effectiveUiState.possibleProblems,
+        symptoms = effectiveUiState.symptoms,
+        causes = effectiveUiState.causes,
+        treatment = effectiveUiState.treatment,
+        recoveryCare = effectiveUiState.recoveryCare,
         location = displayLocation,
         apiType = apiType,
         classifyData = classifyData,
-        onBack = { navController?.popBackStack() }
+        onBack = { navController?.popBackStack() },
+        onChatWithAi = onChatWithAi
     )
 }
 
@@ -154,7 +152,8 @@ fun DiagnoseResultScreen(
     location: String? = null,
     apiType: ApiType = ApiType.DETECT,
     classifyData: ClassifyData? = null,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onChatWithAi: (String) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -167,7 +166,8 @@ fun DiagnoseResultScreen(
                 imageUri = imageUri,
                 onBack = onBack,
                 classifyData = classifyData,
-                location = location
+                location = location,
+                onChatWithAi = onChatWithAi
             )
         } else {
             ContentSection(
@@ -180,7 +180,8 @@ fun DiagnoseResultScreen(
                 treatment = treatment,
                 recoveryCare = recoveryCare,
                 location = location,
-                apiType = apiType
+                apiType = apiType,
+                onChatWithAi = onChatWithAi
             )
         }
     }
@@ -223,14 +224,6 @@ private fun HeaderImage(
                 contentScale = ContentScale.Crop
             )
         }
-
-        // simple bounding box
-        /*Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(110.dp, 70.dp)
-                .border(2.dp, Color(0xFFE53935))
-        )*/
     }
 }
 
@@ -245,7 +238,8 @@ private fun ContentSection(
     treatment: List<TreatmentItem>,
     recoveryCare: List<RecoveryItem>,
     location: String?,
-    apiType: ApiType
+    apiType: ApiType,
+    onChatWithAi: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -290,8 +284,7 @@ private fun ContentSection(
                 Icon(
                     painter = painterResource(R.drawable.ic_location),
                     contentDescription = null,
-                    tint = Subtitle,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
@@ -314,9 +307,7 @@ private fun ContentSection(
                 )
             }
         }
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
+        Spacer(modifier = Modifier.height(10.dp))
         // Possible Problems Section
         if (possibleProblems.isNotEmpty()) {
             Column(
@@ -339,7 +330,7 @@ private fun ContentSection(
             }
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(15.dp))
 
         // Symptoms Section
         if (symptoms.isNotBlank()) {
@@ -393,8 +384,21 @@ private fun ContentSection(
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.height(24.dp))
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Chat Button Card
+        Box(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp)) {
+            ChatCard(
+                title = stringResource(R.string.need_plant_help),
+                description = stringResource(R.string.get_instant_advice),
+                background = Color.White,
+                animatedRaw = R.raw.ic_tinh_linh,
+                onChatNowClick = {
+                    onChatWithAi("Cách điều trị bệnh $diseaseName")
+                }
+            )
+        }
     }
 }
 
@@ -403,7 +407,8 @@ private fun ClassifyContentSection(
     imageUri: Uri?,
     onBack: () -> Unit,
     classifyData: ClassifyData,
-    location: String?
+    location: String?,
+    onChatWithAi: (String) -> Unit
 ) {
     val plantName = classifyData.plantNameVN ?: classifyData.plantName
     val confidence = classifyData.confidence
@@ -443,33 +448,6 @@ private fun ClassifyContentSection(
             )
         }
         
-        // Scientific Name and Family (if available)
-        if (!scientificName.isNullOrBlank() || !family.isNullOrBlank()) {
-            Spacer(modifier = Modifier.height(4.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                if (!scientificName.isNullOrBlank()) {
-                    Text(
-                        text = scientificName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Subtitle,
-                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
-                    )
-                }
-                if (!family.isNullOrBlank()) {
-                    Text(
-                        text = "Họ: $family",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Subtitle
-                    )
-                }
-            }
-        }
-        
         // Location and Time
         if (!location.isNullOrBlank()) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -507,263 +485,434 @@ private fun ClassifyContentSection(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(24.dp))
         
-        // Info Card
-        Card(
+        // Plant Info Section
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(12.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+                .padding(horizontal = 16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                // Status
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+            Text(
+                text = stringResource(R.string.plant_info),
+                style = MaterialTheme.typography.TitleLarge3,
+                color = GreenSurface
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            
+            // Scientific Name
+            InfoRow(label = stringResource(R.string.scientific_name), value = scientificName ?: "N/A")
+            Divider(color = Color(0xFFF1F1F1), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
+            
+            // Family
+            InfoRow(label = stringResource(R.string.family), value = family ?: "N/A")
+            Divider(color = Color(0xFFF1F1F1), thickness = 1.dp, modifier = Modifier.padding(vertical = 8.dp))
+            
+            // Confidence
+            val confidencePercent = (confidence ?: 0.0) * 100
+            InfoRow(label = stringResource(R.string.confidence), value = "${confidencePercent.toInt()}%")
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Description Section
+        if (!description.isNullOrBlank()) {
+            TextSectionCard(title = stringResource(R.string.description), text = description)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // Care Tips Section
+        careTips?.let { tips ->
+            if (tips.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = null,
-                        tint = Color(0xFF2ECC71),
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = classifyData.classificationStatus ?: stringResource(R.string.status_identified),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Subtitle
-                    )
-                }
-                
-                // Confidence
-                if (confidence != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "📊",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        // Xử lý confidence: nếu > 1.0 thì là phần trăm, nếu <= 1.0 thì nhân 100
-                        val confidencePercent = if (confidence > 1.0) confidence else confidence * 100
-                        Text(
-                            text = "${stringResource(R.string.confidence)}: ${String.format("%.2f", confidencePercent)}%",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Subtitle
-                        )
-                    }
-                }
-                
-                // Description
-                if (!description.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "📝 ${stringResource(R.string.description)}:",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                        text = stringResource(R.string.care_tips),
+                        style = MaterialTheme.typography.TitleLarge3,
                         color = GreenSurface
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Subtitle,
-                        lineHeight = 20.sp
-                    )
-                }
-            }
-        }
-        // Common Diseases Section
-        if (!commonDiseases.isNullOrEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.possible_problems),
-                    style = MaterialTheme.typography.TitleLarge3,
-                    color = Color.Red
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.horizontalScroll(rememberScrollState())
-                ) {
-                    commonDiseases.forEach { ProblemChip(it) }
-                }
-            }
-        }
-        
-        // Care Tips Section
-        if (!careTips.isNullOrEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Text(
-                    text = "💡 Mẹo chăm sóc",
-                    style = MaterialTheme.typography.TitleLarge3,
-                    color = GreenSurface
-                )
-                Spacer(modifier = Modifier.height(10.dp))
-                careTips.forEachIndexed { index, tip ->
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = if (index != careTips.lastIndex) 15.dp else 0.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9)),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(
-                            text = "• $tip",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Subtitle,
-                            modifier = Modifier.padding(12.dp)
-                        )
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            tips.forEachIndexed { index, tip ->
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        text = "• ",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color(0xFF33691E)
+                                    )
+                                    Text(
+                                        text = tip,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color(0xFF33691E),
+                                        lineHeight = 22.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                if (index < tips.lastIndex) Spacer(modifier = Modifier.height(4.dp))
+                            }
+                        }
                     }
                 }
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
         
+        // Common Diseases Section
+        commonDiseases?.let { diseases ->
+            if (diseases.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.common_diseases),
+                        style = MaterialTheme.typography.TitleLarge3,
+                        color = GreenSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            diseases.forEachIndexed { index, disease ->
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Text(
+                                        text = "• ",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color(0xFF33691E)
+                                    )
+                                    Text(
+                                        text = disease,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color(0xFF33691E),
+                                        lineHeight = 22.sp,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                                if (index < diseases.lastIndex) Spacer(modifier = Modifier.height(4.dp))
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+
+        // Chat Button Card
+        Box(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp)) {
+            ChatCard(
+                title = stringResource(R.string.need_plant_help),
+                description = stringResource(R.string.get_instant_advice),
+                background = Color.White,
+                animatedRaw = R.raw.ic_tinh_linh,
+                onChatNowClick = {
+                    onChatWithAi("Cách chăm sóc cây $plantName")
+                }
+            )
+        }
     }
 }
 
 @Composable
+private fun InfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Subtitle,
+            fontWeight = FontWeight.Medium
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.width(200.dp),
+            textAlign = TextAlign.End
+        )
+    }
+}
+
+
+@Composable
 private fun ProblemChip(text: String) {
     AssistChip(
-        onClick = {},
-        label = { Text(text = text, style = MaterialTheme.typography.Label1) },
+        onClick = { },
+        label = { Text(text) },
         colors = AssistChipDefaults.assistChipColors(
-            containerColor = Red1,
-            labelColor = RedErr
+            containerColor = Color(0xFFFFEBEE),
+            labelColor = Color(0xFFD32F2F)
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = Color(0xFFFFCDD2)
         )
     )
 }
 
 @Composable
 private fun TextSectionCard(title: String, text: String) {
-    if (text.isBlank()) return
-    
-    Column(modifier = Modifier.padding(horizontal = 14.dp)) {
-        Text(title, style = MaterialTheme.typography.TitleLarge3)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.TitleLarge3,
+            color = GreenSurface
+        )
         Spacer(modifier = Modifier.height(8.dp))
         Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDFD))
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9)),
+            shape = RoundedCornerShape(12.dp)
         ) {
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Subtitle,
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier.padding(16.dp),
+                color = Color(0xFF33691E),
+                lineHeight = 22.sp
             )
         }
     }
 }
-
-
 
 @Composable
 private fun TreatmentItemCard(item: TreatmentItem) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+        shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Text(
-                item.title,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                color = GreenSurface
-            )
-            if (!item.subtitle.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    item.subtitle!!,
-                    style = MaterialTheme.typography.Body1,
-                    color = Color(0xFF2C3E50)
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = GreenSurface
                 )
             }
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+            val subtitle = item.subtitle
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Subtitle
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             item.steps.forEachIndexed { index, step ->
-                Text(text = step, style = MaterialTheme.typography.Body1, color = Subtitle)
-                if (index != item.steps.lastIndex) Spacer(modifier = Modifier.height(6.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "• ",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Subtitle
+                    )
+                    Text(
+                        text = step,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Subtitle,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (index < item.steps.lastIndex) Spacer(modifier = Modifier.height(4.dp))
+            }
+            val linkText = item.linkText
+            if (!linkText.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Recommended: $linkText",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color(0xFF1976D2),
+                    fontStyle = FontStyle.Italic
+                )
             }
         }
     }
 }
-
-
 
 @Composable
 private fun RecoveryItemCard(item: RecoveryItem) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 10.dp),
-        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = White),
+        shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Text(
-                item.title,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                color = Color(0xFF1976D2)
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            item.steps.forEachIndexed { index, s ->
-                Text(s, style = MaterialTheme.typography.Body1, color = Subtitle)
-                if (index != item.steps.lastIndex) Spacer(modifier = Modifier.height(6.dp))
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1976D2)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            item.steps.forEachIndexed { i, step ->
+                Row(verticalAlignment = Alignment.Top) {
+                    Text(
+                        text = "•",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Subtitle,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                    Text(
+                        text = step,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Subtitle,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (i < item.steps.lastIndex) Spacer(modifier = Modifier.height(4.dp))
             }
         }
     }
 }
 
-@Preview
+// === NEW COMPONENTS FOR CHAT CARD ===
+
 @Composable
-private fun PreviewDiagnoseResult() {
+fun ChatCard(
+    title: String, 
+    description: String, 
+    background: Color, 
+    animatedRaw: Int? = null,
+    onChatNowClick: () -> Unit = {}
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(130.dp)
+            .shadow(6.dp, shape = shape, clip = false)
+            .border(
+                width = 2.dp,
+                brush = Brush.linearGradient(
+                    listOf(
+                        Color(0xFF00E676), // green
+                        Color(0xFF00B0FF)  // blue
+                    )
+                ),
+                shape = shape
+            )
+            .clip(shape)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(1.5.dp),
+            shape = shape,
+            colors = CardDefaults.cardColors(containerColor = background),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, style = MaterialTheme.typography.Button1)
+                    Text(description, style = MaterialTheme.typography.Label4, color = Subtitle)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = onChatNowClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4)),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.height(36.dp) // Smaller button
+                    ) {
+                        Text(stringResource(R.string.chat_now), fontSize = 12.sp, color = Color.White)
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                animatedRaw?.let { GifImage(animatedRaw = it) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GifImage(animatedRaw: Int) {
+    val context = LocalContext.current
+    val imageLoader = remember {
+        ImageLoader.Builder(context).components {
+            if (Build.VERSION.SDK_INT >= 28) {
+                add(ImageDecoderDecoder.Factory())
+            } else {
+                add(GifDecoder.Factory())
+            }
+        }.build()
+    }
+
+    val resourceEntryName = try {
+        context.resources.getResourceEntryName(animatedRaw)
+    } catch (e: Exception) {
+        "ic_tinh_linh"
+    }
+    // Fallback if resource name lookup fails (rare but possible with obfuscation) or dynamic load issues
+    // Note: Assuming R.raw.ic_tinh_linh exists as passed from HomeScreen
+    
+    val gifUri = Uri.parse("android.resource://${context.packageName}/raw/$resourceEntryName")
+
+    AsyncImage(
+        model = ImageRequest.Builder(context).data(gifUri).crossfade(false).allowRgb565(false)
+            .build(),
+        contentDescription = null,
+        modifier = Modifier.size(80.dp), // Reduced size slightly for smaller card
+        contentScale = ContentScale.Fit,
+        imageLoader = imageLoader
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun DiagnoseResultScreenPreview() {
     DiagnoseResultScreen(
-        diseaseName = "Tomato Early Blight",
-        possibleProblems = listOf("Fungal Infection", "Nutrient Deficiency"),
-        symptoms = "Dark spots on leaves\nYellowing of lower leaves\nStunted growth",
-        causes = "Overwatering\nPoor air circulation\nInfected soil",
+        imageUri = null,
+        diseaseName = "Leaf Rust",
+        possibleProblems = listOf("Fungal Infection", "High Humidity"),
+        symptoms = "Brown spots on leaves, yellowing",
+        causes = "Excessive moisture, poor air circulation",
         treatment = listOf(
             TreatmentItem(
-                title = "Fungicide Application",
-                subtitle = "Use a copper-based fungicide",
-                steps = listOf(
-                    "Mix fungicide according to package instructions.",
-                    "Apply to affected plants every 7-10 days."
-                ),
-                linkText = "Buy Fungicide"
+                title = "Remove infected leaves",
+                subtitle = "Cut off all visible infected leaves",
+                steps = emptyList(),
+                linkText = null
+            ),
+            TreatmentItem(
+                title = "Apply fungicide",
+                subtitle = "Spray copper-based fungicide",
+                steps = emptyList(),
+                linkText = "FungiStop 500"
             )
         ),
         recoveryCare = listOf(
-            RecoveryItem(
-                title = "Post-Treatment Care",
-                steps = listOf(
-                    "Monitor plants for new symptoms.",
-                    "Ensure proper watering and spacing."
-                ),
-                linkText = "Learn More"
-            )
+            RecoveryItem("Watering", listOf("Water at base only", "Avoid wetting leaves")),
+            RecoveryItem("Fertilizing", listOf("Use balanced NPK", "Reduce Nitrogen"))
         ),
-        location = "Hà Đông, Hà Nội"
+        location = "Ho Chi Minh City"
     )
 }

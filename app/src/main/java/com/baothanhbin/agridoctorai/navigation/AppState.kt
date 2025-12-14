@@ -52,7 +52,7 @@ class AppState(
             TopLevelDestination.HOME -> navController.navigateToHome(topLevelNavOptions)
             TopLevelDestination.DIAGNOSE -> navController.navigateToDiagnose(topLevelNavOptions)
             TopLevelDestination.MY_PLANTS -> navController.navigateToMyplants(topLevelNavOptions)
-            TopLevelDestination.CHATBOT -> navController.navigateToChatbot(topLevelNavOptions)
+            TopLevelDestination.CHATBOT -> navController.navigateToChatbot(navOptions = topLevelNavOptions)
         }
     }
 }

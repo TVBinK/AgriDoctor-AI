@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import com.baothanhbin.feature.camera.navigation.cameraScreen
 import com.baothanhbin.feature.chatbot.navigation.chatbotScreen
+import com.baothanhbin.feature.chatbot.navigation.navigateToChatbot
 import com.baothanhbin.feature.diagnose.navigation.diagnoseScreen
 import com.baothanhbin.feature.home.HomeScreen
 import com.baothanhbin.feature.home.navigation.HOME_ROUTE
@@ -46,9 +47,23 @@ fun MainNavHost(
             navController = navController,
             locationStateHolder = appState.locationStateHolder
         )
+
+
         diagnoseResultScreen(
             navController = navController,
-            locationStateHolder = appState.locationStateHolder
+            locationStateHolder = appState.locationStateHolder,
+            onNavigateToChatbot = { message ->
+                // Navigate to chatbot as top-level destination, popping DiagnoseResultScreen
+                val navOptions = androidx.navigation.navOptions {
+                    popUpTo(com.baothanhbin.feature.home.navigation.HOME_ROUTE) { 
+                        saveState = true 
+                        inclusive = false
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+                navController.navigateToChatbot(initialMessage = message, navOptions = navOptions)
+            }
         )
         diagnoseFailedScreen(navController = navController)
         lightMeterScreen(navController = navController)

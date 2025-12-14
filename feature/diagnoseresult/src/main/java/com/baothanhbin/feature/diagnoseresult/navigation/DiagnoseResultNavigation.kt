@@ -52,7 +52,8 @@ fun NavController.navigateToDiagnoseResult(
 
 fun NavGraphBuilder.diagnoseResultScreen(
     navController: NavHostController? = null,
-    locationStateHolder: LocationStateHolder
+    locationStateHolder: LocationStateHolder,
+    onNavigateToChatbot: (String) -> Unit
 ) {
     // Route with imageUri argument
     composable(
@@ -95,7 +96,8 @@ fun NavGraphBuilder.diagnoseResultScreen(
             imageUri = imageUri,
             locationStateHolder = locationStateHolder,
             apiType = apiType,
-            classifyData = classifyData
+            classifyData = classifyData,
+            onChatWithAi = onNavigateToChatbot
         )
     }
     // Route without argument (for backward compatibility)
@@ -133,7 +135,8 @@ fun NavGraphBuilder.diagnoseResultScreen(
             imageUri = null,
             locationStateHolder = locationStateHolder,
             apiType = apiType,
-            classifyData = classifyData
+            classifyData = classifyData,
+            onChatWithAi = onNavigateToChatbot
         )
     }
 }
