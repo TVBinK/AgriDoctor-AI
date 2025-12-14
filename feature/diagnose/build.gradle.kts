@@ -12,6 +12,7 @@ dependencies {
     implementation(project(":core:data"))
     implementation(project(":core:database"))
     implementation(project(":feature:diagnoseresult"))
+    implementation(project(":feature:camera"))
     implementation(project(":core:ui"))
 
     //coil

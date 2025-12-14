@@ -25,6 +25,12 @@ abstract class DataModule {
     abstract fun bindDiagnoseResultRepository(
         impl: DiagnoseResultRepositoryImpl
     ): DiagnoseResultRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindPlantRepository(
+        impl: com.baothanhbin.core.data.impl.PlantRepositoryImpl
+    ): com.baothanhbin.core.data.repository.PlantRepository
 }
 
 @Module

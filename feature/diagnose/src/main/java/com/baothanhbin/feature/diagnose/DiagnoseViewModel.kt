@@ -10,6 +10,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.baothanhbin.core.data.repository.DiagnoseResultRepository
 import com.baothanhbin.core.database.model.DiagnoseResultEntity
+import com.baothanhbin.core.database.model.PlantEntity
+import com.baothanhbin.core.database.model.toClassifyData
+import com.baothanhbin.core.model.ApiType
+import com.baothanhbin.core.model.ClassifyData
 import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,17 +27,27 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 sealed class DiagnoseNavigationEvent {
-    data class NavigateToResult(val imageUri: Uri?) : DiagnoseNavigationEvent()
+    data class NavigateToResult(
+        val imageUri: Uri?,
+        val apiType: ApiType = ApiType.DETECT,
+        val classifyData: ClassifyData? = null
+    ) : DiagnoseNavigationEvent()
+
+    data object NavigateToCamera : DiagnoseNavigationEvent()
 }
 
 @HiltViewModel
 class DiagnoseViewModel @Inject constructor(
     application: Application,
-    private val diagnoseResultRepository: DiagnoseResultRepository
+    private val diagnoseResultRepository: DiagnoseResultRepository,
+    private val plantRepository: com.baothanhbin.core.data.repository.PlantRepository
 ) : AndroidViewModel(application) {
 
     private val _historyItems = MutableStateFlow<List<DiagnoseResultEntity>>(emptyList())
     val historyItems: StateFlow<List<DiagnoseResultEntity>> = _historyItems.asStateFlow()
+
+    private val _plantHistoryItems = MutableStateFlow<List<PlantEntity>>(emptyList())
+    val plantHistoryItems: StateFlow<List<PlantEntity>> = _plantHistoryItems.asStateFlow()
 
     private val _navigationEvent = MutableSharedFlow<DiagnoseNavigationEvent>()
     val navigationEvent: SharedFlow<DiagnoseNavigationEvent> = _navigationEvent.asSharedFlow()
@@ -52,6 +66,10 @@ class DiagnoseViewModel @Inject constructor(
         viewModelScope.launch {
             val results = diagnoseResultRepository.getAllDiagnoseResults()
             _historyItems.value = results
+            
+            // Load plant history
+            val plants = plantRepository.getAllPlants()
+            _plantHistoryItems.value = plants
         }
     }
 
@@ -59,6 +77,24 @@ class DiagnoseViewModel @Inject constructor(
         viewModelScope.launch {
             val uri = entity.imageUri?.let { Uri.parse(it) }
             _navigationEvent.emit(DiagnoseNavigationEvent.NavigateToResult(uri))
+        }
+    }
+
+    fun onPlantHistoryItemClick(entity: PlantEntity) {
+        viewModelScope.launch {
+            val uri = entity.imageUri?.let { Uri.parse(it) }
+            val classifyData = entity.toClassifyData()
+            _navigationEvent.emit(DiagnoseNavigationEvent.NavigateToResult(
+                imageUri = uri,
+                apiType = ApiType.CLASSIFY,
+                classifyData = classifyData
+            ))
+        }
+    }
+
+    fun onAutoDiagnoseClick() {
+        viewModelScope.launch {
+            _navigationEvent.emit(DiagnoseNavigationEvent.NavigateToCamera)
         }
     }
 

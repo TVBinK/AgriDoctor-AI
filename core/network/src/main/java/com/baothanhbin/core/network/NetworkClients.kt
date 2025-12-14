@@ -8,7 +8,12 @@ import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.client.statement.HttpResponse
 import okhttp3.OkHttpClient
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -18,15 +23,21 @@ import javax.net.ssl.X509TrustManager
 
 internal object NetworkClients {
 
-    // API Endpoints - Obfuscated để tránh dịch ngược
-    // Chia nhỏ string để khó đọc hơn khi decompile
+    /**
+     * Base URL cho API server
+     * 
+     * Cấu hình sử dụng ADB reverse forwarding (kết nối qua cáp USB):
+     * 1. Server chạy trên máy tính tại: https://localhost:3443
+     * 2. Chạy lệnh ADB: adb reverse tcp:3443 tcp:3443
+     * 3. Ứng dụng Android sẽ kết nối đến localhost:3443
+     * 
+     * Lợi ích:
+     * - Không cần cấu hình IP, không phụ thuộc mạng WiFi/4G
+     * - Kết nối ổn định qua USB
+     * - Không cần lo về firewall
+     */
     private val SERVER_BASE_URL: String
-        get() = buildString {
-            append("https://")
-            append("192.168.34")
-            append(".116:")
-            append("3443")
-        }
+        get() = "https://127.0.0.1:3443"
 
     /**
      * Tạo TrustManager chấp nhận tất cả certificates (chỉ dùng cho development)
@@ -120,13 +131,55 @@ internal object NetworkClients {
             append("/classify")
         }
 
-    // For real device, use actual machine IP: 192.168.34.116
-    // For emulator, use: https://10.0.2.2:3000/api/detect
+    /**
+     * Kiểm tra kết nối đến server
+     * @return true nếu kết nối thành công, false nếu không thể kết nối
+     */
+    suspend fun testServerConnection(): Boolean {
+        return withContext(Dispatchers.IO) {
+            try {
+                val testClient = createClient(
+                    baseUrl = SERVER_BASE_URL,
+                    acceptAllCertificates = BuildConfig.DEBUG
+                )
+                val response: HttpResponse = testClient.get("")
+                val isSuccess = response.status.value in 200..499 // 4xx vẫn là kết nối thành công (server trả lời)
+                Log.d("NetworkClients", "🔗 Test connection: ${if (isSuccess) "✅ OK" else "❌ Failed"} - Status: ${response.status.value}")
+                testClient.close()
+                isSuccess
+            } catch (e: Exception) {
+                Log.e("NetworkClients", "❌ Connection test failed: ${e.message}")
+                Log.e("NetworkClients", "   Kiểm tra:")
+                Log.e("NetworkClients", "   1. Đã chạy: adb reverse tcp:3443 tcp:3443")
+                Log.e("NetworkClients", "   2. Server đang chạy tại: https://localhost:3443")
+                Log.e("NetworkClients", "   3. Điện thoại đang kết nối qua USB")
+                false
+            }
+        }
+    }
+
+    init {
+        Log.d("NetworkClients", "🔗 ===== Network Configuration =====")
+        Log.d("NetworkClients", "🔗 Server Base URL: $SERVER_BASE_URL")
+        Log.d("NetworkClients", "🔗 Detect API: $SERVER_BASE_URL$API_DETECT_PATH")
+        Log.d("NetworkClients", "🔗 Accept All Certificates: ${BuildConfig.DEBUG}")
+        Log.d("NetworkClients", "🔗 =================================")
+        Log.d("NetworkClients", "💡 Lưu ý: Sử dụng ADB reverse forwarding qua USB")
+        Log.d("NetworkClients", "💡 Chạy: adb reverse tcp:3443 tcp:3443")
+    }
+
+    // Cách sử dụng ADB reverse forwarding:
+    // 1. Kết nối điện thoại với máy tính qua USB
+    // 2. Bật USB debugging trên điện thoại
+    // 3. Chạy lệnh: adb reverse tcp:3443 tcp:3443
+    // 4. Server trên máy tính chạy tại: https://localhost:3443
+    // 5. Ứng dụng sẽ kết nối đến: https://127.0.0.1:3443/api/detect
     //
     // Lưu ý:
     // - Trong debug mode: acceptAllCertificates = true để chấp nhận self-signed certificates
     // - Trong release mode: acceptAllCertificates = false và sử dụng certificate hợp lệ
-    // - Hoặc cài đặt self-signed certificate vào thiết bị và sử dụng network security config
+    // - ADB reverse chỉ hoạt động khi cáp USB đang kết nối
+    // - Sử dụng testServerConnection() để kiểm tra kết nối
     val detectClient: HttpClient = createClient(
         baseUrl = "$SERVER_BASE_URL$API_DETECT_PATH",
         acceptAllCertificates = BuildConfig.DEBUG // Chỉ chấp nhận self-signed trong debug mode
@@ -150,5 +203,6 @@ internal object NetworkClients {
         acceptAllCertificates = BuildConfig.DEBUG
     )
 }
+
 
 

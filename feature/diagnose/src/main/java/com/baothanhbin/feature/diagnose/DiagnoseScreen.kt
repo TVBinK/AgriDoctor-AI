@@ -66,6 +66,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.database.model.DiagnoseResultEntity
+import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.theme.Body1
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Label4
@@ -73,6 +74,7 @@ import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.ui.dialog.LocationDialog
+import com.baothanhbin.feature.camera.navigation.navigateToCamera
 import com.baothanhbin.feature.diagnoseresult.navigation.navigateToDiagnoseResult
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -94,8 +96,14 @@ fun DiagnoseRoute(
             when (event) {
                 is DiagnoseNavigationEvent.NavigateToResult -> {
                     navController?.navigateToDiagnoseResult(
-                        imageUri = event.imageUri
+                        imageUri = event.imageUri,
+                        apiType = event.apiType,
+                        classifyData = event.classifyData
                     )
+                }
+                is DiagnoseNavigationEvent.NavigateToCamera -> {
+                    // Navigate to Camera with Diagnose mode (index 0)
+                    navController?.navigateToCamera(modeIndex = 0)
                 }
             }
         }
@@ -160,7 +168,9 @@ fun DiagnoseScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(top = 140.dp, bottom = 24.dp)
         ) {
-            DiagnoseCard()
+            DiagnoseCard(
+                onAutoDiagnoseClick = { viewModel.onAutoDiagnoseClick() }
+            )
             Spacer(modifier = Modifier.height(16.dp))
             CommonProblemsSection()
             Spacer(modifier = Modifier.height(24.dp))
@@ -232,7 +242,9 @@ private fun DiagnoseTopBar(
 }
 
 @Composable
-private fun DiagnoseCard() {
+private fun DiagnoseCard(
+    onAutoDiagnoseClick: () -> Unit
+) {
     val shape = RoundedCornerShape(16.dp)
 
     Box(
@@ -266,7 +278,7 @@ private fun DiagnoseCard() {
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
-                    onClick = {},
+                    onClick = onAutoDiagnoseClick,
                     shape = RoundedCornerShape(24.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                 ) {
@@ -362,8 +374,12 @@ private fun HistorySection(
     viewModel: DiagnoseViewModel
 ) {
     val historyItems by viewModel.historyItems.collectAsStateWithLifecycle()
+    val plantHistoryItems by viewModel.plantHistoryItems.collectAsStateWithLifecycle()
+    
+    // Tab state
+    var selectedTab by remember { mutableStateOf(0) } // 0: Disease, 1: Plant
 
-    if (historyItems.isEmpty()) {
+    if (historyItems.isEmpty() && plantHistoryItems.isEmpty()) {
         return
     }
 
@@ -372,27 +388,215 @@ private fun HistorySection(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
-        Text(
-            text = stringResource(R.string.health_check_history),
-            style = MaterialTheme.typography.TitleLarge3,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-
-        LazyColumn(
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.health_check_history),
+                style = MaterialTheme.typography.TitleLarge3,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+        }
+        
+        // Custom Tabs
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(400.dp), // Giới hạn chiều cao để scroll được
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(bottom = 16.dp)
+                .background(Color(0xFFF0F0F0), RoundedCornerShape(8.dp))
+                .padding(4.dp)
         ) {
-            items(
-                items = historyItems,
-                key = { it.id } // Sử dụng id làm key để đảm bảo recomposition đúng
-            ) { item ->
-                HistoryItem(
-                    entity = item,
-                    onClick = { viewModel.onHistoryItemClick(item) }
+            TabButton(
+                text = "Disease",
+                selected = selectedTab == 0,
+                modifier = Modifier.weight(1f),
+                onClick = { selectedTab = 0 }
+            )
+            TabButton(
+                text = "Plants",
+                selected = selectedTab == 1,
+                modifier = Modifier.weight(1f),
+                onClick = { selectedTab = 1 }
+            )
+        }
+
+        if (selectedTab == 0) {
+            if (historyItems.isEmpty()) {
+                Text(
+                    text = "No disease history yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Subtitle,
+                    modifier = Modifier.padding(vertical = 20.dp).align(Alignment.CenterHorizontally)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        items = historyItems,
+                        key = { it.id }
+                    ) { item ->
+                        HistoryItem(
+                            entity = item,
+                            onClick = { viewModel.onHistoryItemClick(item) }
+                        )
+                    }
+                }
+            }
+        } else {
+            if (plantHistoryItems.isEmpty()) {
+                Text(
+                    text = "No plant history yet",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Subtitle,
+                    modifier = Modifier.padding(vertical = 20.dp).align(Alignment.CenterHorizontally)
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(400.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        items = plantHistoryItems,
+                        key = { it.id }
+                    ) { item ->
+                        PlantHistoryItem(
+                            entity = item,
+                            onClick = { viewModel.onPlantHistoryItemClick(item) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabButton(
+    text: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .height(36.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (selected) Color.White else Color.Transparent)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) GreenSurface else Subtitle
+        )
+    }
+}
+
+@Composable
+private fun PlantHistoryItem(
+    entity: PlantEntity,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Image
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFF5F5F5)),
+                contentAlignment = Alignment.Center
+            ) {
+                entity.imageUri?.let { uriString ->
+                    val uri = try { Uri.parse(uriString) } catch (e: Exception) { null }
+                    
+                    if (uri != null) {
+                        AsyncImage(
+                            model = ImageRequest.Builder(context)
+                                .data(uri)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            placeholder = painterResource(id = R.drawable.img_lavender),
+                            error = painterResource(id = R.drawable.img_lavender)
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.img_lavender),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                } ?: Image(
+                    painter = painterResource(id = R.drawable.img_lavender),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
                 )
             }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = entity.scientificName ?: "Plant",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Subtitle
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = entity.plantName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = GreenSurface
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = formatDate(entity.timestamp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Subtitle
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Subtitle,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -430,7 +634,7 @@ private fun HistoryItem(
                     // Parse URI trước khi vào Composable
                     val uri = try {
                         val parsed = Uri.parse(uriString)
-                        Log.d("HistoryItem", "Loading image from URI: $uriString")
+                        // Log.d("HistoryItem", "Loading image from URI: $uriString")
                         parsed
                     } catch (e: Exception) {
                         Log.e("HistoryItem", "Error parsing URI: $uriString", e)
@@ -560,7 +764,9 @@ fun DiagnosePreview() {
                 .verticalScroll(rememberScrollState())
                 .padding(top = 140.dp, bottom = 24.dp)
         ) {
-            DiagnoseCard()
+            DiagnoseCard(
+                onAutoDiagnoseClick = {}
+            )
             Spacer(modifier = Modifier.height(16.dp))
             CommonProblemsSection()
         }

@@ -10,13 +10,15 @@ import com.baothanhbin.core.database.converter.TreatmentDataListConverter
 import com.baothanhbin.core.database.dao.ChatDao
 import com.baothanhbin.core.database.dao.DiagnoseResultDao
 import com.baothanhbin.core.database.dao.DiseaseDao
+import com.baothanhbin.core.database.dao.PlantDao
 import com.baothanhbin.core.database.model.ChatEntity
 import com.baothanhbin.core.database.model.DiagnoseResultEntity
 import com.baothanhbin.core.database.model.DiseaseListEntity
+import com.baothanhbin.core.database.model.PlantEntity
 
 @Database(
-    entities = [DiagnoseResultEntity::class, ChatEntity::class, DiseaseListEntity::class],
-    version = 6, // Tăng version vì thêm bảng lưu cache danh sách bệnh
+    entities = [DiagnoseResultEntity::class, ChatEntity::class, DiseaseListEntity::class, PlantEntity::class],
+    version = 7, // Tăng version vì thêm bảng plants
     exportSchema = false
 )
 @TypeConverters(
@@ -29,5 +31,6 @@ abstract class AgriDoctorDatabase : RoomDatabase() {
     abstract fun diagnoseResultDao(): DiagnoseResultDao
     abstract fun chatDao(): ChatDao
     abstract fun diseaseDao(): DiseaseDao
+    abstract fun plantDao(): PlantDao
 }
 

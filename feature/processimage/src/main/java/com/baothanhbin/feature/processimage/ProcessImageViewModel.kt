@@ -11,6 +11,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.baothanhbin.core.data.repository.DiagnoseResultRepository
 import com.baothanhbin.core.database.model.toEntity
+import com.baothanhbin.core.database.model.toPlantEntity
 import com.baothanhbin.core.model.ApiType
 import com.baothanhbin.core.model.ClassifyData
 import com.baothanhbin.core.network.NetworkDataSource
@@ -50,7 +51,8 @@ sealed class ProcessImageNavigationEvent {
 @HiltViewModel
 class ProcessImageViewModel @Inject constructor(
     application: Application,
-    private val diagnoseResultRepository: DiagnoseResultRepository
+    private val diagnoseResultRepository: DiagnoseResultRepository,
+    private val plantRepository: com.baothanhbin.core.data.repository.PlantRepository
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(ProcessImageUiState())
@@ -186,6 +188,14 @@ class ProcessImageViewModel @Inject constructor(
                                 locationStateHolder?.updateAddress(currentLocation)
                             }
                             
+                            // Insert Plant to DB
+                            val uriToSave = savedImageUri ?: imageUri
+                            val entity = classifyData.toPlantEntity(
+                                imageUri = uriToSave.toString(),
+                                location = currentLocation
+                            )
+                            plantRepository.insertPlant(entity)
+
                             // Navigate with saved URI if available
                             val navigationUri = savedImageUri ?: imageUri
                             _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(
