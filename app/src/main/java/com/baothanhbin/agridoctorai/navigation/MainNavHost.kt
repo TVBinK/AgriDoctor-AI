@@ -10,25 +10,66 @@ import com.baothanhbin.feature.diagnose.navigation.diagnoseScreen
 import com.baothanhbin.feature.home.HomeScreen
 import com.baothanhbin.feature.home.navigation.HOME_ROUTE
 import com.baothanhbin.feature.home.navigation.homeScreen
+import com.baothanhbin.feature.home.navigation.navigateToHome
+import com.baothanhbin.feature.login.navigation.LOGIN_ROUTE
+import com.baothanhbin.feature.login.navigation.loginScreen
+import com.baothanhbin.feature.login.navigation.navigateToLogin
 import com.baothanhbin.feature.myplants.navigation.myplantScreen
 import com.baothanhbin.feature.processimage.navigation.processImageScreen
 import com.baothanhbin.feature.diagnoseresult.navigation.diagnoseResultScreen
 import com.baothanhbin.feature.diagnosefailed.navigation.diagnoseFailedScreen
 import com.baothanhbin.feature.lightmeter.navigation.lightMeterScreen
 import com.baothanhbin.feature.settings.navigation.settingsScreen
+import com.baothanhbin.feature.signup.navigation.SIGNUP_ROUTE
+import com.baothanhbin.feature.signup.navigation.signupScreen
+import com.baothanhbin.feature.signup.navigation.navigateToSignup
+import com.baothanhbin.feature.verificationotp.navigation.verificationOTPScreen
+import com.baothanhbin.feature.verificationotp.navigation.navigateToVerificationOTP
 
 @Composable
 fun MainNavHost(
     modifier: Modifier = Modifier,
-    appState: AppState
+    appState: AppState,
+    startDestination: String = LOGIN_ROUTE
 ) {
     val navController = appState.navController
 
     NavHost(
         modifier = modifier,
-        startDestination = HOME_ROUTE,
+        startDestination = startDestination,
         navController = navController
     ) {
+        loginScreen(
+            onNavigateToSignup = {
+                navController.navigateToSignup()
+            },
+            onContinueAsGuest = {
+                navController.navigateToHome()
+            },
+            onNavigateToPin = { email: String ->
+                navController.navigateToVerificationOTP(email) 
+            }
+        )
+        verificationOTPScreen(
+            onBackClick = { navController.navigateUp() },
+            onVerifySuccess = { 
+                // Navigate to home after successful OTP verification
+                val navOptions = androidx.navigation.navOptions {
+                    popUpTo(LOGIN_ROUTE) { 
+                        inclusive = true 
+                    }
+                }
+                navController.navigateToHome(navOptions) 
+            }
+        )
+        signupScreen(
+            onNavigateToLogin = {
+                navController.navigateToLogin()
+            },
+            onSignupSuccess = { identifier ->
+                navController.navigateToVerificationOTP(identifier)
+            }
+        )
         homeScreen(
             navController = navController,
             locationStateHolder = appState.locationStateHolder,

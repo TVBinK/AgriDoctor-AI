@@ -31,6 +31,7 @@ import com.baothanhbin.agridoctorai.resources.R
 class MainActivity : FragmentActivity() {
 
     private val securityGateViewModel: SecurityGateViewModel by viewModels()
+    private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +63,7 @@ class MainActivity : FragmentActivity() {
             }
 
             val gateState by securityGateViewModel.gateState.collectAsStateWithLifecycle()
+            val isLoggedIn by mainViewModel.isLoggedIn.collectAsStateWithLifecycle()
 
             LaunchedEffect(gateState.shouldPromptBiometric) {
                 if (gateState.shouldPromptBiometric) {
@@ -76,10 +78,21 @@ class MainActivity : FragmentActivity() {
             }
 
             val appState = rememberAppState() // Tạo navigation state
+
+            LaunchedEffect(isLoggedIn) {
+                if (!isLoggedIn) {
+                    appState.navController.navigate(com.baothanhbin.feature.login.navigation.LOGIN_ROUTE) {
+                        popUpTo(0) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
+
             Box(modifier = Modifier.fillMaxSize()) {
                 MainApp(
                     modifier = Modifier.fillMaxSize(),
-                    appState = appState //Truyền state xuống
+                    appState = appState,
+                    startDestination = if (isLoggedIn) com.baothanhbin.feature.home.navigation.HOME_ROUTE else com.baothanhbin.feature.login.navigation.LOGIN_ROUTE
                 )
 
                 if (gateState.shouldLockApp) {

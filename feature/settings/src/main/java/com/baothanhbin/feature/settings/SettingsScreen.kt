@@ -71,6 +71,7 @@ import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.theme.Body4
 import com.baothanhbin.core.theme.Label2
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 
 @Composable
 fun SettingsRoute(
@@ -83,9 +84,13 @@ fun SettingsRoute(
         onBackClick = onBackClick,
         onToggleBiometric = { enabled ->
             viewModel.setBiometricLockEnabled(enabled)
+        },
+        onLogoutClick = {
+            viewModel.logout()
         }
     )
 }
+
 
 data class SettingsUiState(
     val biometricLockEnabled: Boolean = false
@@ -96,7 +101,8 @@ data class SettingsUiState(
 fun SettingsScreen(
     uiState: SettingsUiState,
     onBackClick: () -> Unit,
-    onToggleBiometric: (Boolean) -> Unit
+    onToggleBiometric: (Boolean) -> Unit,
+    onLogoutClick: () -> Unit
 ) {
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
@@ -247,6 +253,16 @@ fun SettingsScreen(
                     onClick = { /* TODO */ }
                 )
             }
+            
+            SettingsGroupCard {
+                SettingRow(
+                    leadingIcon = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ExitToApp,
+                    title = stringResource(id = R.string.settings_logout),
+                    value = null,
+                    onClick = onLogoutClick,
+                    showChevron = false
+                )
+            }
         }
     }
 }
@@ -388,7 +404,8 @@ fun SettingsScreenPreview() {
             biometricLockEnabled = true
         ),
         onBackClick = {},
-        onToggleBiometric = {}
+        onToggleBiometric = {},
+        onLogoutClick = {}
     )
 }
 

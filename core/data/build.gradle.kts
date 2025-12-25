@@ -33,4 +33,10 @@ dependencies {
     implementation(project(":core:network"))
     implementation(libs.hilt.android)
     implementation(libs.protobuf.kotlin.lite)
+    // Ktor client
+    implementation("io.ktor:ktor-client-core:2.3.12")
+    implementation("io.ktor:ktor-client-android:2.3.12")
+    implementation("io.ktor:ktor-client-okhttp:2.3.12")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.12")
+    implementation(libs.kotlinx.serialization.json)
 }

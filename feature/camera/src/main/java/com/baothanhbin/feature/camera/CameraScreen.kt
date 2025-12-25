@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -117,6 +118,10 @@ fun CameraScreen(
     var previewWidth by remember { mutableStateOf(0) }
     var previewHeight by remember { mutableStateOf(0) }
     
+    // State để lưu URI và apiType từ photo picker, sẽ navigate sau khi activity đã đóng hoàn toàn
+    var pendingImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var pendingApiType by remember { mutableStateOf<String?>(null) }
+    
     // Image picker launcher - sử dụng selectedIndex hiện tại để quyết định apiType
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -125,7 +130,23 @@ fun CameraScreen(
             val apiType = if (selectedIndex == 0) "DETECT" else "CLASSIFY"
             val modeName = if (selectedIndex == 0) "Chuẩn đoán (DETECT)" else "Nhận diện cây (CLASSIFY)"
             Log.d("CameraScreen", "Chọn ảnh từ gallery với tab: index=$selectedIndex, mode=$modeName, apiType=$apiType")
-            navController.navigateToProcessImage(it, apiType)
+            // Lưu vào state và sẽ navigate sau một delay ngắn để tránh xung đột với transition
+            pendingImageUri = it
+            pendingApiType = apiType
+        }
+    }
+    
+    // Navigate sau khi activity result được xử lý và có một delay ngắn
+    LaunchedEffect(pendingImageUri, pendingApiType) {
+        val uri = pendingImageUri
+        val apiType = pendingApiType
+        if (uri != null && apiType != null) {
+            // Delay ngắn để đảm bảo photo picker activity đã đóng hoàn toàn
+            delay(100)
+            navController.navigateToProcessImage(uri, apiType)
+            // Reset state
+            pendingImageUri = null
+            pendingApiType = null
         }
     }
     

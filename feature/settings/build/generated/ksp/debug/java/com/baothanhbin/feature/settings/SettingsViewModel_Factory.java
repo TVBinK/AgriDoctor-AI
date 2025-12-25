@@ -1,5 +1,6 @@
 package com.baothanhbin.feature.settings;
 
+import com.baothanhbin.core.data.repository.AuthRepository;
 import com.baothanhbin.core.data.repository.SecuritySettingsRepository;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
@@ -26,23 +27,28 @@ import javax.inject.Provider;
 public final class SettingsViewModel_Factory implements Factory<SettingsViewModel> {
   private final Provider<SecuritySettingsRepository> securitySettingsRepositoryProvider;
 
+  private final Provider<AuthRepository> authRepositoryProvider;
+
   public SettingsViewModel_Factory(
-      Provider<SecuritySettingsRepository> securitySettingsRepositoryProvider) {
+      Provider<SecuritySettingsRepository> securitySettingsRepositoryProvider,
+      Provider<AuthRepository> authRepositoryProvider) {
     this.securitySettingsRepositoryProvider = securitySettingsRepositoryProvider;
+    this.authRepositoryProvider = authRepositoryProvider;
   }
 
   @Override
   public SettingsViewModel get() {
-    return newInstance(securitySettingsRepositoryProvider.get());
+    return newInstance(securitySettingsRepositoryProvider.get(), authRepositoryProvider.get());
   }
 
   public static SettingsViewModel_Factory create(
-      Provider<SecuritySettingsRepository> securitySettingsRepositoryProvider) {
-    return new SettingsViewModel_Factory(securitySettingsRepositoryProvider);
+      Provider<SecuritySettingsRepository> securitySettingsRepositoryProvider,
+      Provider<AuthRepository> authRepositoryProvider) {
+    return new SettingsViewModel_Factory(securitySettingsRepositoryProvider, authRepositoryProvider);
   }
 
-  public static SettingsViewModel newInstance(
-      SecuritySettingsRepository securitySettingsRepository) {
-    return new SettingsViewModel(securitySettingsRepository);
+  public static SettingsViewModel newInstance(SecuritySettingsRepository securitySettingsRepository,
+      AuthRepository authRepository) {
+    return new SettingsViewModel(securitySettingsRepository, authRepository);
   }
 }

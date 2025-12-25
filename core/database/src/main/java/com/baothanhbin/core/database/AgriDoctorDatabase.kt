@@ -18,7 +18,7 @@ import com.baothanhbin.core.database.model.PlantEntity
 
 @Database(
     entities = [DiagnoseResultEntity::class, ChatEntity::class, DiseaseListEntity::class, PlantEntity::class],
-    version = 7, // Tăng version vì thêm bảng plants
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(

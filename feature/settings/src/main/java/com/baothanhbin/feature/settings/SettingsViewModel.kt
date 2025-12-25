@@ -12,7 +12,8 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val securitySettingsRepository: SecuritySettingsRepository
+    private val securitySettingsRepository: SecuritySettingsRepository,
+    private val authRepository: com.baothanhbin.core.data.repository.AuthRepository
 ) : ViewModel() {
 
     val uiState = securitySettingsRepository.observeBiometricEnabled()
@@ -28,6 +29,12 @@ class SettingsViewModel @Inject constructor(
     fun setBiometricLockEnabled(enabled: Boolean) {
         viewModelScope.launch {
             securitySettingsRepository.setBiometricEnabled(enabled)
+        }
+    }
+
+    fun logout() {
+        viewModelScope.launch {
+            authRepository.logout()
         }
     }
 }

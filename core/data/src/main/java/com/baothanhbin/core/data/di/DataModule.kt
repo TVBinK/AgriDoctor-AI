@@ -31,6 +31,12 @@ abstract class DataModule {
     abstract fun bindPlantRepository(
         impl: com.baothanhbin.core.data.impl.PlantRepositoryImpl
     ): com.baothanhbin.core.data.repository.PlantRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(
+        impl: com.baothanhbin.core.data.impl.AuthRepositoryImpl
+    ): com.baothanhbin.core.data.repository.AuthRepository
 }
 
 @Module
@@ -65,12 +71,14 @@ object ApiKeyModule {
     @Singleton
     fun provideApiKeyRepository(
         dataStore: ApiKeyDataStore,
-        encryptionManager: KeyEncryptionManager
+        encryptionManager: KeyEncryptionManager,
+        authRepository: com.baothanhbin.core.data.repository.AuthRepository
     ): ApiKeyRepository {
         return ApiKeyRepository(
             dataStore = dataStore,
             encryptionManager = encryptionManager,
-            networkDataSource = com.baothanhbin.core.network.NetworkDataSource
+            networkDataSource = com.baothanhbin.core.network.NetworkDataSource,
+            authRepository = authRepository
         )
     }
 

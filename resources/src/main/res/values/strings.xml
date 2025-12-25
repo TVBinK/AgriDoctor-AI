@@ -58,6 +58,7 @@
     <string name="settings_privacy_policy">Chính sách quyền riêng tư</string>
     <string name="settings_contact">Liên hệ</string>
     <string name="settings_rate_app">Đánh giá ứng dụng</string>
+    <string name="settings_logout">Đăng xuất</string>
 
     <string name="settings_premium_illustration_cd">Minh họa gói Premium</string>
     

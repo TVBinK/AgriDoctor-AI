@@ -1,0 +1,407 @@
+package com.baothanhbin.feature.login
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import android.net.Uri
+import android.os.Build
+import android.util.Log
+import coil.ImageLoader
+import coil.compose.AsyncImage
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.request.ImageRequest
+import com.baothanhbin.agridoctorai.resources.R
+import com.baothanhbin.core.theme.BlueDefault
+import com.baothanhbin.core.theme.Body4
+import com.baothanhbin.core.theme.GreenSurface
+import com.baothanhbin.core.theme.Subtitle
+import com.baothanhbin.core.theme.Title
+import com.baothanhbin.core.theme.White
+
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
+
+@Composable
+fun LoginRoute(
+    onNavigateToSignup: () -> Unit,
+    onContinueAsGuest: () -> Unit,
+    onNavigateToPin: (String) -> Unit,
+    viewModel: LoginViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uiState.isOtpSent) {
+        if (uiState.isOtpSent) {
+            onNavigateToPin(uiState.email)
+            viewModel.resetState()
+        }
+    }
+
+    LoginScreen(
+        onLoginClick = { email, password -> viewModel.login(email, password) },
+        onNavigateToSignup = onNavigateToSignup,
+        onContinueAsGuest = onContinueAsGuest,
+        isLoading = uiState.isLoading,
+        errorMessage = uiState.error
+    )
+}
+
+@Composable
+fun LoginScreen(
+    onLoginClick: (String, String) -> Unit,
+    onNavigateToSignup: () -> Unit,
+    onContinueAsGuest: () -> Unit,
+    isLoading: Boolean = false,
+    errorMessage: String? = null
+) {
+    var identifier by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    val isFormValid = identifier.isNotEmpty() && password.isNotEmpty()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.bg_home),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            contentScale = ContentScale.FillWidth
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 170.dp, bottom = 24.dp, start = 16.dp, end = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    GifImage(animatedRaw = R.raw.ic_tinh_linh)
+                }
+                Text(
+                    text = "Đăng nhập",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Title,
+                    textAlign = TextAlign.Center,
+                )
+
+                // ===== Form đăng nhập với style giống snippet =====
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn(animationSpec = tween(600, delayMillis = 600)),
+                    exit = fadeOut(animationSpec = tween(600))
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        // Email label
+                        Text(
+                            text = "Email",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF232B35),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = identifier,
+                            onValueChange = { identifier = it },
+                            placeholder = {
+                                Text(
+                                    text = "tvbink@example.com",
+                                    fontSize = 15.sp,
+                                    color = Color(0xFFB0B4BA)
+                                )
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF34A853),
+                                unfocusedBorderColor = Color(0xFFE8E8E8),
+                                focusedContainerColor = Color(0xFFF8F9FA),
+                                unfocusedContainerColor = Color(0xFFF8F9FA)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next
+                            ),
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Password label
+                        Text(
+                            text = "Mật khẩu",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF232B35),
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = { password = it },
+                            placeholder = {
+                                Text(
+                                    text = "Nhập mật khẩu của bạn",
+                                    fontSize = 15.sp,
+                                    color = Color(0xFFB0B4BA)
+                                )
+                            },
+                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                    Icon(
+                                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                                        contentDescription = if (passwordVisible) "Ẩn mật khẩu" else "Hiển thị mật khẩu",
+                                        tint = Color(0xFFB0B4BA)
+                                    )
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF34A853),
+                                unfocusedBorderColor = Color(0xFFE8E8E8),
+                                focusedContainerColor = Color(0xFFF8F9FA),
+                                unfocusedContainerColor = Color(0xFFF8F9FA)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done
+                            ),
+                            singleLine = true,
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    if (isFormValid) {
+                                        onLoginClick(identifier.trim(), password)
+                                    }
+                                }
+                            )
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Quên mật khẩu?",
+                        style = MaterialTheme.typography.Body4,
+                        color = BlueDefault,
+                        modifier = Modifier.padding(start = 200.dp).clickable {
+                            // TODO: navigate to forgot password
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn(animationSpec = tween(600, delayMillis = 800)),
+                    exit = fadeOut(animationSpec = tween(600))
+                ) {
+                    val buttonScale = if (isFormValid && !isLoading) 1f else 0.98f
+                    Button(
+                        onClick = {
+                            if (isFormValid && !isLoading) {
+                                onLoginClick(identifier.trim(), password)
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .scale(buttonScale),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isFormValid) Color(0xFF34A853) else Color(
+                                0xFFD3D3D3
+                            )
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        enabled = isFormValid && !isLoading
+                    ) {
+                        if (isLoading) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White
+                            )
+                        } else {
+                            Text(
+                                text = "Đăng nhập",
+                                color = if (isFormValid) Color.White else Color(0xFF9E9E9E),
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+                
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    Log.d("LoginScreen", "Error message displayed: $errorMessage")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Hoặc",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Subtitle,
+                    textAlign = TextAlign.Center
+                )
+
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onNavigateToSignup),
+                    text = "Chưa có tài khoản? Đăng ký ngay",
+                    textAlign = TextAlign.Center,
+                    color = BlueDefault,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onContinueAsGuest),
+                    text = "Tiếp tục không cần tài khoản",
+                    textAlign = TextAlign.Center,
+                    color = Subtitle,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+        Image(
+            painter = painterResource(id = R.drawable.bg_bottom_login),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .align (Alignment.BottomCenter),
+            contentScale = ContentScale.FillWidth
+        )
+    }
+}
+
+@Composable
+private fun GifImage(animatedRaw: Int) {
+    val context = LocalContext.current
+    val imageLoader = remember {
+        ImageLoader.Builder(context).components {
+            if (Build.VERSION.SDK_INT >= 28) {
+                add(ImageDecoderDecoder.Factory())
+            } else {
+                add(GifDecoder.Factory())
+            }
+        }.build()
+    }
+
+    AsyncImage(
+        model = ImageRequest.Builder(context)
+            .data(animatedRaw)
+            .crossfade(false)
+            .allowRgb565(false)
+            .build(),
+        contentDescription = null,
+        modifier = Modifier.size(100.dp),
+        contentScale = ContentScale.Fit,
+        imageLoader = imageLoader
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LoginScreenPreview() {
+    LoginScreen(
+        onLoginClick = { _, _ -> },
+        onNavigateToSignup = {},
+        onContinueAsGuest = {},
+    )
+}

@@ -12,6 +12,7 @@
     <domain-config cleartextTrafficPermitted="false">
         <domain includeSubdomains="true">192.168.34.116</domain>
         <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">192.168.28.1</domain>
         <trust-anchors>
             <!-- Trust system certificates -->
             <certificates src="system" />

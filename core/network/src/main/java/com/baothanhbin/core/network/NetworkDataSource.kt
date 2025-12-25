@@ -28,15 +28,18 @@ object NetworkDataSource {
     suspend fun detectImageTyped(
         imageBytes: ByteArray,
         fileName: String,
-        mimeTypeString: String
-    ): DiagnoseApiResponse? = detectImageTyped(imageBytes, fileName, ContentType.parse(mimeTypeString))
+        mimeTypeString: String,
+        token: String? = null
+    ): DiagnoseApiResponse? = detectImageTyped(imageBytes, fileName, ContentType.parse(mimeTypeString), token)
 
     suspend fun detectImageTyped(
         imageBytes: ByteArray,
         fileName: String = "image.jpg",
-        mimeType: ContentType = ContentType.Image.JPEG
+        mimeType: ContentType = ContentType.Image.JPEG,
+        token: String? = null
     ): DiagnoseApiResponse? = withContext(Dispatchers.IO) {
         try {
+            Log.d("detectImageTyped", "Starting API call")
             val ensuredFileName = run {
                 val hasExt = fileName.contains('.')
                 if (hasExt) fileName else {
@@ -51,6 +54,7 @@ object NetworkDataSource {
                     "$fileName$extension"
                 }
             }
+            Log.d("detectImageTyped", "Ensured file name: $ensuredFileName")
             val contentTypeHeader = mimeType.toString()
             val contentDispositionHeader = "filename=\"$ensuredFileName\""
             val response = NetworkClients.detectClient.submitFormWithBinaryData(
@@ -64,8 +68,13 @@ object NetworkDataSource {
                         }
                     )
                 }
-            )
-
+            ) {
+                if (token != null) {
+                    headers.append(HttpHeaders.Authorization, "Bearer $token")
+                }
+            }
+            Log.d("detectImageTyped", "${response}")
+            Log.d("detectImageTyped", "API call completed with status: ${response.status}")
             if (response.status == HttpStatusCode.OK) {
                 Log.d("detectImageTyped", "API call successful")
                 val result: DiagnoseApiResponse = response.body()
@@ -83,9 +92,13 @@ object NetworkDataSource {
      * Lấy Gemini API key từ server
      * Server trả về JSON: { "success": true, "data": { "apiKey": "..." } }
      */
-    suspend fun getGeminiApiKey(): String? = withContext(Dispatchers.IO) {
+    suspend fun getGeminiApiKey(token: String? = null): String? = withContext(Dispatchers.IO) {
         try {
-            val response = NetworkClients.apiKeyClient.get("")
+            val response = NetworkClients.apiKeyClient.get("") {
+                if (token != null) {
+                    headers.append(HttpHeaders.Authorization, "Bearer $token")
+                }
+            }
             
             if (response.status == HttpStatusCode.OK) {
                 val apiKeyResponse: ApiKeyResponse = response.body()
@@ -131,13 +144,15 @@ object NetworkDataSource {
     suspend fun classifyImageTyped(
         imageBytes: ByteArray,
         fileName: String,
-        mimeTypeString: String
-    ): ClassifyApiResponse? = classifyImageTyped(imageBytes, fileName, ContentType.parse(mimeTypeString))
+        mimeTypeString: String,
+        token: String? = null
+    ): ClassifyApiResponse? = classifyImageTyped(imageBytes, fileName, ContentType.parse(mimeTypeString), token)
 
     suspend fun classifyImageTyped(
         imageBytes: ByteArray,
         fileName: String = "image.jpg",
-        mimeType: ContentType = ContentType.Image.JPEG
+        mimeType: ContentType = ContentType.Image.JPEG,
+        token: String? = null
     ): ClassifyApiResponse? = withContext(Dispatchers.IO) {
         try {
             val ensuredFileName = run {
@@ -167,7 +182,11 @@ object NetworkDataSource {
                         }
                     )
                 }
-            )
+            ) {
+                if (token != null) {
+                    headers.append(HttpHeaders.Authorization, "Bearer $token")
+                }
+            }
 
             if (response.status == HttpStatusCode.OK) {
                 Log.d("classifyImageTyped", "API call successful")

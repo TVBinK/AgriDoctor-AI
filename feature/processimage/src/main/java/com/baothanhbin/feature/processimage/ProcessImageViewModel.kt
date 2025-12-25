@@ -9,6 +9,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.baothanhbin.core.data.repository.AuthRepository
 import com.baothanhbin.core.data.repository.DiagnoseResultRepository
 import com.baothanhbin.core.database.model.toEntity
 import com.baothanhbin.core.database.model.toPlantEntity
@@ -52,7 +53,8 @@ sealed class ProcessImageNavigationEvent {
 class ProcessImageViewModel @Inject constructor(
     application: Application,
     private val diagnoseResultRepository: DiagnoseResultRepository,
-    private val plantRepository: com.baothanhbin.core.data.repository.PlantRepository
+    private val plantRepository: com.baothanhbin.core.data.repository.PlantRepository,
+    private val authRepository: AuthRepository
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(ProcessImageUiState())
@@ -83,6 +85,10 @@ class ProcessImageViewModel @Inject constructor(
                 val mime = URLConnection.guessContentTypeFromName(name) ?: "image/jpeg"
 
                 _uiState.value = ProcessImageUiState(step = 1) // uploading
+                
+                // Get Auth Token
+                val token = authRepository.getToken()
+                Log.d("ProcessImage", "Token retrieved: ${if (token != null) "Yes (length=${token.length})" else "No"}")
 
                 // Log apiType received
                 Log.d("ProcessImage", "Processing image with apiType: $apiType (DETECT=${apiType == ApiType.DETECT}, CLASSIFY=${apiType == ApiType.CLASSIFY})")
@@ -90,7 +96,7 @@ class ProcessImageViewModel @Inject constructor(
                 // For detect API, use existing logic
                 if (apiType == ApiType.DETECT) {
                     Log.d("ProcessImage", "Calling DETECT API")
-                    val detectResult = NetworkDataSource.detectImageTyped(bytes, name, mime)
+                    val detectResult = NetworkDataSource.detectImageTyped(bytes, name, mime, token)
 
                     // Log API response
                     Log.d("ProcessImage", "API Response received")
@@ -156,7 +162,7 @@ class ProcessImageViewModel @Inject constructor(
                 } else {
                     // Handle classify API
                     Log.d("ProcessImage", "Calling CLASSIFY API")
-                    val classifyResult = NetworkDataSource.classifyImageTyped(bytes, name, mime)
+                    val classifyResult = NetworkDataSource.classifyImageTyped(bytes, name, mime, token)
                     
                     Log.d("ProcessImage", "Classify API Response received")
                     if (classifyResult != null) {

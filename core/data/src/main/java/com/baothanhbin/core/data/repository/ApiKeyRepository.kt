@@ -17,7 +17,8 @@ import javax.inject.Singleton
 class ApiKeyRepository @Inject constructor(
     private val dataStore: ApiKeyDataStore,
     private val encryptionManager: KeyEncryptionManager,
-    private val networkDataSource: NetworkDataSource
+    private val networkDataSource: NetworkDataSource,
+    private val authRepository: AuthRepository
 ) {
     companion object {
         private const val TAG = "ApiKeyRepository"
@@ -43,7 +44,8 @@ class ApiKeyRepository @Inject constructor(
 
             // Nếu không có trong cache, lấy từ server
             Log.d(TAG, "Fetching API key from server")
-            val apiKey = networkDataSource.getGeminiApiKey()
+            val token = authRepository.getToken()
+            val apiKey = networkDataSource.getGeminiApiKey(token)
             
             if (apiKey != null) {
                 // Mã hóa và lưu vào DataStore

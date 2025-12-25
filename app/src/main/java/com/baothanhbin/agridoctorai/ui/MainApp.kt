@@ -11,10 +11,13 @@ import com.baothanhbin.agridoctorai.navigation.AppState
 import com.baothanhbin.agridoctorai.navigation.MainNavHost
 import androidx.compose.ui.Modifier
 
+import com.baothanhbin.feature.login.navigation.LOGIN_ROUTE
+
 @Composable
 fun MainApp(
     modifier: Modifier = Modifier,
-    appState: AppState
+    appState: AppState,
+    startDestination: String = LOGIN_ROUTE
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
         Column(modifier = androidx.compose.ui.Modifier.background(Color.White)) {
@@ -23,7 +26,7 @@ fun MainApp(
                     .weight(1f) // chiếm toàn bộ phần trên
                     .fillMaxSize()
             ) {
-                MainNavHost(modifier, appState)
+                MainNavHost(modifier, appState, startDestination)
             }
             if(appState.currentTopLevelDestination !=null){
                 MainBottomNavBar(

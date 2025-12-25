@@ -96,6 +96,9 @@ dependencies {
     implementation(project(":feature:diagnosefailed"))
     implementation(project(":feature:lightmeter"))
     implementation(project(":feature:settings"))
+    implementation(project(":feature:login"))
+    implementation(project(":feature:signup"))
+    implementation(project(":feature:verificationotp"))
     implementation(project(":core:ui"))
     implementation(project(":core:theme"))
 }
