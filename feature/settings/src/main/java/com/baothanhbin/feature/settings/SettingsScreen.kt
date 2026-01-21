@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
-import androidx.biometric.BiometricManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,7 +28,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.PrivacyTip
@@ -78,35 +76,21 @@ fun SettingsRoute(
     onBackClick: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     SettingsScreen(
-        uiState = uiState,
         onBackClick = onBackClick,
-        onToggleBiometric = { enabled ->
-            viewModel.setBiometricLockEnabled(enabled)
-        },
         onLogoutClick = {
             viewModel.logout()
         }
     )
 }
 
-
-data class SettingsUiState(
-    val biometricLockEnabled: Boolean = false
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    uiState: SettingsUiState,
     onBackClick: () -> Unit,
-    onToggleBiometric: (Boolean) -> Unit,
     onLogoutClick: () -> Unit
 ) {
     val context = LocalContext.current
-    val isPreview = LocalInspectionMode.current
-    val biometricManager = if (!isPreview) BiometricManager.from(context) else null
     val verticalPadding = 24.dp
 
     val notEnrolledMessage = stringResource(id = R.string.biometric_not_enrolled)
@@ -165,62 +149,6 @@ fun SettingsScreen(
                     title = stringResource(id = R.string.settings_clear_caches),
                     value = stringResource(id = R.string.settings_clear_caches_value),
                     onClick = { /* TODO: clear cache */ }
-                )
-                DividerSpacer()
-                // Fingerprint / biometric row
-                SettingRow(
-                    leadingIcon = Icons.Default.Fingerprint,
-                    title = stringResource(id = R.string.biometric_lock_title),
-                    value = null,
-                    showChevron = false,
-                    trailing = {
-                        Switch(
-                            checked = uiState.biometricLockEnabled,
-                            onCheckedChange = { isChecked ->
-                                if (isChecked) {
-                                    if (biometricManager == null) {
-                                        // Preview mode: chỉ bật/tắt UI, không gọi hệ thống sinh trắc
-                                        onToggleBiometric(true)
-                                    } else {
-                                        when (
-                                            biometricManager.canAuthenticate(
-                                                BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                                                        BiometricManager.Authenticators.BIOMETRIC_WEAK
-                                            )
-                                        ) {
-                                            BiometricManager.BIOMETRIC_SUCCESS -> onToggleBiometric(
-                                                true
-                                            )
-
-                                            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> {
-                                                Toast.makeText(
-                                                    context,
-                                                    notEnrolledMessage,
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                                onToggleBiometric(false)
-                                            }
-
-                                            else -> {
-                                                Toast.makeText(
-                                                    context,
-                                                    notSupportedMessage,
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                                onToggleBiometric(false)
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    onToggleBiometric(false)
-                                }
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = White,
-                                checkedTrackColor = GreenSurface
-                            )
-                        )
-                    }
                 )
             }
 
@@ -400,11 +328,7 @@ private fun SettingRow(
 @Composable
 fun SettingsScreenPreview() {
     SettingsScreen(
-        uiState = SettingsUiState(
-            biometricLockEnabled = true
-        ),
         onBackClick = {},
-        onToggleBiometric = {},
         onLogoutClick = {}
     )
 }

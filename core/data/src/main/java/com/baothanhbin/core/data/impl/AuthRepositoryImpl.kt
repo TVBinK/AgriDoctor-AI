@@ -1,22 +1,18 @@
 package com.baothanhbin.core.data.impl
 
-import android.content.Context
-import android.content.SharedPreferences
 import com.baothanhbin.core.data.repository.AuthRepository
+import com.baothanhbin.core.datastore.AuthDataStore
 import com.baothanhbin.core.model.AuthResponse
 import com.baothanhbin.core.model.LoginRequest
 import com.baothanhbin.core.model.SignupRequest
 import com.baothanhbin.core.model.VerifyOtpRequest
 import com.baothanhbin.core.network.NetworkClients
-import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.call.body
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import io.ktor.client.statement.bodyAsText
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -24,12 +20,10 @@ import javax.inject.Singleton
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val authDataStore: AuthDataStore
 ) : AuthRepository {
 
-    private val prefs: SharedPreferences = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
-    private val _isLoggedIn = MutableStateFlow(prefs.getString("jwt_token", null) != null)
-    override val isLoggedIn: Flow<Boolean> = _isLoggedIn.asStateFlow()
+    override val isLoggedIn: Flow<Boolean> = authDataStore.isLoggedInFlow()
 
     override suspend fun login(request: LoginRequest): Result<AuthResponse> {
         android.util.Log.d("AuthRepository", "Logging in with email: ${request.email}")
@@ -98,20 +92,23 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
-        prefs.edit().remove("jwt_token").apply()
-        _isLoggedIn.value = false
+        authDataStore.clearToken()
     }
 
     override suspend fun saveToken(token: String) {
-        prefs.edit().putString("jwt_token", token).apply()
-        _isLoggedIn.value = true
+        authDataStore.saveToken(token)
     }
 
     override suspend fun getToken(): String? {
-        return prefs.getString("jwt_token", null)
+        return authDataStore.getToken()
     }
 
     override fun isUserLoggedIn(): Boolean {
-        return prefs.getString("jwt_token", null) != null
+        // Synchronous check - may need to be called from coroutine context
+        return runCatching {
+            kotlinx.coroutines.runBlocking {
+                authDataStore.getToken() != null
+            }
+        }.getOrDefault(false)
     }
 }

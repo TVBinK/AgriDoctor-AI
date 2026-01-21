@@ -1,19 +1,13 @@
 package com.baothanhbin.core.network
 
 import android.util.Log
-import com.baothanhbin.core.network.BuildConfig
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.plugins.defaultRequest
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import io.ktor.client.call.body
-import io.ktor.client.request.get
-import io.ktor.client.statement.HttpResponse
 import okhttp3.OkHttpClient
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
@@ -22,138 +16,48 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
 object NetworkClients {
-
-   // local: https://localhost:3443
-    private val SERVER_BASE_URL: String
-        get() = "https://192.168.34.116:3443"
-
-    /**
-     * Tạo TrustManager chấp nhận tất cả certificates (chỉ dùng cho development)
-     * CẢNH BÁO: Không sử dụng trong production!
-     */
     private fun createTrustAllManager(): X509TrustManager {
         return object : X509TrustManager {
-            override fun checkClientTrusted(
-                chain: Array<out X509Certificate>?,
-                authType: String?
-            ) {
-                // Trust all client certificates
-            }
-
-            override fun checkServerTrusted(
-                chain: Array<out X509Certificate>?,
-                authType: String?
-            ) {
-                // Trust all server certificates (chỉ cho development)
-            }
-
-            override fun getAcceptedIssuers(): Array<X509Certificate> {
-                return arrayOf()
-            }
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
         }
     }
 
-    private fun createClient(
-        baseUrl: String,
-        acceptAllCertificates: Boolean = false
-    ): HttpClient {
+    private fun createClient(baseUrl: String): HttpClient {
         return HttpClient(OkHttp) {
             engine {
-                // Cấu hình OkHttp client
                 preconfigured = OkHttpClient.Builder().apply {
-                    if (acceptAllCertificates) {
-                        // Chỉ sử dụng trong debug mode - chấp nhận tất cả certificates
-                        // CẢNH BÁO: Không sử dụng trong production!
+                    if (BuildConfig.DEBUG) {
                         val trustAllCerts = arrayOf<TrustManager>(createTrustAllManager())
                         val sslContext = SSLContext.getInstance("TLS")
                         sslContext.init(null, trustAllCerts, SecureRandom())
-                        
                         sslSocketFactory(sslContext.socketFactory, trustAllCerts[0] as X509TrustManager)
                         hostnameVerifier { _, _ -> true }
-                        
-                        Log.w("NetworkClients", "⚠️ Accepting all certificates - DEVELOPMENT MODE ONLY")
+                        Log.w("NetworkClients", "⚠️ Accepting all certificates - DEBUG MODE")
                     }
                 }.build()
             }
-            
             defaultRequest {
                 url(baseUrl)
             }
             install(HttpTimeout) {
                 requestTimeoutMillis = 60_000
-                connectTimeoutMillis = 60_000
-                socketTimeoutMillis = 60_000
             }
             install(ContentNegotiation) {
-                json(
-                    Json {
-                        ignoreUnknownKeys = true
-                        encodeDefaults = true
-                    }
-                )
+                json(Json {
+                    ignoreUnknownKeys = true
+                    encodeDefaults = true
+                })
             }
         }
     }
 
-    // API paths - Obfuscated để tránh dịch ngược
-    private val API_DETECT_PATH: String
-        get() = buildString {
-            append("/api")
-            append("/detect")
-        }
-    
-    private val API_KEY_PATH: String
-        get() = buildString {
-            append("/api")
-            append("/gemini")
-            append("-key")
-        }
-
-    private val API_DISEASES_PATH: String
-        get() = buildString {
-            append("/api")
-            append("/diseases")
-        }
-    
-    private val API_CLASSIFY_PATH: String
-        get() = buildString {
-            append("/api")
-            append("/classify")
-        }
-
-    private val API_AUTH_PATH: String
-        get() = buildString {
-            append("/api")
-            append("/auth/") // Add trailing slash
-        }
-
-    val detectClient: HttpClient = createClient(
-        baseUrl = "$SERVER_BASE_URL$API_DETECT_PATH",
-        acceptAllCertificates = BuildConfig.DEBUG // Chỉ chấp nhận self-signed trong debug mode
-    )
-
-    // Client cho API key endpoint
-    val apiKeyClient: HttpClient = createClient(
-        baseUrl = "$SERVER_BASE_URL$API_KEY_PATH",
-        acceptAllCertificates = BuildConfig.DEBUG
-    )
-
-    // Client cho API danh sách bệnh
-    val diseasesClient: HttpClient = createClient(
-        baseUrl = "$SERVER_BASE_URL$API_DISEASES_PATH",
-        acceptAllCertificates = BuildConfig.DEBUG
-    )
-    
-    // Client cho API nhận diện cây
-    val classifyClient: HttpClient = createClient(
-        baseUrl = "$SERVER_BASE_URL$API_CLASSIFY_PATH",
-        acceptAllCertificates = BuildConfig.DEBUG
-    )
-
-    val authClient: HttpClient = createClient(
-        baseUrl = "$SERVER_BASE_URL$API_AUTH_PATH",
-        acceptAllCertificates = BuildConfig.DEBUG
-    )
+    val detectClient = createClient("https://localhost:3443/api/detect")
+    val apiKeyClient = createClient("https://localhost:3443/api/gemini-key")
+    val diseasesClient = createClient("https://localhost:3443/api/diseases")
+    val classifyClient = createClient("https://localhost:3443/api/classify")
+    val authClient = createClient("https://localhost:3443/api/auth/")
 }
 
 

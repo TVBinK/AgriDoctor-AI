@@ -13,9 +13,6 @@ dependencies {
     implementation(project(":core:model"))
     api(libs.androidx.room.runtime)
     api(libs.androidx.room.ktx)
-    implementation(libs.android.database.sqlcipher)
-    implementation(libs.androidx.sqlite)
-    implementation(libs.androidx.sqlite.framework)
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
 }

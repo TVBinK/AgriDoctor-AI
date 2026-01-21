@@ -27,7 +27,7 @@ object ApiKeySerializer : Serializer<ApiKeyProto> {
 }
 
 /**
- * DataStore cho API key
+ * DataStore cho API key (không mã hóa)
  */
 class ApiKeyDataStore(private val context: Context) {
     private val Context.apiKeyDataStore: DataStore<ApiKeyProto> by dataStore(
@@ -35,10 +35,10 @@ class ApiKeyDataStore(private val context: Context) {
         serializer = ApiKeySerializer
     )
 
-    suspend fun saveApiKey(encryptedKey: String) {
+    suspend fun saveApiKey(apiKey: String) {
         context.apiKeyDataStore.updateData { current ->
             current.toBuilder()
-                .setEncryptedKey(encryptedKey)
+                .setApiKey(apiKey)
                 .setTimestamp(System.currentTimeMillis())
                 .build()
         }
@@ -52,7 +52,7 @@ class ApiKeyDataStore(private val context: Context) {
                     emit(ApiKeyProto.getDefaultInstance())
                 }
                 .map { proto ->
-                    proto.encryptedKey.ifEmpty { null }
+                    proto.apiKey.ifEmpty { null }
                 }
                 .first()
         } catch (e: Exception) {

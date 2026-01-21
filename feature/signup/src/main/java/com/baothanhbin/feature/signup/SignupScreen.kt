@@ -118,7 +118,7 @@ fun SignupScreen(
 
     val isFormValid = name.isNotBlank() &&
         identifier.isNotBlank() &&
-        password.length >= 8 &&
+        password.length >= 6 &&
         password == confirmPassword
 
     Box(
@@ -265,7 +265,7 @@ fun SignupScreen(
                             onValueChange = { password = it },
                             placeholder = {
                                 Text(
-                                    text = "Tối thiểu 8 ký tự",
+                                    text = "Tối thiểu 6 ký tự",
                                     fontSize = 15.sp,
                                     color = Color(0xFFB0B4BA)
                                 )

@@ -101,21 +101,6 @@
 -keepclassmembers,allowobfuscation class com.baothanhbin.core.data.encryption.** {
     <methods>; <fields>;
 }
--keepclassmembers,allowobfuscation class com.baothanhbin.agridoctorai.security.SecurityManager {
-    <methods>; <fields>;
-}
--keepclassmembers,allowobfuscation class com.baothanhbin.agridoctorai.security.SecurityCheckResult {
-    <init>(...); <methods>; <fields>;
-}
--keepclassmembers,allowobfuscation class com.baothanhbin.agridoctorai.security.SecurityIssue {
-    <init>(...); <methods>; <fields>;
-}
--keepclassmembers,allowobfuscation enum com.baothanhbin.agridoctorai.security.SecurityIssueType {
-    **[] $VALUES; public *;
-}
--keepclassmembers,allowobfuscation class com.baothanhbin.agridoctorai.ui.SecurityWarningDialog** {
-    <methods>;
-}
 
 # ============================================
 # Package Obfuscation (Repackage all classes)

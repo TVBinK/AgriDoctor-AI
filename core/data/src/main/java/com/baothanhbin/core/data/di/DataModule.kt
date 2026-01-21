@@ -1,13 +1,10 @@
 package com.baothanhbin.core.data.di
 
 import android.content.Context
-import com.baothanhbin.core.data.encryption.KeyEncryptionManager
 import com.baothanhbin.core.data.impl.DiagnoseResultRepositoryImpl
 import com.baothanhbin.core.data.repository.ApiKeyRepository
 import com.baothanhbin.core.data.repository.DiagnoseResultRepository
-import com.baothanhbin.core.data.repository.SecuritySettingsRepository
 import com.baothanhbin.core.datastore.ApiKeyDataStore
-import com.baothanhbin.core.datastore.SecuritySettingsDataStore
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -53,40 +50,22 @@ object ApiKeyModule {
 
     @Provides
     @Singleton
-    fun provideSecuritySettingsDataStore(
+    fun provideAuthDataStore(
         @ApplicationContext context: Context
-    ): SecuritySettingsDataStore {
-        return SecuritySettingsDataStore(context)
-    }
-
-    @Provides
-    @Singleton
-    fun provideKeyEncryptionManager(
-        @ApplicationContext context: Context
-    ): KeyEncryptionManager {
-        return KeyEncryptionManager(context)
+    ): com.baothanhbin.core.datastore.AuthDataStore {
+        return com.baothanhbin.core.datastore.AuthDataStore(context)
     }
 
     @Provides
     @Singleton
     fun provideApiKeyRepository(
         dataStore: ApiKeyDataStore,
-        encryptionManager: KeyEncryptionManager,
         authRepository: com.baothanhbin.core.data.repository.AuthRepository
     ): ApiKeyRepository {
         return ApiKeyRepository(
             dataStore = dataStore,
-            encryptionManager = encryptionManager,
             networkDataSource = com.baothanhbin.core.network.NetworkDataSource,
             authRepository = authRepository
         )
-    }
-
-    @Provides
-    @Singleton
-    fun provideSecuritySettingsRepository(
-        securitySettingsDataStore: SecuritySettingsDataStore
-    ): SecuritySettingsRepository {
-        return SecuritySettingsRepository(securitySettingsDataStore)
     }
 }
