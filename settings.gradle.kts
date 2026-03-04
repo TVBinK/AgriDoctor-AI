@@ -19,7 +19,9 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "AgriDoctor AI"
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
+rootProject.name = "AgriDoctorAI"
 includeBuild("build-logic")
 include(":app")
 include(":core:model")

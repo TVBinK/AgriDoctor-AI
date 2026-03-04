@@ -83,7 +83,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     //Modules
-    implementation(project(":core:model"))
+    implementation(projects.core.model)
     implementation(project(":core:data"))
     implementation(project(":resources"))
     implementation(project(":feature:home"))
