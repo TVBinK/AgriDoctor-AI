@@ -27,9 +27,9 @@ protobuf {
 }
 
 dependencies {
-    implementation(project(":core:database"))
-    implementation(project(":core:model"))
-    implementation(project(":core:network"))
+    implementation(projects.core.database)
+    implementation(projects.core.model)
+    implementation(projects.core.network)
     implementation(libs.hilt.android)
     implementation(libs.androidx.datastore)
     implementation(libs.protobuf.kotlin.lite)

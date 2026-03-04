@@ -11,10 +11,10 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
     //core
-    implementation(project(":core:theme"))
-    implementation(project(":feature:chatbot"))
-    implementation(project(":feature:camera"))
-    implementation(project(":feature:lightmeter"))
-    implementation(project(":feature:settings"))
-    implementation(project(":core:ui"))
+    implementation(projects.core.theme)
+    implementation(projects.feature.chatbot)
+    implementation(projects.feature.camera)
+    implementation(projects.feature.lightmeter)
+    implementation(projects.feature.settings)
+    implementation(projects.core.ui)
 }

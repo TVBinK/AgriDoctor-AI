@@ -7,16 +7,16 @@ android {
 }
 
 dependencies {
-    implementation(project(":resources"))
-    implementation(project(":core:theme"))
-    implementation(project(":core:network"))
-    implementation(project(":core:model"))
-    implementation(project(":core:data"))
-    implementation(project(":core:database"))
-    implementation(project(":core:ui"))
-    implementation(project(":core:model"))
-    implementation(project(":feature:diagnoseresult"))
-    implementation(project(":feature:diagnosefailed"))
+    implementation(projects.resources)
+    implementation(projects.core.theme)
+    implementation(projects.core.network)
+    implementation(projects.core.model)
+    implementation(projects.core.data)
+    implementation(projects.core.database)
+    implementation(projects.core.ui)
+    implementation(projects.core.model)
+    implementation(projects.feature.diagnoseresult)
+    implementation(projects.feature.diagnosefailed)
     //coil
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)

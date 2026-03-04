@@ -11,8 +11,8 @@ dependencies {
     //coil
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
-    implementation(project(":core:theme"))
-    implementation(project(":core:data"))
-    implementation(project(":core:model"))
-    implementation(project(":core:ui"))
+    implementation(projects.core.theme)
+    implementation(projects.core.data)
+    implementation(projects.core.model)
+    implementation(projects.core.ui)
 }

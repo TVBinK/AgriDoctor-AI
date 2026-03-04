@@ -7,11 +7,11 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:theme"))
-    implementation(project(":resources"))
-    implementation(project(":core:ui"))
-    implementation(project(":core:data"))
-    implementation(project(":core:model"))
+    implementation(projects.core.theme)
+    implementation(projects.resources)
+    implementation(projects.core.ui)
+    implementation(projects.core.data)
+    implementation(projects.core.model)
     
     // Compose
     implementation(platform(libs.androidx.compose.bom))

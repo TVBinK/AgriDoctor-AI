@@ -7,5 +7,5 @@ android {
 }
 
 dependencies {
-    implementation(project(":resources"))
+    implementation(projects.resources)
 }

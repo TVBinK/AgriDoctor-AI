@@ -7,11 +7,11 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:theme"))
-    implementation(project(":core:data"))
-    implementation(project(":resources"))
-    implementation(project(":core:ui"))
-    implementation(project(":resources"))
+    implementation(projects.core.theme)
+    implementation(projects.core.data)
+    implementation(projects.resources)
+    implementation(projects.core.ui)
+    implementation(projects.resources)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.compose.foundation)
 }

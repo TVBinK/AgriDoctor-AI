@@ -10,7 +10,7 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:model"))
+    implementation(projects.core.model)
     api(libs.androidx.room.runtime)
     api(libs.androidx.room.ktx)
     implementation(libs.kotlinx.serialization.core)

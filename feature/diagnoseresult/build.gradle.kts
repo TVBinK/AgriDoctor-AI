@@ -8,12 +8,12 @@ android {
 
 dependencies {
     //core
-    implementation(project(":core:theme"))
-    implementation(project(":resources"))
-    implementation(project(":core:data"))
-    implementation(project(":core:database"))
-    implementation(project(":core:model"))
-    implementation(project(":core:ui"))
+    implementation(projects.core.theme)
+    implementation(projects.resources)
+    implementation(projects.core.data)
+    implementation(projects.core.database)
+    implementation(projects.core.model)
+    implementation(projects.core.ui)
     //coil
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)

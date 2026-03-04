@@ -8,8 +8,8 @@ android {
 }
 
 dependencies {
-    implementation(project(":resources"))
-    implementation(project(":core:model"))
-    implementation(project(":core:theme"))
-    implementation(project(":core:ui"))
+    implementation(projects.resources)
+    implementation(projects.core.model)
+    implementation(projects.core.theme)
+    implementation(projects.core.ui)
 }

@@ -27,10 +27,10 @@ protobuf {
 }
 
 dependencies {
-    implementation(project(":core:database"))
-    implementation(project(":core:datastore"))
-    implementation(project(":core:model"))
-    implementation(project(":core:network"))
+    implementation(projects.core.database)
+    implementation(projects.core.datastore)
+    implementation(projects.core.model)
+    implementation(projects.core.network)
     implementation(libs.hilt.android)
     implementation(libs.protobuf.kotlin.lite)
     // Ktor client

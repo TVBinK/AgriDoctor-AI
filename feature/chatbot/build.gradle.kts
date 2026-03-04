@@ -11,11 +11,11 @@ android {
 }
 
 dependencies {
-    implementation(project(":core:theme"))
-    implementation(project(":core:network"))
-    implementation(project(":core:database"))
-    implementation(project(":core:data"))
-    implementation(project(":resources"))
+    implementation(projects.core.theme)
+    implementation(projects.core.network)
+    implementation(projects.core.database)
+    implementation(projects.core.data)
+    implementation(projects.resources)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.generativeai)
 }
