@@ -142,7 +142,6 @@
 │   └── requirepermission/  # Màn hình yêu cầu quyền (nếu có)
 ├── resources/              # Drawables, strings, fonts
 ├── build-logic/            # Gradle convention plugins dùng chung
-└── simple-navigation/      # Navigation module (Compose Navigation)
 ```
 
 Ứng dụng tuân thủ Clean Architecture: các module `feature` (UI + ViewModel) chỉ phụ thuộc vào `core` thông qua interface repository, tất cả được bind bằng Hilt để dễ test và mở rộng.
@@ -152,8 +151,8 @@
 ## 🚀 Công nghệ sử dụng
 
 - **Kotlin** · **Jetpack Compose** · **MVVM** · **Clean Architecture**
-- **Hilt** · **Room** ·
+- **Hilt** · **Room** · **WorkManager**
 - **Ktor** · **Coroutines/Flow** · **Navigation Compose** · **Coil**
-- **DataStore** ·
+- **DataStore** · 
 
 ---
