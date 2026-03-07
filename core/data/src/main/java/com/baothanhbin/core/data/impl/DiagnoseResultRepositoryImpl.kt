@@ -15,7 +15,6 @@ class DiagnoseResultRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertDiagnoseResult(diagnoseResult: DiagnoseResultEntity): Long {
-        Log.d(TAG, "Inserting diagnose result: ${diagnoseResult.diseaseName}")
         return database.diagnoseResultDao().insertDiagnoseResult(diagnoseResult)
     }
 

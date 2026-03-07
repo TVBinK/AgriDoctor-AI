@@ -1,4 +1,4 @@
-package com.bigq.apps.plugins.convention
+package com.baothanhbin.apps.plugins.convention
 
 import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.Project

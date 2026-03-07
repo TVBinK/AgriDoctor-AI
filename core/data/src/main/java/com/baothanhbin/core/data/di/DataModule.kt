@@ -1,10 +1,16 @@
 package com.baothanhbin.core.data.di
 
 import android.content.Context
+import com.baothanhbin.core.data.impl.AuthRepositoryImpl
 import com.baothanhbin.core.data.impl.DiagnoseResultRepositoryImpl
+import com.baothanhbin.core.data.impl.PlantRepositoryImpl
 import com.baothanhbin.core.data.repository.ApiKeyRepository
+import com.baothanhbin.core.data.repository.AuthRepository
 import com.baothanhbin.core.data.repository.DiagnoseResultRepository
+import com.baothanhbin.core.data.repository.PlantRepository
 import com.baothanhbin.core.datastore.ApiKeyDataStore
+import com.baothanhbin.core.datastore.AuthDataStore
+import com.baothanhbin.core.network.NetworkDataSource
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -14,7 +20,7 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Module
-@InstallIn(SingletonComponent::class)
+@InstallIn(SingletonComponent::class) // Đảm bảo rằng các repository được cung cấp ở cấp độ ứng dụng
 abstract class DataModule {
 
     @Binds
@@ -26,14 +32,14 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindPlantRepository(
-        impl: com.baothanhbin.core.data.impl.PlantRepositoryImpl
-    ): com.baothanhbin.core.data.repository.PlantRepository
+        impl: PlantRepositoryImpl
+    ): PlantRepository
 
     @Binds
     @Singleton
     abstract fun bindAuthRepository(
-        impl: com.baothanhbin.core.data.impl.AuthRepositoryImpl
-    ): com.baothanhbin.core.data.repository.AuthRepository
+        impl: AuthRepositoryImpl
+    ): AuthRepository
 }
 
 @Module
@@ -52,19 +58,19 @@ object ApiKeyModule {
     @Singleton
     fun provideAuthDataStore(
         @ApplicationContext context: Context
-    ): com.baothanhbin.core.datastore.AuthDataStore {
-        return com.baothanhbin.core.datastore.AuthDataStore(context)
+    ): AuthDataStore {
+        return AuthDataStore(context)
     }
 
     @Provides
     @Singleton
     fun provideApiKeyRepository(
         dataStore: ApiKeyDataStore,
-        authRepository: com.baothanhbin.core.data.repository.AuthRepository
+        authRepository: AuthRepository
     ): ApiKeyRepository {
         return ApiKeyRepository(
             dataStore = dataStore,
-            networkDataSource = com.baothanhbin.core.network.NetworkDataSource,
+            networkDataSource = NetworkDataSource,
             authRepository = authRepository
         )
     }

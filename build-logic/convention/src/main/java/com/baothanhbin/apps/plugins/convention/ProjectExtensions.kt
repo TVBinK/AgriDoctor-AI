@@ -1,4 +1,4 @@
-package com.bigq.apps.plugins.convention
+package com.baothanhbin.apps.plugins.convention
 
 import org.gradle.api.Project
 import org.gradle.api.artifacts.VersionCatalog

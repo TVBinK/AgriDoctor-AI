@@ -1,5 +1,5 @@
 import com.android.build.gradle.LibraryExtension
-import com.bigq.apps.plugins.convention.libs
+import com.baothanhbin.apps.plugins.convention.libs
 import org.gradle.api.JavaVersion
 import org.gradle.api.Plugin
 import org.gradle.api.Project
