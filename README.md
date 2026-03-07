@@ -1,17 +1,13 @@
-<p align="center">
-  <img src="resources/src/main/res/drawable-xxxhdpi/ic_launcher_foreground.webp" alt="AgriDoctorAI" width="96" />
-</p>
-
 # 🌾 AgriDoctorAI
 
 <p align="center">
   <img src="https://img.shields.io/badge/Android-Kotlin-3DDC84?style=flat&logo=android&logoColor=white" alt="Android Kotlin"/>
   <img src="https://img.shields.io/badge/Jetpack-Compose-4285F4?style=flat&logo=jetpackcompose&logoColor=white" alt="Jetpack Compose"/>
   <img src="https://img.shields.io/badge/Hilt-DI-FF6F00?style=flat" alt="Hilt"/>
-  <img src="https://img.shields.io/badge/Room-SQLCipher-4285F4?style=flat" alt="Room SQLCipher"/>
+  <img src="https://img.shields.io/badge/Room-Database-4285F4?style=flat" alt="Room Database"/>
 </p>
 
-Ứng dụng Android giúp **chẩn đoán bệnh cây bằng AI, tư vấn chăm sóc và quản lý cây trồng** cho nông dân ngay trên điện thoại. Xây dựng bằng Jetpack Compose, kiến trúc đa module với Hilt, Room (SQLCipher), WorkManager và tích hợp Gemini cho trợ lý hội thoại.
+Ứng dụng Android giúp **chẩn đoán bệnh cây bằng AI, tư vấn chăm sóc và quản lý cây trồng** cho nông dân ngay trên điện thoại. Xây dựng bằng Jetpack Compose, kiến trúc đa module với Hilt, Room, WorkManager và tích hợp Gemini cho trợ lý hội thoại.
 
 <p align="center">
   <img src="resources/src/main/res/drawable/banner_readme.png" alt="AgriDoctorAI Banner" width="70%"/>
@@ -36,7 +32,7 @@
 | **UI**       | Jetpack Compose                                                |
 | **Kiến trúc**| Multi-module, MVVM, Clean Architecture                         |
 | **DI**       | Hilt                                                           |
-| **Database** | Room + SQLCipher (mã hóa dữ liệu)                              |
+| **Database** | Room                                                           |
 | **AI**       | Gemini API (chatbot, hỗ trợ chẩn đoán)                        |
 | **Background** | WorkManager (xử lý nền, tác vụ lâu)                         |
 
@@ -72,7 +68,7 @@
 **Cách hoạt động:**
 - Giao diện hội thoại được xây dựng trong `feature/chatbot`.
 - Mỗi tin nhắn được gửi tới Gemini API thông qua `core/network`.
-- API key và cấu hình được lưu an toàn trong `core/datastore`.
+- API key và cấu hình được lưu trong `core/datastore`.
 - Kết quả được stream về UI Compose, hiển thị tương tự ứng dụng chat.
 
 ---
@@ -86,7 +82,7 @@
 | 📈 | Theo dõi tiến độ sinh trưởng, năng suất ước tính |
 
 **Cách hoạt động:**
-- Dữ liệu cây trồng lưu trong Room (mã hóa bằng SQLCipher) tại `core/database`.
+- Dữ liệu cây trồng lưu trong Room tại `core/database`.
 - UI chính được tổ chức trong `feature/home` và `feature/myplants`.
 - ViewModel dùng repository từ `core/data` để thao tác dữ liệu một cách tách biệt với UI.
 
@@ -107,38 +103,7 @@
 
 ---
 
-### 🔒 5. Bảo mật & an toàn dữ liệu
-
-| Icon | Mô tả |
-|:---:|---|
-| 🔐 | Mã hóa database bằng SQLCipher, khóa lưu trong Android Keystore |
-| 🧾 | Bảo vệ API key Gemini bằng AES/GCM + DataStore |
-| 🧬 | Kiểm tra chữ ký SHA-256 của APK để phát hiện app bị re-sign |
-| 🧩 | Obfuscation bằng R8/ProGuard, làm khó decompile mã nguồn |
-
-**Cách hoạt động (tổng quan):**
-- Database Room trong `core/database` được cấu hình SQLCipher, password sinh ngẫu nhiên và mã hóa qua `KeyEncryptionManager`.
-- API key Gemini được mã hóa và lưu trong `core/datastore`, chỉ giải mã khi cần gửi request.
-- `SecurityManager` (trong module bảo mật) kiểm tra SHA-256 chữ ký runtime, nếu sai khác sẽ chặn tính năng nhạy cảm.
-
----
-
-### ⚙️ 6. Cài đặt & cấu hình AI
-
-| Icon | Mô tả |
-|:---:|---|
-| 🧩 | Nhập và thay đổi Gemini API key |
-| 🌐 | Cấu hình ngôn ngữ, đơn vị đo lường (nếu hỗ trợ) |
-| 🎨 | Tùy chỉnh một số thiết lập giao diện (theme, animation...) |
-
-**Cách hoạt động:**
-- Màn hình cài đặt nằm trong `feature/settings`.
-- Thông số được lưu bằng DataStore (`core/datastore`) để đảm bảo an toàn và nhất quán.
-- ViewModel sử dụng repository từ `core/data` để xử lý logic lưu/đọc.
-
----
-
-### 🔐 7. Quyền truy cập (Require Permission)
+### 🔐 5. Quyền truy cập (Require Permission)
 
 | Icon | Mô tả |
 |:---:|---|
@@ -162,9 +127,8 @@
 │   ├── model/              # Data models, mapper dùng chung
 │   ├── network/            # Retrofit/Ktor client, Gemini API
 │   ├── data/               # Repository implementations
-│   ├── database/           # Room + SQLCipher entities, DAOs
-│   ├── datastore/          # DataStore (Proto/Preferences) cho cấu hình & khóa
-│   └── security/           # SecurityManager, key encryption (nếu tách riêng)
+│   ├── database/           # Room entities, DAOs
+│   └── datastore/          # DataStore (Proto/Preferences) cho cấu hình app
 ├── feature/
 │   ├── camera/             # Chụp ảnh lá, chuẩn bị dữ liệu chẩn đoán
 │   ├── diagnose/           # Luồng chẩn đoán bệnh cây
@@ -174,7 +138,7 @@
 │   ├── home/               # Màn hình tổng quan, entry point chính
 │   ├── lightmeter/         # Đo sáng, gợi ý tưới & chiếu sáng
 │   ├── processimage/       # Xử lý ảnh trước khi gửi AI
-│   ├── settings/           # Cài đặt app, API key, bảo mật
+│   ├── settings/           # Cài đặt app và API key
 │   └── requirepermission/  # Màn hình yêu cầu quyền (nếu có)
 ├── resources/              # Drawables, strings, fonts
 ├── build-logic/            # Gradle convention plugins dùng chung
@@ -188,8 +152,8 @@
 ## 🚀 Công nghệ sử dụng
 
 - **Kotlin** · **Jetpack Compose** · **MVVM** · **Clean Architecture**
-- **Hilt** · **Room** · **SQLCipher** · **WorkManager**
-- **Retrofit/Ktor** · **Coroutines/Flow** · **Navigation Compose** · **Coil**
-- **DataStore** · **Android Keystore** · **R8/ProGuard**
+- **Hilt** · **Room** ·
+- **Ktor** · **Coroutines/Flow** · **Navigation Compose** · **Coil**
+- **DataStore** ·
 
 ---
