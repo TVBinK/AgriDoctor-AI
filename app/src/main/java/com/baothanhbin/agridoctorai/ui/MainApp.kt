@@ -20,9 +20,9 @@ fun MainApp(
     startDestination: String = LOGIN_ROUTE
 ) {
     Surface(modifier = modifier.fillMaxSize()) {
-        Column(modifier = androidx.compose.ui.Modifier.background(Color.White)) {
+        Column(modifier = Modifier.background(Color.White)) {
             Box(
-                modifier = androidx.compose.ui.Modifier
+                modifier = Modifier
                     .weight(1f) // chiếm toàn bộ phần trên
                     .fillMaxSize()
             ) {

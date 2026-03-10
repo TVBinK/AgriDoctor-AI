@@ -22,15 +22,11 @@ material = "1.13.0"
 androidGradlePlugin = "8.12.3"
 ksp = "2.0.21-1.0.25"
 room = "2.8.1"
-sqlcipher = "4.5.4"
 kotlinxSerialization = "1.7.3"
 work = "2.9.1"
 tvMaterial = "1.0.1"
 coil = "2.7.0"
 datastore = "1.1.7"
-airbnbLottie = "6.5.2"
-beforeAfter = "1.2.2"
-runtime = "1.9.2"
 ui = "1.9.2"
 cameraCore = "1.5.0"
 foundation = "1.9.2"
@@ -60,7 +56,6 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
-airbnb-lottie-compose = { group = "com.airbnb.android", name = "lottie-compose", version.ref = "airbnbLottie" }
 #icon extended
 compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "iconExtended" }
 #hilt
@@ -79,10 +74,6 @@ protobuf-protoc = { group = "com.google.protobuf", name = "protoc", version.ref 
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
-#sqlcipher
-android-database-sqlcipher = { group = "net.zetetic", name = "android-database-sqlcipher", version.ref = "sqlcipher" }
-androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version = "2.3.1" }
-androidx-sqlite-framework = { group = "androidx.sqlite", name = "sqlite-framework", version = "2.3.1" }
 #kotlinx serialization
 kotlinx-serialization-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
@@ -98,10 +89,6 @@ androidx-tv-material = { group = "androidx.tv", name = "tv-material", version.re
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
-#before after
-before-after = { group = "com.github.SmartToolFactory", name = "Compose-BeforeAfter", version.ref = "beforeAfter" }
-androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
-androidx-compose-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtime" }
 ui = { group = "androidx.compose.ui", name = "ui", version.ref = "ui" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraCore" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraCore" }
