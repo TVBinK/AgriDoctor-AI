@@ -69,6 +69,9 @@ class DiagnoseViewModel @Inject constructor(
             
             // Load plant history
             val plants = plantRepository.getAllPlants()
+            plants.forEach { plant ->
+                Log.d("DiagnoseViewModel", "Plant: ${plant.plantName}, imageUri: ${plant.imageUri}")
+            }
             _plantHistoryItems.value = plants
         }
     }

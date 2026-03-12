@@ -193,6 +193,11 @@
     <string name="log_message_failed_read_bytes">Không thể đọc byte ảnh</string>
     <string name="log_message_api_result_null">Kết quả API là null</string>
     <string name="log_message_image_uri">URI ảnh: %1$s</string>
+
+    <string name="list_disease">Cây bệnh</string>
+    <string name="list_plant">Cây trồng</string>
+    <string name="no_disease_history">Chưa có lịch sử chuẩn đoán bệnh</string>
+    <string name="no_plant_history">Chưa có lịch sử nhận diện cây</string>
 </resources>
 
 

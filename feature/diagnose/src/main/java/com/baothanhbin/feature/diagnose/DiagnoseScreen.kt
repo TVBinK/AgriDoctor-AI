@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,14 +40,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,10 +78,6 @@ import com.baothanhbin.feature.diagnoseresult.navigation.navigateToDiagnoseResul
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
-import androidx.compose.foundation.interaction.MutableInteractionSource
 
 @Composable
 fun DiagnoseRoute(
@@ -101,6 +96,7 @@ fun DiagnoseRoute(
                         classifyData = event.classifyData
                     )
                 }
+
                 is DiagnoseNavigationEvent.NavigateToCamera -> {
                     // Navigate to Camera with Diagnose mode (index 0)
                     navController?.navigateToCamera(modeIndex = 0)
@@ -108,7 +104,7 @@ fun DiagnoseRoute(
             }
         }
     }
-    
+
     DiagnoseScreen(
         viewModel = viewModel,
         locationStateHolder = locationStateHolder
@@ -122,7 +118,7 @@ fun DiagnoseScreen(
 ) {
     val context = LocalContext.current
     val showLocationDialog by viewModel.showLocationDialog.collectAsState()
-    
+
     // Kiểm tra permission khi khởi động - chỉ load nếu chưa có address
     LaunchedEffect(Unit) {
         viewModel.loadHistory()
@@ -130,7 +126,7 @@ fun DiagnoseScreen(
             viewModel.getCurrentLocation(context, locationStateHolder)
         }
     }
-    
+
     // Launcher để request location permission
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -141,7 +137,7 @@ fun DiagnoseScreen(
             viewModel.onPermissionDenied()
         }
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -157,7 +153,7 @@ fun DiagnoseScreen(
         )
         DiagnoseTopBar(
             currentAddress = locationStateHolder.currentAddress,
-            onLocationClick = { 
+            onLocationClick = {
                 viewModel.checkAndGetLocation(context, locationStateHolder)
             }
         )
@@ -178,7 +174,7 @@ fun DiagnoseScreen(
                 viewModel = viewModel
             )
         }
-        
+
         // Hiển thị LocationDialog
         if (showLocationDialog) {
             LocationDialog(
@@ -270,7 +266,10 @@ private fun DiagnoseCard(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(40.dp))
-                Text(stringResource(R.string.plant_health), style = MaterialTheme.typography.TitleLarge3)
+                Text(
+                    stringResource(R.string.plant_health),
+                    style = MaterialTheme.typography.TitleLarge3
+                )
                 Text(
                     stringResource(R.string.help_plants_get_health),
                     style = MaterialTheme.typography.Label4,
@@ -289,7 +288,11 @@ private fun DiagnoseCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.auto_diagnose), color = Color.White, fontSize = 12.sp)
+                    Text(
+                        stringResource(R.string.auto_diagnose),
+                        color = Color.White,
+                        fontSize = 12.sp
+                    )
                 }
             }
         }
@@ -375,7 +378,7 @@ private fun HistorySection(
 ) {
     val historyItems by viewModel.historyItems.collectAsStateWithLifecycle()
     val plantHistoryItems by viewModel.plantHistoryItems.collectAsStateWithLifecycle()
-    
+
     // Tab state
     var selectedTab by remember { mutableStateOf(0) } // 0: Disease, 1: Plant
 
@@ -399,7 +402,7 @@ private fun HistorySection(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
         }
-        
+
         // Custom Tabs
         Row(
             modifier = Modifier
@@ -409,68 +412,73 @@ private fun HistorySection(
                 .padding(4.dp)
         ) {
             TabButton(
-                text = "Disease",
+                text = stringResource(R.string.list_disease),
                 selected = selectedTab == 0,
                 modifier = Modifier.weight(1f),
                 onClick = { selectedTab = 0 }
             )
             TabButton(
-                text = "Plants",
+                text = stringResource(R.string.list_plant),
                 selected = selectedTab == 1,
                 modifier = Modifier.weight(1f),
                 onClick = { selectedTab = 1 }
             )
         }
 
-        if (selectedTab == 0) {
-            if (historyItems.isEmpty()) {
-                Text(
-                    text = "No disease history yet",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Subtitle,
-                    modifier = Modifier.padding(vertical = 20.dp).align(Alignment.CenterHorizontally)
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(400.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(
-                        items = historyItems,
-                        key = { it.id }
-                    ) { item ->
-                        HistoryItem(
-                            entity = item,
-                            onClick = { viewModel.onHistoryItemClick(item) }
-                        )
+        when (selectedTab) {
+            0 -> {
+                // Tab Disease - hiển thị từ diagnose_results
+                if (historyItems.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.no_disease_history),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Subtitle,
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(400.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(
+                            items = historyItems,
+                            key = { it.id }
+                        ) { item ->
+                            HistoryItem(
+                                entity = item,
+                                onClick = { viewModel.onHistoryItemClick(item) }
+                            )
+                        }
                     }
                 }
             }
-        } else {
-            if (plantHistoryItems.isEmpty()) {
-                Text(
-                    text = "No plant history yet",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Subtitle,
-                    modifier = Modifier.padding(vertical = 20.dp).align(Alignment.CenterHorizontally)
-                )
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(400.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(
-                        items = plantHistoryItems,
-                        key = { it.id }
-                    ) { item ->
-                        PlantHistoryItem(
-                            entity = item,
-                            onClick = { viewModel.onPlantHistoryItemClick(item) }
-                        )
+            1 -> {
+                // Tab Plant - hiển thị từ plants
+                if (plantHistoryItems.isEmpty()) {
+                    Text(
+                        text = stringResource(R.string.no_plant_history),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Subtitle,
+                        modifier = Modifier.padding(vertical = 16.dp)
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(400.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(
+                            items = plantHistoryItems,
+                            key = { it.id }
+                        ) { item ->
+                            PlantHistoryItem(
+                                entity = item,
+                                onClick = { viewModel.onPlantHistoryItemClick(item) }
+                            )
+                        }
                     }
                 }
             }
@@ -509,6 +517,8 @@ private fun PlantHistoryItem(
 ) {
     val context = LocalContext.current
     
+    Log.d("PlantHistoryItem", "Rendering plant: ${entity.plantName}, imageUri: ${entity.imageUri}")
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -523,7 +533,6 @@ private fun PlantHistoryItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Image
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -532,16 +541,22 @@ private fun PlantHistoryItem(
                 contentAlignment = Alignment.Center
             ) {
                 entity.imageUri?.let { uriString ->
-                    val uri = try { Uri.parse(uriString) } catch (e: Exception) { null }
-                    
+                    val uri = try {
+                        Uri.parse(uriString)
+                    } catch (e: Exception) {
+                        null
+                    }
+
                     if (uri != null) {
                         AsyncImage(
                             model = ImageRequest.Builder(context)
                                 .data(uri)
                                 .crossfade(true)
                                 .build(),
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
+                            contentDescription = entity.plantName,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Crop,
                             placeholder = painterResource(id = R.drawable.img_lavender),
                             error = painterResource(id = R.drawable.img_lavender)
@@ -549,15 +564,19 @@ private fun PlantHistoryItem(
                     } else {
                         Image(
                             painter = painterResource(id = R.drawable.img_lavender),
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize(),
+                            contentDescription = entity.plantName,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(8.dp)),
                             contentScale = ContentScale.Crop
                         )
                     }
                 } ?: Image(
                     painter = painterResource(id = R.drawable.img_lavender),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
+                    contentDescription = entity.plantName,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop
                 )
             }
@@ -567,20 +586,44 @@ private fun PlantHistoryItem(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = entity.scientificName ?: "Plant",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Subtitle
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = entity.plantNameVN ?: entity.plantName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GreenSurface,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    entity.confidence?.let { conf ->
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "${(conf * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = GreenSurface
+                        )
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                entity.scientificName?.let { sciName ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = sciName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Subtitle,
+                        fontWeight = FontWeight.Normal
+                    )
+                }
 
-                Text(
-                    text = entity.plantName,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = GreenSurface
-                )
+                entity.family?.let { familyName ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = familyName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Subtitle
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -607,7 +650,7 @@ private fun HistoryItem(
     onClick: () -> Unit
 ) {
     val context = LocalContext.current
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -640,7 +683,7 @@ private fun HistoryItem(
                         Log.e("HistoryItem", "Error parsing URI: $uriString", e)
                         null
                     }
-                    
+
                     if (uri != null) {
                         // Sử dụng ImageRequest.Builder với Context để đảm bảo Coil có thể đọc file local
                         AsyncImage(
@@ -649,10 +692,17 @@ private fun HistoryItem(
                                 .crossfade(true)
                                 .listener(
                                     onError = { _, result ->
-                                        Log.e("HistoryItem", "Error loading image from URI: $uriString", result.throwable)
+                                        Log.e(
+                                            "HistoryItem",
+                                            "Error loading image from URI: $uriString",
+                                            result.throwable
+                                        )
                                     },
                                     onSuccess = { _, _ ->
-                                        Log.d("HistoryItem", "Successfully loaded image from URI: $uriString")
+                                        Log.d(
+                                            "HistoryItem",
+                                            "Successfully loaded image from URI: $uriString"
+                                        )
                                     }
                                 )
                                 .build(),
@@ -690,12 +740,6 @@ private fun HistoryItem(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                // Plant name - có thể extract từ diseaseName hoặc dùng default
-                Text(
-                    text = extractPlantName(entity.diseaseName),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Subtitle
-                )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -725,13 +769,6 @@ private fun HistoryItem(
             )
         }
     }
-}
-
-private fun extractPlantName(diseaseName: String): String {
-    // Simple extraction - có thể improve sau
-    // Ví dụ: "Early blight" -> "Potato" (cần logic tốt hơn)
-    // Tạm thời return default
-    return "Potato" // Có thể map từ diseaseName hoặc lưu trong database
 }
 
 private fun formatDate(timestamp: Long): String {

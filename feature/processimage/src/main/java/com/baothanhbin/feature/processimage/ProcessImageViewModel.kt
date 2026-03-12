@@ -242,18 +242,17 @@ class ProcessImageViewModel @Inject constructor(
     }
     
     /**
-     * Copy image from source URI (especially Photo Picker) to app storage
+     * Copy image from source URI to app storage for persistent access
      * Returns the new URI or null if copy fails
      */
     private suspend fun copyImageToAppStorage(context: Application, sourceUri: Uri): Uri? = withContext(Dispatchers.IO) {
         try {
-            // Check if URI is from Photo Picker (needs to be copied)
             val uriString = sourceUri.toString()
-            val isPickerUri = uriString.contains("media/picker") || uriString.contains("photopicker")
             
-            // If not a picker URI, return null (no need to copy, e.g., camera images are already saved)
-            if (!isPickerUri) {
-                return@withContext null
+            // Check if already saved in AgriDoctorAI folder
+            if (uriString.contains("AgriDoctorAI")) {
+                Log.d("ProcessImage", "Image already in app storage: $sourceUri")
+                return@withContext sourceUri
             }
             
             // Read the source image
@@ -269,7 +268,7 @@ class ProcessImageViewModel @Inject constructor(
             // Save to app storage
             val timestamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(Date())
             val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, "diagnosis_$timestamp.jpg")
+                put(MediaStore.MediaColumns.DISPLAY_NAME, "plant_$timestamp.jpg")
                 put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AgriDoctorAI")
             }
