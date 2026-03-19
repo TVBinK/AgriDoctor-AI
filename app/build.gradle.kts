@@ -101,4 +101,6 @@ dependencies {
     implementation(projects.feature.verificationotp)
     implementation(projects.core.ui)
     implementation(projects.core.theme)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
 }

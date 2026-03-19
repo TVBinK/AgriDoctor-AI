@@ -1,6 +1,8 @@
 package com.baothanhbin.feature.myplants
 
 import android.Manifest
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +41,17 @@ import com.baothanhbin.core.theme.Body1
 import com.baothanhbin.core.ui.dialog.LocationDialog
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.ui.graphics.asImageBitmap
+import android.graphics.Bitmap
+import java.io.File
+import java.io.FileOutputStream
+import java.util.UUID
+import com.baothanhbin.core.database.model.PlantEntity
+import coil.compose.AsyncImage
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 // Theme colors
 private val GreenSurface = Color(0xFF4CAF50)
@@ -92,31 +105,8 @@ fun MyplantScreen(
         stringResource(R.string.reminder)
     )
     
-    // Sample data
-    val plants = listOf(
-        Plant(
-            id = 1,
-            name = "Aspidistra elatior",
-            imageRes = R.drawable.img_lavender,
-            nextAction = stringResource(R.string.no_reminders),
-            nextActionDate = "",
-            hasReminder = false
-        ),
-        Plant(
-            id = 2,
-            name = "Spiral Aloe",
-            imageRes = R.drawable.img_lavender,
-            nextAction = stringResource(R.string.next_report_on),
-            nextActionDate = "Jun 20"
-        ),
-        Plant(
-            id = 3,
-            name = "List item",
-            imageRes = R.drawable.img_lavender,
-            nextAction = stringResource(R.string.next_water_on),
-            nextActionDate = "Jun 20"
-        )
-    )
+    val myPlants by viewModel.myPlants.collectAsState()
+    var showAddPlantDialog by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -140,7 +130,7 @@ fun MyplantScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 140.dp, bottom = 24.dp)
+                .padding(top = 140.dp)
         ) {
             // Tab Row
             TabRow(
@@ -172,10 +162,53 @@ fun MyplantScreen(
             }
 
             // Content
-            when (selectedTab) {
-                0 -> MyPlantsContent(plants = plants)
-                1 -> ReminderContent()
+            Box(modifier = Modifier.fillMaxSize()) {
+                var showSetReminderDialog by remember { mutableStateOf<PlantEntity?>(null) }
+                
+                when (selectedTab) {
+                    0 -> MyPlantsContent(
+                        plants = myPlants,
+                        onSetReminderClick = { plant ->
+                            showSetReminderDialog = plant
+                        }
+                    )
+                    1 -> ReminderContent()
+                }
+                
+                if (showSetReminderDialog != null) {
+                    SetReminderDialog(
+                        plantName = showSetReminderDialog!!.plantName,
+                        onDismissRequest = { showSetReminderDialog = null },
+                        onSetReminder = { timestamp ->
+                            viewModel.scheduleWateringReminder(context, showSetReminderDialog!!.plantName, timestamp)
+                            showSetReminderDialog = null
+                        }
+                    )
+                }
+                
+                if (selectedTab == 0) {
+                    FloatingActionButton(
+                        onClick = { showAddPlantDialog = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp),
+                        containerColor = GreenSurface,
+                        contentColor = Color.White
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add plant")
+                    }
+                }
             }
+        }
+        
+        if (showAddPlantDialog) {
+            AddPlantDialog(
+                onDismissRequest = { showAddPlantDialog = false },
+                onAddPlant = { name, imageUri -> 
+                    viewModel.addPlant(name, imageUri, locationStateHolder.currentAddress)
+                    showAddPlantDialog = false
+                }
+            )
         }
         
         // Hiển thị LocationDialog
@@ -242,7 +275,10 @@ fun MyPlantsTopBar(
 }
 
 @Composable
-private fun MyPlantsContent(plants: List<Plant>) {
+private fun MyPlantsContent(
+    plants: List<PlantEntity>,
+    onSetReminderClick: (PlantEntity) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -255,18 +291,36 @@ private fun MyPlantsContent(plants: List<Plant>) {
             modifier = Modifier.padding(bottom = 16.dp)
         )
         
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(plants) { plant ->
-                PlantItemCard(plant = plant)
+        if (plants.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Chưa có cây. Hãy thêm cây của bạn!",
+                    color = Subtitle
+                )
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(plants) { plant ->
+                    PlantItemCard(
+                        plant = plant,
+                        onSetReminderClick = { onSetReminderClick(plant) }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun PlantItemCard(plant: Plant) {
+private fun PlantItemCard(
+    plant: PlantEntity,
+    onSetReminderClick: () -> Unit
+) {
     var showMenu by remember { mutableStateOf(false) }
     
     Card(
@@ -284,14 +338,25 @@ private fun PlantItemCard(plant: Plant) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Plant Image
-            Image(
-                painter = painterResource(id = plant.imageRes),
-                contentDescription = plant.name,
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
+            if (plant.imageUri != null) {
+                AsyncImage(
+                    model = File(plant.imageUri),
+                    contentDescription = plant.plantName,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.img_lavender), // Default avatar
+                    contentDescription = plant.plantName,
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
             
             Spacer(modifier = Modifier.width(12.dp))
             
@@ -300,7 +365,7 @@ private fun PlantItemCard(plant: Plant) {
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = plant.name,
+                    text = plant.plantName,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp
@@ -308,34 +373,12 @@ private fun PlantItemCard(plant: Plant) {
                 
                 Spacer(modifier = Modifier.height(4.dp))
                 
-                if (plant.hasReminder) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = plant.nextAction,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Subtitle,
-                            fontSize = 14.sp
-                        )
-                        if (plant.nextActionDate.isNotEmpty()) {
-                            Text(
-                                text = " ${plant.nextActionDate}",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = GreenSurface,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
-                } else {
-                    Text(
-                        text = plant.nextAction,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Subtitle,
-                        fontSize = 14.sp
-                    )
-                }
+                Text(
+                    text = plant.location ?: "Chưa có vị trí",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Subtitle,
+                    fontSize = 14.sp
+                )
             }
             
             // Menu Button
@@ -373,7 +416,7 @@ private fun PlantItemCard(plant: Plant) {
                         text = { Text(stringResource(R.string.set_reminder)) },
                         onClick = {
                             showMenu = false
-                            // Handle set reminder
+                            onSetReminderClick()
                         }
                     )
                 }
@@ -445,3 +488,175 @@ private fun MyPlantsScreenPreview() {
     )
 }
 
+@Composable
+fun AddPlantDialog(
+    onDismissRequest: () -> Unit,
+    onAddPlant: (name: String, imageUri: String?) -> Unit
+) {
+    val context = LocalContext.current
+    var plantName by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<String?>(null) }
+    var bitmapState by remember { mutableStateOf<Bitmap?>(null) }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap: Bitmap? ->
+        if (bitmap != null) {
+            bitmapState = bitmap
+            val tempFile = File(context.cacheDir, "plant_${UUID.randomUUID()}.jpg")
+            val outputStream = FileOutputStream(tempFile)
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputStream)
+            outputStream.flush()
+            outputStream.close()
+            imageUri = tempFile.absolutePath
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(R.string.add_plant)) },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (bitmapState != null) {
+                    Image(
+                        bitmap = bitmapState!!.asImageBitmap(),
+                        contentDescription = "Avatar",
+                        modifier = Modifier
+                            .size(120.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { takePictureLauncher.launch(null) },
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(120.dp)
+                            .background(Color(0xFFE8F5E9), RoundedCornerShape(12.dp))
+                            .clickable { takePictureLauncher.launch(null) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Chụp ảnh\ncây của bạn", textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = GreenSurface)
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = plantName,
+                    onValueChange = { plantName = it },
+                    label = { Text("Tên cây") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = GreenSurface,
+                        focusedLabelColor = GreenSurface
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onAddPlant(plantName, imageUri) },
+                enabled = plantName.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = GreenSurface)
+            ) {
+                Text(stringResource(R.string.add_plant))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest,
+                colors = ButtonDefaults.textButtonColors(contentColor = Subtitle)
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+fun SetReminderDialog(
+    plantName: String,
+    onDismissRequest: () -> Unit,
+    onSetReminder: (Long) -> Unit
+) {
+    val context = LocalContext.current
+    var selectedTimestamp by remember { mutableStateOf<Long?>(null) }
+    var dateTimeText by remember { mutableStateOf("") }
+    
+    val calendar = Calendar.getInstance()
+    
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            TimePickerDialog(
+                context,
+                { _, hourOfDay, minute ->
+                    val cal = Calendar.getInstance()
+                    cal.set(year, month, dayOfMonth, hourOfDay, minute, 0)
+                    selectedTimestamp = cal.timeInMillis
+                    dateTimeText = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(cal.time)
+                },
+                calendar.get(Calendar.HOUR_OF_DAY),
+                calendar.get(Calendar.MINUTE),
+                true
+            ).show()
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+    
+    // Ensure the user cannot select past dates
+    datePickerDialog.datePicker.minDate = System.currentTimeMillis() - 1000
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Hẹn giờ tưới nước") },
+        text = {
+            Column {
+                Text("Cài đặt nhắc nhở tưới nước cho $plantName:", color = Subtitle)
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                OutlinedTextField(
+                    value = dateTimeText,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Ngày giờ đặt hẹn") },
+                    placeholder = { Text("Chọn thời gian...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { datePickerDialog.show() },
+                    enabled = false,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledBorderColor = GreenSurface,
+                        disabledLabelColor = GreenSurface,
+                        disabledPlaceholderColor = Subtitle
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    selectedTimestamp?.let { onSetReminder(it) }
+                },
+                enabled = selectedTimestamp != null,
+                colors = ButtonDefaults.buttonColors(containerColor = GreenSurface)
+            ) {
+                Text("Cài đặt")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest,
+                colors = ButtonDefaults.textButtonColors(contentColor = Subtitle)
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}

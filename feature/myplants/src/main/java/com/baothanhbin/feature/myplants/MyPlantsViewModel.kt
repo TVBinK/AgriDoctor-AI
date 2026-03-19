@@ -17,11 +17,22 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.Data
+import androidx.work.WorkManager
+import androidx.work.ExistingWorkPolicy
+import androidx.work.ExistingPeriodicWorkPolicy
+import com.baothanhbin.core.data.repository.PlantRepository
+import com.baothanhbin.core.database.model.PlantEntity
+import com.baothanhbin.core.worker.WateringWorker
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltViewModel
 class MyPlantsViewModel @Inject constructor(
-    application: Application
+    application: Application,
+    private val plantRepository: PlantRepository
 ) : AndroidViewModel(application) {
 
     private val _showLocationDialog = MutableStateFlow(false)
@@ -29,6 +40,51 @@ class MyPlantsViewModel @Inject constructor(
 
     private val _locationError = MutableSharedFlow<String>()
     val locationError: SharedFlow<String> = _locationError.asSharedFlow()
+
+    private val _myPlants = MutableStateFlow<List<PlantEntity>>(emptyList())
+    val myPlants: StateFlow<List<PlantEntity>> = _myPlants.asStateFlow()
+
+    init {
+        loadPlants()
+    }
+
+    private fun loadPlants() {
+        viewModelScope.launch {
+            _myPlants.value = plantRepository.getAllPlants()
+        }
+    }
+
+    fun addPlant(plantName: String, imageUri: String?, location: String?) {
+        viewModelScope.launch {
+            val plant = PlantEntity(
+                plantName = plantName,
+                imageUri = imageUri,
+                location = location
+            )
+            plantRepository.insertPlant(plant)
+            loadPlants() // Refresh the list
+        }
+    }
+
+    fun scheduleWateringReminder(context: Context, plantName: String, targetTimestamp: Long) {
+        val delay = targetTimestamp - System.currentTimeMillis()
+        if (delay <= 0) return
+
+        val inputData = Data.Builder()
+            .putString("plantName", plantName)
+            .build()
+            
+        val workRequest = OneTimeWorkRequestBuilder<WateringWorker>()
+            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+            .setInputData(inputData)
+            .build()
+            
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "Watering_${plantName.hashCode()}",
+            ExistingWorkPolicy.REPLACE,
+            workRequest
+        )
+    }
 
     fun checkAndGetLocation(context: Context, locationStateHolder: LocationStateHolder) {
         if (!LocationHelper.hasLocationPermission(context)) {

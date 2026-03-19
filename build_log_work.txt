@@ -1,0 +1,733 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+Type-safe project accessors is an incubating feature.
+> Task :build-logic:convention:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :build-logic:convention:compileKotlin UP-TO-DATE
+> Task :build-logic:convention:compileJava NO-SOURCE
+> Task :build-logic:convention:pluginDescriptors UP-TO-DATE
+> Task :build-logic:convention:processResources UP-TO-DATE
+> Task :build-logic:convention:classes UP-TO-DATE
+> Task :build-logic:convention:jar UP-TO-DATE
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugBuildConfig
+> Task :resources:preBuild UP-TO-DATE
+> Task :resources:preDebugBuild UP-TO-DATE
+> Task :resources:writeDebugAarMetadata UP-TO-DATE
+> Task :core:data:preBuild UP-TO-DATE
+> Task :core:data:preDebugBuild UP-TO-DATE
+> Task :core:data:writeDebugAarMetadata UP-TO-DATE
+> Task :core:database:preBuild UP-TO-DATE
+> Task :core:database:preDebugBuild UP-TO-DATE
+> Task :core:database:writeDebugAarMetadata UP-TO-DATE
+> Task :core:datastore:preBuild UP-TO-DATE
+> Task :core:datastore:preDebugBuild UP-TO-DATE
+> Task :core:datastore:writeDebugAarMetadata UP-TO-DATE
+> Task :core:model:preBuild UP-TO-DATE
+> Task :core:model:preDebugBuild UP-TO-DATE
+> Task :core:model:writeDebugAarMetadata UP-TO-DATE
+> Task :core:network:preBuild UP-TO-DATE
+> Task :core:network:preDebugBuild UP-TO-DATE
+> Task :core:network:writeDebugAarMetadata UP-TO-DATE
+> Task :core:theme:preBuild UP-TO-DATE
+> Task :core:theme:preDebugBuild UP-TO-DATE
+> Task :core:theme:writeDebugAarMetadata UP-TO-DATE
+> Task :core:ui:preBuild UP-TO-DATE
+> Task :core:ui:preDebugBuild UP-TO-DATE
+> Task :core:ui:writeDebugAarMetadata UP-TO-DATE
+> Task :feature:camera:preBuild UP-TO-DATE
+> Task :feature:camera:preDebugBuild UP-TO-DATE
+> Task :feature:chatbot:preBuild UP-TO-DATE
+> Task :feature:chatbot:preDebugBuild UP-TO-DATE
+> Task :feature:diagnose:preBuild UP-TO-DATE
+> Task :feature:diagnose:preDebugBuild UP-TO-DATE
+> Task :feature:camera:writeDebugAarMetadata
+> Task :feature:chatbot:writeDebugAarMetadata
+> Task :feature:diagnosefailed:preBuild UP-TO-DATE
+> Task :feature:diagnosefailed:preDebugBuild UP-TO-DATE
+> Task :feature:diagnose:writeDebugAarMetadata
+> Task :feature:diagnoseresult:preBuild UP-TO-DATE
+> Task :feature:diagnoseresult:preDebugBuild UP-TO-DATE
+> Task :feature:diagnosefailed:writeDebugAarMetadata
+> Task :feature:home:preBuild UP-TO-DATE
+> Task :feature:home:preDebugBuild UP-TO-DATE
+> Task :feature:diagnoseresult:writeDebugAarMetadata
+> Task :feature:lightmeter:preBuild UP-TO-DATE
+> Task :feature:lightmeter:preDebugBuild UP-TO-DATE
+> Task :feature:home:writeDebugAarMetadata
+> Task :feature:login:preBuild UP-TO-DATE
+> Task :feature:login:preDebugBuild UP-TO-DATE
+> Task :feature:lightmeter:writeDebugAarMetadata
+> Task :feature:myplants:preBuild UP-TO-DATE
+> Task :feature:myplants:preDebugBuild UP-TO-DATE
+> Task :feature:login:writeDebugAarMetadata
+> Task :feature:myplants:writeDebugAarMetadata UP-TO-DATE
+> Task :feature:processimage:preBuild UP-TO-DATE
+> Task :feature:processimage:preDebugBuild UP-TO-DATE
+> Task :feature:settings:preBuild UP-TO-DATE
+> Task :feature:settings:preDebugBuild UP-TO-DATE
+> Task :feature:processimage:writeDebugAarMetadata
+> Task :feature:signup:preBuild UP-TO-DATE
+> Task :feature:signup:preDebugBuild UP-TO-DATE
+> Task :feature:settings:writeDebugAarMetadata
+> Task :feature:verificationotp:preBuild UP-TO-DATE
+> Task :feature:verificationotp:preDebugBuild UP-TO-DATE
+> Task :feature:signup:writeDebugAarMetadata
+> Task :feature:verificationotp:writeDebugAarMetadata
+> Task :resources:processDebugNavigationResources UP-TO-DATE
+> Task :core:data:processDebugNavigationResources UP-TO-DATE
+> Task :core:database:processDebugNavigationResources UP-TO-DATE
+> Task :core:datastore:processDebugNavigationResources UP-TO-DATE
+> Task :core:model:processDebugNavigationResources UP-TO-DATE
+> Task :core:network:processDebugNavigationResources UP-TO-DATE
+> Task :core:theme:processDebugNavigationResources UP-TO-DATE
+> Task :core:ui:processDebugNavigationResources UP-TO-DATE
+> Task :feature:camera:processDebugNavigationResources
+> Task :feature:chatbot:processDebugNavigationResources
+> Task :feature:diagnose:processDebugNavigationResources
+> Task :feature:diagnosefailed:processDebugNavigationResources
+> Task :feature:diagnoseresult:processDebugNavigationResources
+> Task :feature:home:processDebugNavigationResources
+> Task :app:checkDebugAarMetadata
+> Task :feature:lightmeter:processDebugNavigationResources
+> Task :feature:login:processDebugNavigationResources
+> Task :feature:myplants:processDebugNavigationResources UP-TO-DATE
+> Task :feature:processimage:processDebugNavigationResources
+> Task :feature:settings:processDebugNavigationResources
+> Task :feature:signup:processDebugNavigationResources
+> Task :feature:verificationotp:processDebugNavigationResources
+> Task :app:processDebugNavigationResources
+> Task :app:generateDebugResValues
+> Task :resources:generateDebugResValues UP-TO-DATE
+> Task :resources:generateDebugResources UP-TO-DATE
+> Task :app:compileDebugNavigationResources
+> Task :resources:packageDebugResources UP-TO-DATE
+> Task :core:data:generateDebugResValues UP-TO-DATE
+> Task :core:data:generateDebugResources UP-TO-DATE
+> Task :core:data:packageDebugResources UP-TO-DATE
+> Task :core:database:generateDebugResValues UP-TO-DATE
+> Task :core:database:generateDebugResources UP-TO-DATE
+> Task :core:database:packageDebugResources UP-TO-DATE
+> Task :core:datastore:generateDebugResValues UP-TO-DATE
+> Task :core:datastore:generateDebugResources UP-TO-DATE
+> Task :core:datastore:packageDebugResources UP-TO-DATE
+> Task :core:model:generateDebugResValues UP-TO-DATE
+> Task :core:model:generateDebugResources UP-TO-DATE
+> Task :core:model:packageDebugResources UP-TO-DATE
+> Task :core:network:generateDebugResValues UP-TO-DATE
+> Task :core:network:generateDebugResources UP-TO-DATE
+> Task :core:network:packageDebugResources UP-TO-DATE
+> Task :core:theme:generateDebugResValues UP-TO-DATE
+> Task :core:theme:generateDebugResources UP-TO-DATE
+> Task :core:theme:packageDebugResources UP-TO-DATE
+> Task :core:ui:generateDebugResValues UP-TO-DATE
+> Task :core:ui:generateDebugResources UP-TO-DATE
+> Task :core:ui:packageDebugResources UP-TO-DATE
+> Task :feature:camera:generateDebugResValues
+> Task :feature:camera:generateDebugResources
+> Task :feature:camera:packageDebugResources
+> Task :feature:chatbot:generateDebugResValues
+> Task :feature:chatbot:generateDebugResources
+> Task :feature:chatbot:packageDebugResources
+> Task :feature:diagnose:generateDebugResValues
+> Task :feature:diagnose:generateDebugResources
+> Task :feature:diagnose:packageDebugResources
+> Task :feature:diagnosefailed:generateDebugResValues
+> Task :feature:diagnosefailed:generateDebugResources
+> Task :feature:diagnosefailed:packageDebugResources
+> Task :feature:diagnoseresult:generateDebugResValues
+> Task :feature:diagnoseresult:generateDebugResources
+> Task :feature:diagnoseresult:packageDebugResources
+> Task :feature:home:generateDebugResValues
+> Task :feature:home:generateDebugResources
+> Task :feature:home:packageDebugResources
+> Task :feature:lightmeter:generateDebugResValues
+> Task :feature:lightmeter:generateDebugResources
+> Task :feature:lightmeter:packageDebugResources
+> Task :feature:login:generateDebugResValues
+> Task :feature:login:generateDebugResources
+> Task :feature:login:packageDebugResources
+> Task :feature:myplants:generateDebugResValues UP-TO-DATE
+> Task :feature:myplants:generateDebugResources UP-TO-DATE
+> Task :feature:myplants:packageDebugResources UP-TO-DATE
+> Task :feature:processimage:generateDebugResValues
+> Task :feature:processimage:generateDebugResources
+> Task :feature:processimage:packageDebugResources
+> Task :feature:settings:generateDebugResValues
+> Task :feature:settings:generateDebugResources
+> Task :feature:settings:packageDebugResources
+> Task :feature:signup:generateDebugResValues
+> Task :feature:signup:generateDebugResources
+> Task :feature:signup:packageDebugResources
+> Task :feature:verificationotp:generateDebugResValues
+> Task :feature:verificationotp:generateDebugResources
+> Task :feature:verificationotp:packageDebugResources
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :resources:extractDeepLinksDebug
+> Task :core:data:extractDeepLinksDebug
+> Task :core:database:extractDeepLinksDebug
+> Task :core:datastore:extractDeepLinksDebug
+> Task :core:model:extractDeepLinksDebug
+> Task :core:network:extractDeepLinksDebug
+> Task :core:theme:extractDeepLinksDebug
+> Task :core:ui:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :feature:camera:extractDeepLinksDebug
+> Task :core:data:processDebugManifest
+> Task :resources:processDebugManifest
+> Task :core:database:processDebugManifest
+> Task :core:ui:processDebugManifest
+> Task :core:network:processDebugManifest
+> Task :core:datastore:processDebugManifest
+> Task :core:theme:processDebugManifest
+> Task :core:model:processDebugManifest
+> Task :feature:chatbot:extractDeepLinksDebug
+> Task :feature:camera:processDebugManifest
+> Task :feature:diagnose:extractDeepLinksDebug
+> Task :feature:diagnosefailed:extractDeepLinksDebug
+> Task :feature:diagnoseresult:extractDeepLinksDebug
+> Task :feature:diagnose:processDebugManifest
+> Task :feature:home:extractDeepLinksDebug
+> Task :feature:chatbot:processDebugManifest
+> Task :feature:lightmeter:extractDeepLinksDebug
+> Task :feature:diagnosefailed:processDebugManifest
+> Task :feature:login:extractDeepLinksDebug
+> Task :feature:diagnoseresult:processDebugManifest
+> Task :feature:myplants:extractDeepLinksDebug
+> Task :feature:myplants:processDebugManifest UP-TO-DATE
+> Task :feature:home:processDebugManifest
+> Task :feature:lightmeter:processDebugManifest
+> Task :feature:login:processDebugManifest
+> Task :feature:processimage:extractDeepLinksDebug
+> Task :feature:settings:extractDeepLinksDebug
+> Task :feature:signup:extractDeepLinksDebug
+> Task :feature:verificationotp:extractDeepLinksDebug
+> Task :feature:processimage:processDebugManifest
+> Task :feature:settings:processDebugManifest
+> Task :feature:signup:processDebugManifest
+> Task :resources:parseDebugLocalResources UP-TO-DATE
+> Task :resources:generateDebugRFile UP-TO-DATE
+> Task :feature:verificationotp:processDebugManifest
+> Task :core:data:compileDebugLibraryResources
+> Task :app:mergeDebugResources
+> Task :resources:compileDebugLibraryResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :core:data:parseDebugLocalResources UP-TO-DATE
+> Task :core:data:generateDebugRFile UP-TO-DATE
+> Task :core:database:compileDebugLibraryResources
+> Task :core:database:parseDebugLocalResources UP-TO-DATE
+> Task :core:database:generateDebugRFile UP-TO-DATE
+> Task :core:datastore:compileDebugLibraryResources
+> Task :core:datastore:parseDebugLocalResources UP-TO-DATE
+> Task :core:datastore:generateDebugRFile UP-TO-DATE
+> Task :core:model:compileDebugLibraryResources
+> Task :app:processDebugManifestForPackage
+> Task :core:model:parseDebugLocalResources UP-TO-DATE
+> Task :core:model:generateDebugRFile UP-TO-DATE
+> Task :core:network:compileDebugLibraryResources
+> Task :core:network:parseDebugLocalResources UP-TO-DATE
+> Task :core:network:generateDebugRFile UP-TO-DATE
+> Task :core:theme:compileDebugLibraryResources
+> Task :core:theme:parseDebugLocalResources UP-TO-DATE
+> Task :core:theme:generateDebugRFile UP-TO-DATE
+> Task :core:ui:compileDebugLibraryResources
+> Task :core:ui:parseDebugLocalResources UP-TO-DATE
+> Task :core:ui:generateDebugRFile UP-TO-DATE
+> Task :feature:camera:compileDebugLibraryResources
+> Task :feature:chatbot:compileDebugLibraryResources
+> Task :feature:diagnose:compileDebugLibraryResources
+> Task :feature:camera:parseDebugLocalResources
+> Task :feature:chatbot:parseDebugLocalResources
+> Task :feature:diagnosefailed:compileDebugLibraryResources
+> Task :feature:diagnose:parseDebugLocalResources
+> Task :feature:diagnoseresult:compileDebugLibraryResources
+> Task :feature:diagnosefailed:parseDebugLocalResources
+> Task :feature:home:compileDebugLibraryResources
+> Task :feature:diagnoseresult:parseDebugLocalResources
+> Task :feature:home:parseDebugLocalResources
+> Task :feature:lightmeter:compileDebugLibraryResources
+> Task :feature:diagnosefailed:generateDebugRFile
+> Task :feature:diagnose:generateDebugRFile
+> Task :feature:chatbot:generateDebugRFile
+> Task :feature:lightmeter:parseDebugLocalResources
+> Task :feature:camera:generateDebugRFile
+> Task :feature:diagnoseresult:generateDebugRFile
+> Task :feature:login:compileDebugLibraryResources
+> Task :feature:myplants:compileDebugLibraryResources
+> Task :feature:myplants:parseDebugLocalResources UP-TO-DATE
+> Task :feature:login:parseDebugLocalResources
+> Task :feature:myplants:generateDebugRFile UP-TO-DATE
+> Task :feature:home:generateDebugRFile
+> Task :feature:lightmeter:generateDebugRFile
+> Task :feature:processimage:compileDebugLibraryResources
+> Task :feature:settings:compileDebugLibraryResources
+> Task :feature:processimage:parseDebugLocalResources
+> Task :feature:signup:compileDebugLibraryResources
+> Task :feature:settings:parseDebugLocalResources
+> Task :feature:login:generateDebugRFile
+> Task :feature:processimage:generateDebugRFile
+> Task :feature:verificationotp:compileDebugLibraryResources
+> Task :feature:signup:parseDebugLocalResources
+> Task :feature:settings:generateDebugRFile
+> Task :resources:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :resources:generateDebugBuildConfig UP-TO-DATE
+> Task :feature:verificationotp:parseDebugLocalResources
+> Task :resources:compileDebugKotlin NO-SOURCE
+> Task :resources:javaPreCompileDebug UP-TO-DATE
+> Task :feature:signup:generateDebugRFile
+> Task :feature:verificationotp:generateDebugRFile
+> Task :resources:compileDebugJavaWithJavac UP-TO-DATE
+> Task :resources:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:data:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:data:protobufDummy UP-TO-DATE
+> Task :core:data:extractDebugProto UP-TO-DATE
+> Task :core:database:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:model:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:model:compileDebugKotlin UP-TO-DATE
+> Task :core:model:javaPreCompileDebug UP-TO-DATE
+> Task :core:model:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:model:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:database:kspDebugKotlin UP-TO-DATE
+> Task :core:database:compileDebugKotlin UP-TO-DATE
+> Task :core:database:javaPreCompileDebug UP-TO-DATE
+> Task :core:database:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:database:copyRoomSchemas NO-SOURCE
+> Task :core:model:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:database:transformDebugClassesWithAsm UP-TO-DATE
+> Task :core:database:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:database:processDebugJavaRes UP-TO-DATE
+> Task :core:database:createFullJarDebug UP-TO-DATE
+> Task :core:database:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:datastore:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:datastore:protobufDummy UP-TO-DATE
+> Task :core:datastore:extractDebugProto UP-TO-DATE
+> Task :core:model:processDebugJavaRes UP-TO-DATE
+> Task :core:model:createFullJarDebug UP-TO-DATE
+> Task :core:network:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:network:generateDebugBuildConfig UP-TO-DATE
+> Task :core:network:compileDebugKotlin UP-TO-DATE
+> Task :core:network:javaPreCompileDebug UP-TO-DATE
+> Task :core:network:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:network:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:network:processDebugJavaRes UP-TO-DATE
+> Task :core:network:createFullJarDebug UP-TO-DATE
+> Task :core:datastore:extractIncludeDebugProto UP-TO-DATE
+> Task :core:datastore:extractProto UP-TO-DATE
+> Task :core:datastore:generateDebugProto UP-TO-DATE
+> Task :core:network:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:datastore:kspDebugKotlin UP-TO-DATE
+> Task :core:datastore:compileDebugKotlin UP-TO-DATE
+> Task :core:datastore:javaPreCompileDebug UP-TO-DATE
+> Task :core:datastore:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:datastore:transformDebugClassesWithAsm UP-TO-DATE
+> Task :core:datastore:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:datastore:processDebugJavaRes UP-TO-DATE
+> Task :core:datastore:createFullJarDebug UP-TO-DATE
+> Task :core:data:extractIncludeDebugProto UP-TO-DATE
+> Task :core:data:extractProto UP-TO-DATE
+> Task :core:data:generateDebugProto NO-SOURCE
+> Task :core:datastore:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:data:kspDebugKotlin UP-TO-DATE
+> Task :core:data:compileDebugKotlin UP-TO-DATE
+> Task :core:data:javaPreCompileDebug UP-TO-DATE
+> Task :core:data:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:data:transformDebugClassesWithAsm UP-TO-DATE
+> Task :core:data:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:theme:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:theme:generateDebugBuildConfig UP-TO-DATE
+> Task :core:theme:compileDebugKotlin UP-TO-DATE
+> Task :core:theme:javaPreCompileDebug UP-TO-DATE
+> Task :core:theme:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:theme:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:ui:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :core:ui:generateDebugBuildConfig UP-TO-DATE
+> Task :core:ui:compileDebugKotlin UP-TO-DATE
+> Task :core:ui:javaPreCompileDebug UP-TO-DATE
+> Task :core:ui:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:ui:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :resources:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:data:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:theme:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:ui:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :feature:camera:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:camera:generateDebugBuildConfig
+> Task :feature:diagnosefailed:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:diagnosefailed:generateDebugBuildConfig
+> Task :feature:diagnoseresult:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:diagnoseresult:generateDebugBuildConfig
+> Task :feature:diagnosefailed:javaPreCompileDebug
+> Task :feature:processimage:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:processimage:generateDebugBuildConfig
+> Task :feature:diagnoseresult:javaPreCompileDebug
+> Task :feature:chatbot:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:processimage:javaPreCompileDebug
+> Task :feature:chatbot:generateDebugBuildConfig
+> Task :feature:camera:javaPreCompileDebug
+> Task :feature:diagnose:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:diagnose:generateDebugBuildConfig
+> Task :feature:chatbot:javaPreCompileDebug
+> Task :feature:home:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:home:generateDebugBuildConfig
+> Task :feature:lightmeter:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:diagnose:javaPreCompileDebug
+> Task :feature:lightmeter:generateDebugBuildConfig
+> Task :app:processDebugResources
+> Task :feature:settings:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:settings:generateDebugBuildConfig
+> Task :feature:lightmeter:javaPreCompileDebug
+> Task :feature:login:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:login:generateDebugBuildConfig
+> Task :feature:settings:javaPreCompileDebug
+> Task :feature:home:javaPreCompileDebug
+> Task :feature:myplants:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:myplants:generateDebugBuildConfig UP-TO-DATE
+> Task :feature:login:javaPreCompileDebug
+> Task :feature:myplants:javaPreCompileDebug UP-TO-DATE
+> Task :feature:signup:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:signup:generateDebugBuildConfig
+> Task :feature:verificationotp:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :feature:verificationotp:generateDebugBuildConfig
+> Task :feature:signup:javaPreCompileDebug
+> Task :feature:verificationotp:javaPreCompileDebug
+> Task :app:javaPreCompileDebug
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :resources:mergeDebugShaders
+> Task :resources:compileDebugShaders NO-SOURCE
+> Task :resources:generateDebugAssets UP-TO-DATE
+> Task :resources:mergeDebugAssets
+> Task :core:data:mergeDebugShaders
+> Task :core:data:compileDebugShaders NO-SOURCE
+> Task :core:data:generateDebugAssets UP-TO-DATE
+> Task :core:data:mergeDebugAssets
+> Task :core:database:mergeDebugShaders
+> Task :core:database:compileDebugShaders NO-SOURCE
+> Task :core:database:generateDebugAssets UP-TO-DATE
+> Task :core:database:mergeDebugAssets
+> Task :core:datastore:mergeDebugShaders
+> Task :core:datastore:compileDebugShaders NO-SOURCE
+> Task :core:datastore:generateDebugAssets UP-TO-DATE
+> Task :core:datastore:mergeDebugAssets
+> Task :core:model:mergeDebugShaders
+> Task :core:model:compileDebugShaders NO-SOURCE
+> Task :core:model:generateDebugAssets UP-TO-DATE
+> Task :core:model:mergeDebugAssets
+> Task :core:network:mergeDebugShaders
+> Task :core:network:compileDebugShaders NO-SOURCE
+> Task :core:network:generateDebugAssets UP-TO-DATE
+> Task :core:network:mergeDebugAssets
+> Task :core:theme:mergeDebugShaders
+> Task :core:theme:compileDebugShaders NO-SOURCE
+> Task :core:theme:generateDebugAssets UP-TO-DATE
+> Task :core:theme:mergeDebugAssets
+> Task :core:ui:mergeDebugShaders
+> Task :core:ui:compileDebugShaders NO-SOURCE
+> Task :core:ui:generateDebugAssets UP-TO-DATE
+> Task :core:ui:mergeDebugAssets
+> Task :feature:camera:mergeDebugShaders
+> Task :feature:camera:compileDebugShaders NO-SOURCE
+> Task :feature:camera:generateDebugAssets UP-TO-DATE
+> Task :feature:camera:mergeDebugAssets
+> Task :feature:chatbot:mergeDebugShaders
+> Task :feature:chatbot:compileDebugShaders NO-SOURCE
+> Task :feature:chatbot:generateDebugAssets UP-TO-DATE
+> Task :feature:chatbot:mergeDebugAssets
+> Task :feature:diagnose:mergeDebugShaders
+> Task :feature:diagnose:compileDebugShaders NO-SOURCE
+> Task :feature:diagnose:generateDebugAssets UP-TO-DATE
+> Task :feature:diagnose:mergeDebugAssets
+> Task :feature:diagnosefailed:mergeDebugShaders
+> Task :feature:diagnosefailed:compileDebugShaders NO-SOURCE
+> Task :feature:diagnosefailed:generateDebugAssets UP-TO-DATE
+> Task :feature:diagnosefailed:mergeDebugAssets
+> Task :feature:diagnoseresult:mergeDebugShaders
+> Task :feature:diagnoseresult:compileDebugShaders NO-SOURCE
+> Task :feature:diagnoseresult:generateDebugAssets UP-TO-DATE
+> Task :feature:diagnoseresult:mergeDebugAssets
+> Task :feature:home:mergeDebugShaders
+> Task :feature:home:compileDebugShaders NO-SOURCE
+> Task :feature:home:generateDebugAssets UP-TO-DATE
+> Task :feature:home:mergeDebugAssets
+> Task :feature:lightmeter:mergeDebugShaders
+> Task :feature:lightmeter:compileDebugShaders NO-SOURCE
+> Task :feature:lightmeter:generateDebugAssets UP-TO-DATE
+> Task :feature:lightmeter:mergeDebugAssets
+> Task :feature:login:mergeDebugShaders
+> Task :feature:login:compileDebugShaders NO-SOURCE
+> Task :feature:login:generateDebugAssets UP-TO-DATE
+> Task :feature:login:mergeDebugAssets
+> Task :feature:myplants:mergeDebugShaders UP-TO-DATE
+> Task :feature:myplants:compileDebugShaders NO-SOURCE
+> Task :feature:myplants:generateDebugAssets UP-TO-DATE
+> Task :feature:myplants:mergeDebugAssets UP-TO-DATE
+> Task :feature:processimage:mergeDebugShaders
+> Task :feature:processimage:compileDebugShaders NO-SOURCE
+> Task :feature:processimage:generateDebugAssets UP-TO-DATE
+> Task :feature:processimage:mergeDebugAssets
+> Task :feature:settings:mergeDebugShaders
+> Task :feature:settings:compileDebugShaders NO-SOURCE
+> Task :feature:settings:generateDebugAssets UP-TO-DATE
+> Task :feature:settings:mergeDebugAssets
+> Task :feature:signup:mergeDebugShaders
+> Task :feature:signup:compileDebugShaders NO-SOURCE
+> Task :feature:signup:generateDebugAssets UP-TO-DATE
+> Task :feature:signup:mergeDebugAssets
+> Task :feature:verificationotp:mergeDebugShaders
+> Task :feature:verificationotp:compileDebugShaders NO-SOURCE
+> Task :feature:verificationotp:generateDebugAssets UP-TO-DATE
+> Task :feature:verificationotp:mergeDebugAssets
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :resources:processDebugJavaRes NO-SOURCE
+> Task :core:data:processDebugJavaRes
+> Task :core:theme:processDebugJavaRes
+> Task :core:ui:processDebugJavaRes
+> Task :app:desugarDebugFileDependencies
+> Task :core:theme:bundleLibRuntimeToDirDebug
+> Task :core:ui:bundleLibRuntimeToDirDebug
+> Task :app:checkDebugDuplicateClasses
+> Task :feature:diagnosefailed:kspDebugKotlin
+> Task :resources:bundleLibRuntimeToDirDebug
+> Task :core:data:bundleLibRuntimeToDirDebug
+> Task :core:datastore:bundleLibRuntimeToDirDebug
+> Task :core:database:bundleLibRuntimeToDirDebug
+> Task :core:network:bundleLibRuntimeToDirDebug
+> Task :core:model:bundleLibRuntimeToDirDebug
+> Task :app:mergeDebugJniLibFolders
+> Task :resources:mergeDebugJniLibFolders
+> Task :resources:mergeDebugNativeLibs NO-SOURCE
+> Task :resources:copyDebugJniLibsProjectOnly
+> Task :core:data:mergeDebugJniLibFolders
+> Task :core:data:mergeDebugNativeLibs NO-SOURCE
+> Task :core:data:copyDebugJniLibsProjectOnly
+> Task :core:database:mergeDebugJniLibFolders
+> Task :core:database:mergeDebugNativeLibs NO-SOURCE
+> Task :core:database:copyDebugJniLibsProjectOnly
+> Task :core:datastore:mergeDebugJniLibFolders
+> Task :core:datastore:mergeDebugNativeLibs NO-SOURCE
+> Task :core:datastore:copyDebugJniLibsProjectOnly
+> Task :core:model:mergeDebugJniLibFolders
+> Task :core:model:mergeDebugNativeLibs NO-SOURCE
+> Task :core:model:copyDebugJniLibsProjectOnly
+> Task :core:network:mergeDebugJniLibFolders
+> Task :core:network:mergeDebugNativeLibs NO-SOURCE
+> Task :core:network:copyDebugJniLibsProjectOnly
+> Task :core:theme:mergeDebugJniLibFolders
+> Task :core:theme:mergeDebugNativeLibs NO-SOURCE
+> Task :core:theme:copyDebugJniLibsProjectOnly
+> Task :core:ui:mergeDebugJniLibFolders
+> Task :core:ui:mergeDebugNativeLibs NO-SOURCE
+> Task :core:ui:copyDebugJniLibsProjectOnly
+> Task :feature:camera:mergeDebugJniLibFolders
+> Task :feature:camera:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:camera:copyDebugJniLibsProjectOnly
+> Task :feature:chatbot:mergeDebugJniLibFolders
+> Task :feature:chatbot:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:chatbot:copyDebugJniLibsProjectOnly
+> Task :feature:diagnose:mergeDebugJniLibFolders
+> Task :feature:diagnose:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:diagnose:copyDebugJniLibsProjectOnly
+> Task :feature:diagnosefailed:mergeDebugJniLibFolders
+> Task :feature:diagnosefailed:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:diagnosefailed:copyDebugJniLibsProjectOnly
+> Task :feature:diagnoseresult:mergeDebugJniLibFolders
+> Task :feature:diagnoseresult:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:diagnoseresult:copyDebugJniLibsProjectOnly
+> Task :feature:home:mergeDebugJniLibFolders
+> Task :feature:home:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:home:copyDebugJniLibsProjectOnly
+> Task :feature:lightmeter:mergeDebugJniLibFolders
+> Task :feature:lightmeter:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:lightmeter:copyDebugJniLibsProjectOnly
+> Task :feature:login:mergeDebugJniLibFolders
+> Task :feature:login:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:login:copyDebugJniLibsProjectOnly
+> Task :feature:myplants:mergeDebugJniLibFolders UP-TO-DATE
+> Task :feature:myplants:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:myplants:copyDebugJniLibsProjectOnly
+> Task :feature:processimage:mergeDebugJniLibFolders
+> Task :feature:processimage:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:processimage:copyDebugJniLibsProjectOnly
+> Task :feature:settings:mergeDebugJniLibFolders
+> Task :feature:settings:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:settings:copyDebugJniLibsProjectOnly
+> Task :feature:signup:mergeDebugJniLibFolders
+> Task :feature:signup:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:signup:copyDebugJniLibsProjectOnly
+> Task :feature:verificationotp:mergeDebugJniLibFolders
+> Task :feature:verificationotp:mergeDebugNativeLibs NO-SOURCE
+> Task :feature:verificationotp:copyDebugJniLibsProjectOnly
+> Task :app:mergeDebugNativeLibs
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:stripDebugDebugSymbols
+> Task :feature:settings:kspDebugKotlin
+> Task :feature:login:kspDebugKotlin
+> Task :feature:lightmeter:kspDebugKotlin
+> Task :feature:myplants:kspDebugKotlin
+> Task :feature:chatbot:kspDebugKotlin
+> Task :feature:diagnoseresult:kspDebugKotlin
+> Task :feature:verificationotp:kspDebugKotlin
+> Task :feature:signup:kspDebugKotlin
+> Task :app:mergeExtDexDebug
+
+> Task :feature:verificationotp:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/verificationotp/src/main/java/com/baothanhbin/feature/verificationotp/VerifycationOTPScreen.kt:62:43 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/verificationotp/src/main/java/com/baothanhbin/feature/verificationotp/VerifycationOTPScreen.kt:243:44 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+
+> Task :feature:diagnosefailed:compileDebugKotlin
+
+> Task :feature:login:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/login/src/main/java/com/baothanhbin/feature/login/LoginScreen.kt:86:33 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+
+> Task :feature:lightmeter:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/lightmeter/src/main/java/com/baothanhbin/feature/lightmeter/LightMeterScreen.kt:215:26 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+
+> Task :feature:chatbot:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/chatbot/src/main/java/com/baothanhbin/feature/chatbot/ChatbotScreen.kt:78:35 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/chatbot/src/main/java/com/baothanhbin/feature/chatbot/ChatbotScreen.kt:97:35 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/chatbot/src/main/java/com/baothanhbin/feature/chatbot/ChatbotScreen.kt:409:53 'val Icons.Filled.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.VolumeUp.
+
+> Task :feature:settings:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/settings/src/main/java/com/baothanhbin/feature/settings/SettingsScreen.kt:77:36 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/settings/src/main/java/com/baothanhbin/feature/settings/SettingsScreen.kt:157:49 'val Icons.Filled.Message: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.Message.
+
+> Task :feature:myplants:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/myplants/src/main/java/com/baothanhbin/feature/myplants/MyPlantsScreen.kt:74:36 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/myplants/src/main/java/com/baothanhbin/feature/myplants/MyPlantsScreen.kt:131:13 'fun TabRow(selectedTabIndex: Int, modifier: Modifier = ..., containerColor: Color = ..., contentColor: Color = ..., indicator: @Composable() ComposableFunction1<@ParameterName(...) List<TabPosition>, Unit> = ..., divider: @Composable() ComposableFunction0<Unit> = ..., tabs: @Composable() ComposableFunction0<Unit>): Unit' is deprecated. Replaced with PrimaryTabRow and SecondaryTabRow.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/myplants/src/main/java/com/baothanhbin/feature/myplants/MyPlantsScreen.kt:137:36 'fun Indicator(modifier: Modifier = ..., height: Dp = ..., color: Color = ...): Unit' is deprecated. Use SecondaryIndicator instead.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/myplants/src/main/java/com/baothanhbin/feature/myplants/MyPlantsScreen.kt:138:34 'fun Modifier.tabIndicatorOffset(currentTabPosition: TabPosition): Modifier' is deprecated. Solely for use alongside deprecated TabRowDefaults.Indicator method. For recommended PrimaryIndicator and SecondaryIndicator methods, please use TabIndicatorScope.tabIndicatorOffset method.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/myplants/src/main/java/com/baothanhbin/feature/myplants/MyPlantsScreen.kt:338:34 Java type mismatch: inferred type is 'kotlin.String?', but 'kotlin.String' was expected.
+
+> Task :feature:diagnoseresult:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/diagnoseresult/src/main/java/com/baothanhbin/feature/diagnoseresult/DiagnoseResultScreen.kt:93:42 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/diagnoseresult/src/main/java/com/baothanhbin/feature/diagnoseresult/DiagnoseResultScreen.kt:506:13 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/diagnoseresult/src/main/java/com/baothanhbin/feature/diagnoseresult/DiagnoseResultScreen.kt:510:13 'fun Divider(modifier: Modifier = ..., thickness: Dp = ..., color: Color = ...): Unit' is deprecated. Renamed to HorizontalDivider.
+
+> Task :feature:signup:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/signup/src/main/java/com/baothanhbin/feature/signup/SignupScreen.kt:79:34 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+
+> Task :feature:diagnosefailed:compileDebugJavaWithJavac
+> Task :feature:diagnosefailed:transformDebugClassesWithAsm
+> Task :feature:diagnoseresult:compileDebugJavaWithJavac
+> Task :feature:diagnosefailed:bundleLibRuntimeToJarDebug
+> Task :feature:diagnosefailed:bundleLibCompileToJarDebug
+> Task :feature:diagnoseresult:transformDebugClassesWithAsm
+> Task :feature:chatbot:compileDebugJavaWithJavac
+> Task :feature:diagnoseresult:bundleLibCompileToJarDebug
+> Task :feature:diagnoseresult:bundleLibRuntimeToJarDebug
+> Task :feature:chatbot:transformDebugClassesWithAsm
+> Task :feature:lightmeter:compileDebugJavaWithJavac
+> Task :feature:chatbot:bundleLibCompileToJarDebug
+> Task :feature:chatbot:bundleLibRuntimeToJarDebug
+> Task :feature:lightmeter:transformDebugClassesWithAsm
+> Task :feature:settings:compileDebugJavaWithJavac
+> Task :feature:lightmeter:bundleLibCompileToJarDebug
+> Task :feature:lightmeter:bundleLibRuntimeToJarDebug
+> Task :feature:settings:transformDebugClassesWithAsm
+> Task :feature:login:compileDebugJavaWithJavac
+> Task :feature:settings:bundleLibCompileToJarDebug
+> Task :feature:settings:bundleLibRuntimeToJarDebug
+> Task :feature:login:transformDebugClassesWithAsm
+> Task :feature:processimage:kspDebugKotlin
+> Task :feature:myplants:compileDebugJavaWithJavac
+> Task :feature:login:bundleLibCompileToJarDebug
+> Task :feature:myplants:transformDebugClassesWithAsm
+> Task :feature:signup:compileDebugJavaWithJavac
+> Task :feature:myplants:bundleLibCompileToJarDebug
+> Task :feature:signup:transformDebugClassesWithAsm
+> Task :feature:verificationotp:compileDebugJavaWithJavac
+> Task :feature:signup:bundleLibCompileToJarDebug
+> Task :feature:chatbot:processDebugJavaRes
+> Task :feature:diagnosefailed:processDebugJavaRes
+> Task :feature:verificationotp:transformDebugClassesWithAsm
+> Task :feature:signup:bundleLibRuntimeToJarDebug
+> Task :feature:diagnoseresult:processDebugJavaRes
+> Task :feature:lightmeter:processDebugJavaRes
+> Task :feature:verificationotp:bundleLibCompileToJarDebug
+> Task :feature:verificationotp:bundleLibRuntimeToJarDebug
+> Task :feature:myplants:bundleLibRuntimeToJarDebug
+> Task :feature:login:processDebugJavaRes
+> Task :feature:login:bundleLibRuntimeToJarDebug
+> Task :feature:myplants:processDebugJavaRes
+> Task :feature:settings:processDebugJavaRes
+> Task :feature:signup:processDebugJavaRes
+> Task :feature:verificationotp:processDebugJavaRes
+> Task :feature:diagnosefailed:bundleLibRuntimeToDirDebug
+> Task :feature:settings:bundleLibRuntimeToDirDebug
+> Task :feature:diagnoseresult:bundleLibRuntimeToDirDebug
+> Task :feature:lightmeter:bundleLibRuntimeToDirDebug
+> Task :feature:signup:bundleLibRuntimeToDirDebug
+> Task :feature:chatbot:bundleLibRuntimeToDirDebug
+> Task :feature:verificationotp:bundleLibRuntimeToDirDebug
+> Task :feature:login:bundleLibRuntimeToDirDebug
+> Task :feature:myplants:bundleLibRuntimeToDirDebug
+
+> Task :feature:processimage:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/processimage/src/main/java/com/baothanhbin/feature/processimage/ProcessImageScreen.kt:82:40 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/processimage/src/main/java/com/baothanhbin/feature/processimage/ProcessImageScreen.kt:204:44 'val Icons.Filled.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Filled.ArrowBack.
+
+> Task :feature:processimage:compileDebugJavaWithJavac
+> Task :feature:processimage:processDebugJavaRes
+> Task :feature:processimage:transformDebugClassesWithAsm
+> Task :feature:processimage:bundleLibCompileToJarDebug
+> Task :feature:processimage:bundleLibRuntimeToJarDebug
+> Task :feature:processimage:bundleLibRuntimeToDirDebug
+> Task :feature:camera:kspDebugKotlin
+
+> Task :feature:camera:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/camera/src/main/java/com/baothanhbin/feature/camera/CameraScreen.kt:525:26 'val LocalLifecycleOwner: ProvidableCompositionLocal<LifecycleOwner>' is deprecated. Moved to lifecycle-runtime-compose library in androidx.lifecycle.compose package.
+
+> Task :feature:camera:compileDebugJavaWithJavac
+> Task :feature:camera:processDebugJavaRes
+> Task :feature:camera:transformDebugClassesWithAsm
+> Task :feature:camera:bundleLibRuntimeToJarDebug
+> Task :feature:camera:bundleLibCompileToJarDebug
+> Task :feature:camera:bundleLibRuntimeToDirDebug
+> Task :feature:home:kspDebugKotlin
+> Task :feature:diagnose:kspDebugKotlin
+
+> Task :feature:home:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/home/src/main/java/com/baothanhbin/feature/home/HomeScreen.kt:107:32 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+
+> Task :feature:diagnose:compileDebugKotlin
+w: file:///D:/Data/Android/AgriDoctorAI/feature/diagnose/src/main/java/com/baothanhbin/feature/diagnose/DiagnoseScreen.kt:86:36 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+w: file:///D:/Data/Android/AgriDoctorAI/feature/diagnose/src/main/java/com/baothanhbin/feature/diagnose/DiagnoseScreen.kt:116:36 'fun <reified VM : ViewModel> hiltViewModel(viewModelStoreOwner: ViewModelStoreOwner = ..., key: String? = ...): VM' is deprecated. Moved to package: androidx.hilt.lifecycle.viewmodel.compose.
+
+> Task :feature:home:compileDebugJavaWithJavac
+> Task :feature:diagnose:compileDebugJavaWithJavac
+> Task :feature:diagnose:processDebugJavaRes
+> Task :feature:home:processDebugJavaRes
+> Task :feature:diagnose:transformDebugClassesWithAsm
+> Task :feature:diagnose:bundleLibCompileToJarDebug
+> Task :feature:diagnose:bundleLibRuntimeToJarDebug
+> Task :feature:home:transformDebugClassesWithAsm
+> Task :feature:diagnose:bundleLibRuntimeToDirDebug
+> Task :feature:home:bundleLibCompileToJarDebug
+> Task :feature:home:bundleLibRuntimeToJarDebug
+> Task :feature:home:bundleLibRuntimeToDirDebug
+> Task :app:mergeLibDexDebug
+> Task :app:kspDebugKotlin
+> Task :app:compileDebugKotlin
+> Task :app:compileDebugJavaWithJavac
+> Task :app:hiltAggregateDepsDebug
+> Task :app:hiltJavaCompileDebug
+> Task :app:processDebugJavaRes
+> Task :app:transformDebugClassesWithAsm
+> Task :app:dexBuilderDebug
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugJavaResource
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+
+BUILD SUCCESSFUL in 2m 35s
+544 actionable tasks: 408 executed, 136 up-to-date
