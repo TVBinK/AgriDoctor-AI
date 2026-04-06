@@ -1,6 +1,5 @@
 package com.baothanhbin.feature.myplants
 
-import android.Manifest
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -56,6 +55,10 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import com.baothanhbin.core.database.model.ReminderEntity
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 
 
 @Composable
@@ -81,7 +84,6 @@ fun MyplantScreen(
         }
     }
     
-    // Launcher để request location permission
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -91,6 +93,10 @@ fun MyplantScreen(
             viewModel.onPermissionDenied()
         }
     }
+    
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { /* Do nothing here since we just want to ensure it is requested */ }
     
     val tabs = listOf(
         stringResource(R.string.my_plants),
@@ -168,6 +174,11 @@ fun MyplantScreen(
                     1 -> ReminderContent(
                         reminders = reminders,
                         onAddReminderClick = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                }
+                            }
                             showSetReminderDialog = PlantEntity(
                                 plantName = "Tất cả cây",
                                 imageUri = null,

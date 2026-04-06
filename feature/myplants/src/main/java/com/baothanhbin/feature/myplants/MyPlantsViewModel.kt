@@ -79,7 +79,14 @@ class MyPlantsViewModel @Inject constructor(
 
     fun scheduleWateringReminder(context: Context, plantName: String, targetTimestamp: Long) {
         val delay = targetTimestamp - System.currentTimeMillis()
-        if (delay <= 0) return
+        if (delay <= 0) {
+            Log.e("WateringWorker", "Loi: Thoi gian hen ($targetTimestamp) phai lon hon hien tai (${System.currentTimeMillis()})")
+            return
+        }
+
+        val minutes = TimeUnit.MILLISECONDS.toMinutes(delay)
+        val seconds = TimeUnit.MILLISECONDS.toSeconds(delay) % 60
+        Log.d("WateringWorker", "Dang len lich nhac nho cho '$plantName' sau: $minutes phut $seconds giay (Tong: $delay ms)")
 
         val inputData = Data.Builder()
             .putString("plantName", plantName)
@@ -96,6 +103,8 @@ class MyPlantsViewModel @Inject constructor(
             workRequest
         )
         
+        Log.d("WateringWorker", "enqueueUniqueWork thanh cong. Kiem tra Logcat filter bang 'WateringWorker'")
+
         // Cache object into Room Database
         viewModelScope.launch {
             val reminder = ReminderEntity(plantName = plantName, targetTimestamp = targetTimestamp, isCompleted = false)
