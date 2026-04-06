@@ -77,6 +77,13 @@ class MyPlantsViewModel @Inject constructor(
         }
     }
 
+    fun deletePlant(plant: PlantEntity) {
+        viewModelScope.launch {
+            plantRepository.deletePlant(plant.id)
+            loadPlants()
+        }
+    }
+
     fun scheduleWateringReminder(context: Context, plantName: String, targetTimestamp: Long) {
         val delay = targetTimestamp - System.currentTimeMillis()
         if (delay <= 0) {

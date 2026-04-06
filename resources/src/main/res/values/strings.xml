@@ -153,7 +153,6 @@
     <string name="try_again">Thử lại</string>
     
     <!-- My Plants Screen -->
-    <string name="my_plants_title">Cây của tôi</string>
     <string name="reminder">Nhắc nhở</string>
     <string name="no_reminders">Không có nhắc nhở</string>
     <string name="no_plant">Chưa có cây. Hãy thêm cây của bạn!</string>
@@ -200,6 +199,26 @@
     <string name="list_plant">Cây trồng</string>
     <string name="no_disease_history">Chưa có lịch sử chuẩn đoán bệnh</string>
     <string name="no_plant_history">Chưa có lịch sử nhận diện cây</string>
+    
+    <!-- MyPlants Component Strings -->
+    <string name="add_new_plant">Thêm cây mới</string>
+    <string name="save">Lưu</string>
+    <string name="take_photo_of_your_plant">Chụp ảnh cây của bạn</string>
+    <string name="change_photo">Thay đổi ảnh</string>
+    <string name="add_photo">Thêm ảnh</string>
+    <string name="plant_name">Tên cây</string>
+    <string name="your_plant_name">Tên cây của bạn</string>
+    <string name="set_watering_reminder">Hẹn giờ tưới nước</string>
+    <string name="setup_watering_reminder_for">Cài đặt nhắc nhở tưới nước cho %1$s:</string>
+    <string name="reminder_datetime">Ngày giờ đặt hẹn</string>
+    <string name="select_time">Chọn thời gian...</string>
+    <string name="action_set">Cài đặt</string>
+    <string name="edit_plant">Chỉnh sửa cây</string>
+    <string name="save_changes">Lưu thay đổi</string>
+    <string name="no_care_tasks_today">Chưa có công việc chăm sóc nào hôm nay</string>
+    <string name="completed_at">Đã hoàn thành lúc %1$s</string>
+    <string name="waiting_at">Đang chờ lúc %1$s</string>
+    <string name="no_location">Chưa có vị trí</string>
 </resources>
 
 
