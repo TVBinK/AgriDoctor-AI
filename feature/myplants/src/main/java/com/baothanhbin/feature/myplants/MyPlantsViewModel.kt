@@ -28,6 +28,7 @@ import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.worker.WateringWorker
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import com.baothanhbin.core.database.model.ReminderEntity
 
 @HiltViewModel
 class MyPlantsViewModel @Inject constructor(
@@ -44,8 +45,18 @@ class MyPlantsViewModel @Inject constructor(
     private val _myPlants = MutableStateFlow<List<PlantEntity>>(emptyList())
     val myPlants: StateFlow<List<PlantEntity>> = _myPlants.asStateFlow()
 
+    private val _reminders = MutableStateFlow<List<ReminderEntity>>(emptyList())
+    val reminders: StateFlow<List<ReminderEntity>> = _reminders.asStateFlow()
+
     init {
         loadPlants()
+        loadReminders()
+    }
+
+    private fun loadReminders() {
+        viewModelScope.launch {
+            _reminders.value = plantRepository.getAllReminders()
+        }
     }
 
     private fun loadPlants() {
@@ -84,6 +95,20 @@ class MyPlantsViewModel @Inject constructor(
             ExistingWorkPolicy.REPLACE,
             workRequest
         )
+        
+        // Cache object into Room Database
+        viewModelScope.launch {
+            val reminder = ReminderEntity(plantName = plantName, targetTimestamp = targetTimestamp, isCompleted = false)
+            plantRepository.insertReminder(reminder)
+            loadReminders()
+        }
+    }
+    
+    fun toggleReminderStatus(id: Long, isCompleted: Boolean) {
+        viewModelScope.launch {
+            plantRepository.updateReminderStatus(id, isCompleted)
+            loadReminders() // reload from DB to update UI
+        }
     }
 
     fun checkAndGetLocation(context: Context, locationStateHolder: LocationStateHolder) {

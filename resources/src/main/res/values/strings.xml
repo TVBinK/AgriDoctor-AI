@@ -156,11 +156,13 @@
     <string name="my_plants_title">Cây của tôi</string>
     <string name="reminder">Nhắc nhở</string>
     <string name="no_reminders">Không có nhắc nhở</string>
+    <string name="no_plant">Chưa có cây. Hãy thêm cây của bạn!</string>
     <string name="next_report_on">Báo cáo tiếp theo vào</string>
     <string name="next_water_on">Tưới nước tiếp theo vào</string>
     <string name="more_options">Tùy chọn khác</string>
     <string name="delete">Xóa</string>
     <string name="set_reminder">Đặt nhắc nhở</string>
+    <string name="add_reminder">Thêm nhắc nhở</string>
     <string name="no_reminders_set">Chưa có nhắc nhở nào</string>
     <string name="add_reminder_description">Thêm cây và thiết lập lịch chăm sóc</string>
     <string name="add_plant">Thêm cây</string>

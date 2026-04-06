@@ -525,7 +525,11 @@ private fun CameraPreview(onBindPreview: (LifecycleOwner, PreviewView) -> Unit, 
     val lifecycleOwner = LocalLifecycleOwner.current
     AndroidView(
         modifier = modifier,
-        factory = { ctx -> PreviewView(ctx) },
+        factory = { ctx -> 
+            PreviewView(ctx).apply {
+                implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+            }
+        },
         update = { previewView ->
             onBindPreview(lifecycleOwner, previewView)
         }

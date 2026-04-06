@@ -3,12 +3,14 @@ package com.baothanhbin.core.data.impl
 import com.baothanhbin.core.data.repository.PlantRepository
 import com.baothanhbin.core.database.AgriDoctorDatabase
 import com.baothanhbin.core.database.model.PlantEntity
+import com.baothanhbin.core.database.model.ReminderEntity
 import javax.inject.Inject
 
 class PlantRepositoryImpl @Inject constructor(
     private val database: AgriDoctorDatabase
 ) : PlantRepository {
     private val plantDao get() = database.plantDao()
+    private val reminderDao get() = database.reminderDao()
 
     override suspend fun insertPlant(plant: PlantEntity): Long {
         return plantDao.insertPlant(plant)
@@ -32,5 +34,21 @@ class PlantRepositoryImpl @Inject constructor(
 
     override suspend fun deleteAllPlants() {
         plantDao.deleteAllPlants()
+    }
+
+    override suspend fun insertReminder(reminder: ReminderEntity): Long {
+        return reminderDao.insertReminder(reminder)
+    }
+
+    override suspend fun getAllReminders(): List<ReminderEntity> {
+        return reminderDao.getAllReminders()
+    }
+
+    override suspend fun updateReminderStatus(id: Long, isCompleted: Boolean) {
+        reminderDao.updateReminderStatus(id, isCompleted)
+    }
+
+    override suspend fun deleteReminder(id: Long) {
+        reminderDao.deleteReminder(id)
     }
 }

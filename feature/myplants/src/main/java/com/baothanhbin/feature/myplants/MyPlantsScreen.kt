@@ -44,27 +44,19 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.graphics.asImageBitmap
 import android.graphics.Bitmap
+import androidx.compose.foundation.lazy.LazyRow
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
 import com.baothanhbin.core.database.model.PlantEntity
 import coil.compose.AsyncImage
+import com.baothanhbin.core.theme.GreenSurface
+import com.baothanhbin.core.theme.Subtitle
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import com.baothanhbin.core.database.model.ReminderEntity
 
-// Theme colors
-private val GreenSurface = Color(0xFF4CAF50)
-private val Subtitle = Color(0xFF757575)
-
-data class Plant(
-    val id: Int,
-    val name: String,
-    val imageRes: Int,
-    val nextAction: String,
-    val nextActionDate: String,
-    val hasReminder: Boolean = true
-)
 
 @Composable
 fun MyplantRoute(
@@ -106,6 +98,7 @@ fun MyplantScreen(
     )
     
     val myPlants by viewModel.myPlants.collectAsState()
+    val reminders by viewModel.reminders.collectAsState()
     var showAddPlantDialog by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
@@ -172,7 +165,19 @@ fun MyplantScreen(
                             showSetReminderDialog = plant
                         }
                     )
-                    1 -> ReminderContent()
+                    1 -> ReminderContent(
+                        reminders = reminders,
+                        onAddReminderClick = {
+                            showSetReminderDialog = PlantEntity(
+                                plantName = "Tất cả cây",
+                                imageUri = null,
+                                location = null
+                            )
+                        },
+                        onToggleReminderStatus = { id, isCompleted ->
+                            viewModel.toggleReminderStatus(id, isCompleted)
+                        }
+                    )
                 }
                 
                 if (showSetReminderDialog != null) {
@@ -297,7 +302,7 @@ private fun MyPlantsContent(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Chưa có cây. Hãy thêm cây của bạn!",
+                    text = stringResource(R.string.no_plant),
                     color = Subtitle
                 )
             }
@@ -426,55 +431,242 @@ private fun PlantItemCard(
 }
 
 @Composable
-private fun ReminderContent() {
-    Box(
+private fun ReminderContent(
+    reminders: List<ReminderEntity>,
+    onAddReminderClick: () -> Unit,
+    onToggleReminderStatus: (Long, Boolean) -> Unit
+) {
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
+            .background(White)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        // Top section: Add Reminder Button
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.End
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_selected_plant),
-                contentDescription = null,
-                tint = Subtitle.copy(alpha = 0.5f),
-                modifier = Modifier.size(80.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Text(
-                text = stringResource(R.string.no_reminders_set),
-                style = MaterialTheme.typography.bodyLarge,
-                color = Subtitle
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = stringResource(R.string.add_reminder_description),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Subtitle.copy(alpha = 0.7f),
-                fontSize = 14.sp
-            )
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Button(
-                onClick = { },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = GreenSurface
-                ),
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.padding(horizontal = 32.dp)
+            Surface(
+                color = Color(0xFFE8F5E9), // Light green background
+                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.clickable { onAddReminderClick() }
             ) {
-                Text(
-                    text = stringResource(R.string.add_plant),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.add_reminder),
+                        tint = GreenSurface,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.add_reminder),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = GreenSurface,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Calendar Strip
+        val todayStr = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Calendar.getInstance().time) }
+        var selectedDateStr by remember { mutableStateOf(todayStr) }
+
+        val days = remember {
+            val list = mutableListOf<Pair<String, Pair<Int, String>>>()
+            val tempCal = Calendar.getInstance()
+            tempCal.add(Calendar.DAY_OF_MONTH, -2) // Start from 2 days ago
+            for (i in 0..30) { // Generate next 30 days
+                val dateStr = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(tempCal.time)
+                val date = tempCal.get(Calendar.DAY_OF_MONTH)
+                val dayOfWeek = SimpleDateFormat("EEE", Locale.getDefault()).format(tempCal.time)
+                list.add(dateStr to Pair(date, dayOfWeek))
+                tempCal.add(Calendar.DAY_OF_MONTH, 1)
+            }
+            list
+        }
+        
+        val displayYear = remember(selectedDateStr) {
+            try {
+                val time = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(selectedDateStr)
+                SimpleDateFormat("yyyy", Locale.getDefault()).format(time!!)
+            } catch (e: Exception) { "2025" }
+        }
+        
+        val displayMonth = remember(selectedDateStr) {
+            try {
+                val time = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(selectedDateStr)
+                SimpleDateFormat("MMM", Locale.getDefault()).format(time!!)
+            } catch (e: Exception) { "Jun" }
+        }
+
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            item {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)
+                ) {
+                    Text(displayYear, color = Subtitle.copy(alpha = 0.7f), fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(8.dp)) // Giống với khoảng cách ở cột ngày
+                    Text(displayMonth, color = Subtitle.copy(alpha = 0.7f), fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(14.dp)) // Bù khoảng trống 14dp phía cuối cho bằng với Box dấu chấm
+                }
+            }
+
+            items(days) { (dateStr, dateInfo) ->
+                val (date, dayOfWeek) = dateInfo
+                val isSelected = dateStr == selectedDateStr
+                Column(
+                    modifier = Modifier
+                        .background(
+                            color = if (isSelected) GreenSurface else Color.Transparent,
+                            shape = RoundedCornerShape(24.dp)
+                        )
+                        .padding(horizontal = 12.dp, vertical = 12.dp)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { selectedDateStr = dateStr },
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = String.format(Locale.getDefault(), "%02d", date),
+                        color = if (isSelected) White else Subtitle.copy(alpha = 0.8f),
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        fontSize = 15.sp
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = dayOfWeek,
+                        color = if (isSelected) Color.White else Subtitle.copy(alpha = 0.8f),
+                        fontSize = 13.sp
+                    )
+                    if (isSelected) {
+                        Spacer(Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(Color.White, CircleShape)
+                        )
+                    } else {
+                        Spacer(Modifier.height(14.dp)) // To keep alignment consistent
+                    }
+                }
+            }
+        }
+
+        val tasksForSelectedDate = reminders.filter { task ->
+            try {
+                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(task.targetTimestamp) == selectedDateStr
+            } catch (e: Exception) { false }
+        }
+
+        if (tasksForSelectedDate.isEmpty()) {
+            Spacer(modifier = Modifier.weight(0.8f))
+
+            // Empty state
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_selected_plant),
+                    contentDescription = null,
+                    tint = Subtitle.copy(alpha = 0.4f),
+                    modifier = Modifier.size(100.dp)
                 )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                Text(
+                    text = "You have no care tasks today",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Subtitle.copy(alpha = 0.8f),
+                    fontWeight = FontWeight.Normal
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+        } else {
+            // Task list
+            androidx.compose.foundation.lazy.LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(tasksForSelectedDate) { task ->
+                    val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(task.targetTimestamp)
+                    Card(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            onToggleReminderStatus(task.id, !task.isCompleted)
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (task.isCompleted) Color(0xFFECEFF1) else Color(0xFFF1F8F1)
+                        ),
+                        elevation = CardDefaults.cardElevation(0.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(if (task.isCompleted) Subtitle.copy(alpha = 0.3f) else Color.White, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_water),
+                                    contentDescription = null,
+                                    tint = if (task.isCompleted) Color.White else GreenSurface,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = task.plantName,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = if (task.isCompleted) Subtitle else GreenSurface,
+                                    textDecoration = if (task.isCompleted) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = if (task.isCompleted) "Đã hoàn thành lúc $timeStr" else "Đang chờ lúc $timeStr",
+                                    fontSize = 14.sp,
+                                    color = Subtitle,
+                                    fontWeight = if (task.isCompleted) FontWeight.Normal else FontWeight.Medium
+                                )
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Checkbox(
+                                checked = task.isCompleted,
+                                onCheckedChange = { isChecked ->
+                                    onToggleReminderStatus(task.id, isChecked)
+                                },
+                                colors = CheckboxDefaults.colors(
+                                    checkedColor = GreenSurface
+                                )
+                            )
+                        }
+                    }
+                }
             }
         }
     }

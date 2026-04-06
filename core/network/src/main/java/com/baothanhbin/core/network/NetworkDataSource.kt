@@ -94,11 +94,7 @@ object NetworkDataSource {
      */
     suspend fun getGeminiApiKey(token: String? = null): String? = withContext(Dispatchers.IO) {
         try {
-            val response = NetworkClients.apiKeyClient.get("") {
-                if (token != null) {
-                    headers.append(HttpHeaders.Authorization, "Bearer $token")
-                }
-            }
+            val response = NetworkClients.apiKeyClient.get("")
             
             if (response.status == HttpStatusCode.OK) {
                 val apiKeyResponse: ApiKeyResponse = response.body()
