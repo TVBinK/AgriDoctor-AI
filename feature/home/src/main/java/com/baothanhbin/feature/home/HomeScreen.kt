@@ -154,7 +154,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 140.dp, bottom = 24.dp)
-                //.verticalScroll(rememberScrollState())
+                .verticalScroll(rememberScrollState())
         ) {
             QuickActionsSection(navController = navController)
             Spacer(modifier = Modifier.height(20.dp))
@@ -288,7 +288,7 @@ private fun TodaysCareSection(
                 
                 if (reminders.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(16.dp))
-                    reminders.take(3).forEachIndexed { index, reminder ->
+                    reminders.take(2).forEachIndexed { index, reminder ->
                         val plant = plants.find { it.plantName == reminder.plantName }
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -318,7 +318,7 @@ private fun TodaysCareSection(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(reminder.plantName, style = MaterialTheme.typography.Body1)
-                                Text(stringResource(R.string.watering), color = Subtitle, style = MaterialTheme.typography.Label4)
+                                Text(reminder.actionName, color = Subtitle, style = MaterialTheme.typography.Label4)
                             }
                             Icon(
                                 imageVector = Icons.Default.NotificationsActive,
@@ -327,7 +327,7 @@ private fun TodaysCareSection(
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        if (index < reminders.take(3).size - 1) {
+                        if (index < reminders.take(2).size - 1) {
                             Divider(color = Color(0xFFEEEEEE))
                         }
                     }

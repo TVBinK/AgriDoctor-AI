@@ -242,7 +242,7 @@ fun ReminderContent(
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = task.plantName,
+                                    text = "${task.actionName} - ${task.plantName}",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = if (task.isCompleted) Subtitle else GreenSurface,

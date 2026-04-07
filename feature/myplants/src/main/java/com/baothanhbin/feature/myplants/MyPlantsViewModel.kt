@@ -67,7 +67,7 @@ class MyPlantsViewModel @Inject constructor(
         }
     }
 
-    fun scheduleWateringReminder(context: Context, plantName: String, targetTimestamp: Long) {
+    fun scheduleCareReminder(context: Context, plantName: String, actionName: String, targetTimestamp: Long) {
         val delay = targetTimestamp - System.currentTimeMillis()
         if (delay <= 0) {
             Log.e("WateringWorker", "Loi: Thoi gian hen ($targetTimestamp) phai lon hon hien tai (${System.currentTimeMillis()})")
@@ -80,6 +80,7 @@ class MyPlantsViewModel @Inject constructor(
 
         val inputData = Data.Builder()
             .putString("plantName", plantName)
+            .putString("actionName", actionName)
             .build()
             
         val workRequest = OneTimeWorkRequestBuilder<WateringWorker>()
@@ -97,7 +98,7 @@ class MyPlantsViewModel @Inject constructor(
 
         // Cache object into Room Database
         viewModelScope.launch {
-            val reminder = ReminderEntity(plantName = plantName, targetTimestamp = targetTimestamp, isCompleted = false)
+            val reminder = ReminderEntity(plantName = plantName, actionName = actionName, targetTimestamp = targetTimestamp, isCompleted = false)
             plantRepository.insertReminder(reminder)
         }
     }

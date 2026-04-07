@@ -20,7 +20,7 @@ import com.baothanhbin.core.database.model.ReminderEntity
 
 @Database(
     entities = [DiagnoseResultEntity::class, ChatEntity::class, DiseaseListEntity::class, PlantEntity::class, ReminderEntity::class],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(

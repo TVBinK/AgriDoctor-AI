@@ -26,9 +26,10 @@ class WateringWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val plantName = inputData.getString("plantName") ?: "Cây của bạn"
+        val actionName = inputData.getString("actionName") ?: "Chăm sóc"
         
-        android.util.Log.d("WateringWorker", "Bat dau thuc thi Worker cho cay: $plantName")
-        val notified = NotificationHelper.showWateringNotification(context, plantName)
+        android.util.Log.d("WateringWorker", "Bat dau thuc thi Worker cho cay: $plantName, hanh dong: $actionName")
+        val notified = NotificationHelper.showCareNotification(context, plantName, actionName)
         if (notified) {
             android.util.Log.d("WateringWorker", "Da hien thi Notification cho $plantName")
         } else {

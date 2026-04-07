@@ -208,8 +208,8 @@ fun MyplantScreen(
                         initialPlantName = showSetReminderDialog!!.plantName,
                         availablePlants = myPlants,
                         onDismissRequest = { showSetReminderDialog = null },
-                        onSetReminder = { plantName, timestamp ->
-                            viewModel.scheduleWateringReminder(context, plantName, timestamp)
+                        onSetReminder = { plantName, actionName, timestamp ->
+                            viewModel.scheduleCareReminder(context, plantName, actionName, timestamp)
                             showSetReminderDialog = null
                         }
                     )

@@ -249,11 +249,13 @@ fun SetReminderDialog(
     initialPlantName: String,
     availablePlants: List<PlantEntity>,
     onDismissRequest: () -> Unit,
-    onSetReminder: (String, Long) -> Unit
+    onSetReminder: (String, String, Long) -> Unit
 ) {
     val context = LocalContext.current
     var selectedTimestamp by remember { mutableStateOf<Long?>(null) }
     var dateTimeText by remember { mutableStateOf("") }
+    var actionName by remember { mutableStateOf("Tưới nước") }
+    var expandedActionMenu by remember { mutableStateOf(false) }
     
     // Default to the initial plant name, except if it's "Tất cả cây" then we try to pick the first one
     var selectedPlantName by remember { 
@@ -294,7 +296,7 @@ fun SetReminderDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         containerColor = Color.White,
-        title = { Text(stringResource(R.string.set_watering_reminder)) },
+        title = { Text(stringResource(R.string.set_watering_reminder).replace("tưới nước", "chăm sóc")) },
         text = {
             Column {
                 if (availablePlants.isNotEmpty()) {
@@ -327,6 +329,44 @@ fun SetReminderDialog(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
                 
+                // Action Type Dropdown/TextField
+                androidx.compose.material3.OutlinedTextField(
+                    value = actionName,
+                    onValueChange = { actionName = it },
+                    label = { Text("Loại nhắc nhở (Tưới nước, Bón phân...)") },
+                    trailingIcon = {
+                        androidx.compose.material3.IconButton(onClick = { expandedActionMenu = !expandedActionMenu }) {
+                            androidx.compose.material3.Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.ArrowDropDown,
+                                contentDescription = null
+                            )
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = GreenSurface,
+                        focusedLabelColor = GreenSurface,
+                        cursorColor = GreenSurface
+                    )
+                )
+                androidx.compose.material3.DropdownMenu(
+                    expanded = expandedActionMenu,
+                    onDismissRequest = { expandedActionMenu = false },
+                    modifier = Modifier.fillMaxWidth(0.7f).background(Color.White)
+                ) {
+                    listOf("Tưới nước", "Bón phân", "Tỉa cành", "Làm cỏ", "Phun thuốc").forEach { action ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(action, color = GreenSurface) },
+                            onClick = {
+                                actionName = action
+                                expandedActionMenu = false
+                            }
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 OutlinedTextField(
                     value = dateTimeText,
                     onValueChange = {},
@@ -349,7 +389,7 @@ fun SetReminderDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    selectedTimestamp?.let { onSetReminder(selectedPlantName, it) }
+                    selectedTimestamp?.let { onSetReminder(selectedPlantName, actionName.ifBlank { "Chăm sóc" }, it) }
                 },
                 enabled = selectedTimestamp != null,
                 colors = ButtonDefaults.buttonColors(containerColor = GreenSurface)

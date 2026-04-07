@@ -15,12 +15,12 @@ import com.baothanhbin.agridoctorai.resources.R
 
 object NotificationHelper {
 
-    fun showWateringNotification(context: Context, plantName: String): Boolean {
+    fun showCareNotification(context: Context, plantName: String, actionName: String): Boolean {
         val channelId = "watering_reminder_channel"
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Watering Reminders"
-            val descriptionText = "Nhắc nhở tưới nước cho cây"
+            val name = "Care Reminders"
+            val descriptionText = "Nhắc nhở chăm sóc cây"
             val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel = NotificationChannel(channelId, name, importance).apply {
                 description = descriptionText
@@ -32,8 +32,8 @@ object NotificationHelper {
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.logo)
-            .setContentTitle("Đã đến giờ tưới nước")
-            .setContentText("Hãy kiểm tra và tưới nước cho $plantName nhé!")
+            .setContentTitle("Đã đến giờ $actionName")
+            .setContentText("Hãy kiểm tra và $actionName cho $plantName nhé!")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 

@@ -9,5 +9,6 @@ data class ReminderEntity(
     val id: Long = 0,
     val plantName: String,
     val targetTimestamp: Long,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val actionName: String = "Tưới nước"
 )
