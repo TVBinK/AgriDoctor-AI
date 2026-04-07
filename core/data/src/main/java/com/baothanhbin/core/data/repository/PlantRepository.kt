@@ -7,12 +7,12 @@ interface PlantRepository {
     suspend fun insertPlant(plant: PlantEntity): Long
     suspend fun getPlantById(id: Long): PlantEntity?
     suspend fun getLatestPlant(): PlantEntity?
-    suspend fun getAllPlants(): List<PlantEntity>
+    fun getAllPlants(): kotlinx.coroutines.flow.Flow<List<PlantEntity>>
     suspend fun deletePlant(id: Long)
     suspend fun deleteAllPlants()
     
     suspend fun insertReminder(reminder: ReminderEntity): Long
-    suspend fun getAllReminders(): List<ReminderEntity>
+    fun getAllReminders(): kotlinx.coroutines.flow.Flow<List<ReminderEntity>>
     suspend fun updateReminderStatus(id: Long, isCompleted: Boolean)
     suspend fun deleteReminder(id: Long)
 }

@@ -24,7 +24,7 @@ class PlantRepositoryImpl @Inject constructor(
         return plantDao.getLatestPlant()
     }
 
-    override suspend fun getAllPlants(): List<PlantEntity> {
+    override fun getAllPlants(): kotlinx.coroutines.flow.Flow<List<PlantEntity>> {
         return plantDao.getAllPlants()
     }
 
@@ -40,7 +40,7 @@ class PlantRepositoryImpl @Inject constructor(
         return reminderDao.insertReminder(reminder)
     }
 
-    override suspend fun getAllReminders(): List<ReminderEntity> {
+    override fun getAllReminders(): kotlinx.coroutines.flow.Flow<List<ReminderEntity>> {
         return reminderDao.getAllReminders()
     }
 

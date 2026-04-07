@@ -43,6 +43,8 @@
     <string name="biometric_prompt_subtitle">Mở khóa AgriDoctorAI</string>
     <string name="biometric_prompt_failed">Vân tay không khớp, vui lòng thử lại.</string>
     <string name="biometric_prompt_cancel">Huỷ</string>
+    <string name="task">Nhiệm vụ</string>
+
 
     <!-- Settings Screen -->
     <string name="settings_premium_title">Khám phá thêm tiện ích!</string>
@@ -219,6 +221,7 @@
     <string name="completed_at">Đã hoàn thành lúc %1$s</string>
     <string name="waiting_at">Đang chờ lúc %1$s</string>
     <string name="no_location">Chưa có vị trí</string>
+    <string name="watering">Tưới nước</string>
 </resources>
 
 

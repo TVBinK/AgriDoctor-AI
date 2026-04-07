@@ -27,11 +27,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -79,9 +83,13 @@ import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.theme.Yellow1
+import com.baothanhbin.core.database.model.PlantEntity
+import com.baothanhbin.core.database.model.ReminderEntity
 import com.baothanhbin.core.ui.dialog.LocationDialog
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.feature.camera.navigation.navigateToCamera
+import com.baothanhbin.feature.myplants.navigation.navigateToMyplants
+import com.baothanhbin.feature.chatbot.navigation.navigateToChatbot
 import com.baothanhbin.feature.lightmeter.navigation.navigateToLightMeter
 import com.baothanhbin.feature.settings.navigation.navigateToSettings
 import kotlinx.coroutines.launch
@@ -108,6 +116,8 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     val showLocationDialog by viewModel.showLocationDialog.collectAsState()
+    val reminders by viewModel.reminders.collectAsState()
+    val plants by viewModel.myPlants.collectAsState()
 
     // Khởi tạo location khi screen start
     LaunchedEffect(Unit) {
@@ -144,10 +154,30 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 140.dp, bottom = 24.dp)
+                //.verticalScroll(rememberScrollState())
         ) {
             QuickActionsSection(navController = navController)
             Spacer(modifier = Modifier.height(20.dp))
-            TodaysCareSection()
+            val todayDateStr = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date()) }
+            val todaysReminders = reminders.filter { reminder ->
+                val reminderDateStr = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date(reminder.targetTimestamp))
+                !reminder.isCompleted && reminderDateStr == todayDateStr
+            }
+
+            TodaysCareSection(
+                reminders = todaysReminders,
+                plants = plants,
+                onToggleReminder = { id, isCompleted -> viewModel.toggleReminderStatus(id, isCompleted) },
+                onViewAllClick = { 
+                    navController?.navigateToMyplants(
+                        androidx.navigation.navOptions {
+                            popUpTo(com.baothanhbin.feature.home.navigation.HOME_ROUTE) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    )
+                }
+            )
             Spacer(modifier = Modifier.height(20.dp))
             MeasurementToolsSection(
                 navController = navController,
@@ -226,7 +256,12 @@ private fun QuickActionsSection(
 }
 
 @Composable
-private fun TodaysCareSection() {
+private fun TodaysCareSection(
+    reminders: List<ReminderEntity>,
+    plants: List<PlantEntity>,
+    onToggleReminder: (Long, Boolean) -> Unit,
+    onViewAllClick: () -> Unit = {}
+) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
             stringResource(R.string.todays_care),
@@ -246,16 +281,65 @@ private fun TodaysCareSection() {
                     .padding(16.dp),
             ) {
                 Text(
-                    stringResource(R.string.tasks_count),
+                    "${reminders.size} ${stringResource(R.string.task)}",
                     color = GreenSurface,
                     style = MaterialTheme.typography.TitleLarge3
                 )
-                Spacer(modifier = Modifier.height(5.dp))
+                
+                if (reminders.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    reminders.take(3).forEachIndexed { index, reminder ->
+                        val plant = plants.find { it.plantName == reminder.plantName }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = reminder.isCompleted,
+                                onCheckedChange = { onToggleReminder(reminder.id, it) },
+                                colors = CheckboxDefaults.colors(checkedColor = GreenSurface)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            if (plant?.imageUri != null) {
+                                AsyncImage(
+                                    model = java.io.File(plant.imageUri),
+                                    contentDescription = plant.plantName,
+                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Image(
+                                    painter = painterResource(id = R.drawable.img_lavender),
+                                    contentDescription = reminder.plantName,
+                                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)),
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(reminder.plantName, style = MaterialTheme.typography.Body1)
+                                Text(stringResource(R.string.watering), color = Subtitle, style = MaterialTheme.typography.Label4)
+                            }
+                            Icon(
+                                imageVector = Icons.Default.NotificationsActive,
+                                contentDescription = null,
+                                tint = GreenSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        if (index < reminders.take(3).size - 1) {
+                            Divider(color = Color(0xFFEEEEEE))
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     stringResource(R.string.view_all),
                     color = BlueDefault,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    textDecoration = TextDecoration.Underline
+                    modifier = Modifier.align(Alignment.CenterHorizontally).clickable { onViewAllClick() },
+                    textDecoration = TextDecoration.Underline,
+                    fontSize = 14.sp
                 )
             }
         }
@@ -268,6 +352,8 @@ private fun MeasurementToolsSection(
     onNavigateToChatbot: (() -> Unit)? = null
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        // Tạm ẩn tính năng máy đo nước và máy đo ánh sáng
+        /*
         Text(stringResource(R.string.measurement_tools), style = MaterialTheme.typography.TitleLarge3)
         Spacer(modifier = Modifier.height(12.dp))
         Row(
@@ -296,13 +382,20 @@ private fun MeasurementToolsSection(
             )
         }
         Spacer(modifier = Modifier.height(12.dp))
+        */
         ChatCard(
             title = stringResource(R.string.need_plant_help),
             description = stringResource(R.string.get_instant_advice),
             background = Color.White,
             animatedRaw = R.raw.ic_tinh_linh,
             onChatNowClick = {
-                onNavigateToChatbot?.invoke()
+                navController?.navigateToChatbot(
+                    navOptions = androidx.navigation.navOptions {
+                        popUpTo(com.baothanhbin.feature.home.navigation.HOME_ROUTE) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                ) ?: onNavigateToChatbot?.invoke()
             }
         )
     }
@@ -406,7 +499,7 @@ fun HomeFeatureCard(
     }
 }
 
-@Composable
+/*@Composable
 fun MeasurementToolCard(
     title: String,
     description: String,
@@ -470,7 +563,7 @@ fun MeasurementToolCard(
             )
         }
     }
-}
+}*/
 
 @Composable
 fun ChatCard(

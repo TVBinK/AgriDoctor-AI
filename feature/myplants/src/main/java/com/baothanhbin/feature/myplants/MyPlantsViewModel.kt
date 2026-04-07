@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.OneTimeWorkRequestBuilder
@@ -42,28 +44,11 @@ class MyPlantsViewModel @Inject constructor(
     private val _locationError = MutableSharedFlow<String>()
     val locationError: SharedFlow<String> = _locationError.asSharedFlow()
 
-    private val _myPlants = MutableStateFlow<List<PlantEntity>>(emptyList())
-    val myPlants: StateFlow<List<PlantEntity>> = _myPlants.asStateFlow()
+    val myPlants: StateFlow<List<PlantEntity>> = plantRepository.getAllPlants()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private val _reminders = MutableStateFlow<List<ReminderEntity>>(emptyList())
-    val reminders: StateFlow<List<ReminderEntity>> = _reminders.asStateFlow()
-
-    init {
-        loadPlants()
-        loadReminders()
-    }
-
-    private fun loadReminders() {
-        viewModelScope.launch {
-            _reminders.value = plantRepository.getAllReminders()
-        }
-    }
-
-    private fun loadPlants() {
-        viewModelScope.launch {
-            _myPlants.value = plantRepository.getAllPlants()
-        }
-    }
+    val reminders: StateFlow<List<ReminderEntity>> = plantRepository.getAllReminders()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun addPlant(plantName: String, imageUri: String?, location: String?) {
         viewModelScope.launch {
@@ -73,14 +58,12 @@ class MyPlantsViewModel @Inject constructor(
                 location = location
             )
             plantRepository.insertPlant(plant)
-            loadPlants() // Refresh the list
         }
     }
 
     fun deletePlant(plant: PlantEntity) {
         viewModelScope.launch {
             plantRepository.deletePlant(plant.id)
-            loadPlants()
         }
     }
 
@@ -116,14 +99,12 @@ class MyPlantsViewModel @Inject constructor(
         viewModelScope.launch {
             val reminder = ReminderEntity(plantName = plantName, targetTimestamp = targetTimestamp, isCompleted = false)
             plantRepository.insertReminder(reminder)
-            loadReminders()
         }
     }
     
     fun toggleReminderStatus(id: Long, isCompleted: Boolean) {
         viewModelScope.launch {
             plantRepository.updateReminderStatus(id, isCompleted)
-            loadReminders() // reload from DB to update UI
         }
     }
 

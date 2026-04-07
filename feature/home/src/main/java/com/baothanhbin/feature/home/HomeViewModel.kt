@@ -16,12 +16,18 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.baothanhbin.core.data.repository.PlantRepository
+import com.baothanhbin.core.database.model.PlantEntity
+import com.baothanhbin.core.database.model.ReminderEntity
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    application: Application
+    application: Application,
+    private val plantRepository: PlantRepository
 ) : AndroidViewModel(application) {
 
     private val _showLocationDialog = MutableStateFlow(false)
@@ -29,6 +35,18 @@ class HomeViewModel @Inject constructor(
 
     private val _locationError = MutableSharedFlow<String>()
     val locationError: SharedFlow<String> = _locationError.asSharedFlow()
+
+    val reminders: StateFlow<List<ReminderEntity>> = plantRepository.getAllReminders()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val myPlants: StateFlow<List<PlantEntity>> = plantRepository.getAllPlants()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun toggleReminderStatus(id: Long, isCompleted: Boolean) {
+        viewModelScope.launch {
+            plantRepository.updateReminderStatus(id, isCompleted)
+        }
+    }
 
     fun checkAndGetLocation(context: Context, locationStateHolder: LocationStateHolder) {
         if (!LocationHelper.hasLocationPermission(context)) {

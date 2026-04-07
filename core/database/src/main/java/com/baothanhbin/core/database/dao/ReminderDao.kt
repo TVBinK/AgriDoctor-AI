@@ -12,7 +12,7 @@ interface ReminderDao {
     suspend fun insertReminder(reminder: ReminderEntity): Long
 
     @Query("SELECT * FROM reminders ORDER BY targetTimestamp ASC")
-    suspend fun getAllReminders(): List<ReminderEntity>
+    fun getAllReminders(): kotlinx.coroutines.flow.Flow<List<ReminderEntity>>
     
     @Query("UPDATE reminders SET isCompleted = :isCompleted WHERE id = :id")
     suspend fun updateReminderStatus(id: Long, isCompleted: Boolean)

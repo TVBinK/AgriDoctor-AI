@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -46,8 +48,8 @@ class DiagnoseViewModel @Inject constructor(
     private val _historyItems = MutableStateFlow<List<DiagnoseResultEntity>>(emptyList())
     val historyItems: StateFlow<List<DiagnoseResultEntity>> = _historyItems.asStateFlow()
 
-    private val _plantHistoryItems = MutableStateFlow<List<PlantEntity>>(emptyList())
-    val plantHistoryItems: StateFlow<List<PlantEntity>> = _plantHistoryItems.asStateFlow()
+    val plantHistoryItems: StateFlow<List<PlantEntity>> = plantRepository.getAllPlants()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _navigationEvent = MutableSharedFlow<DiagnoseNavigationEvent>()
     val navigationEvent: SharedFlow<DiagnoseNavigationEvent> = _navigationEvent.asSharedFlow()
@@ -66,13 +68,6 @@ class DiagnoseViewModel @Inject constructor(
         viewModelScope.launch {
             val results = diagnoseResultRepository.getAllDiagnoseResults()
             _historyItems.value = results
-            
-            // Load plant history
-            val plants = plantRepository.getAllPlants()
-            plants.forEach { plant ->
-                Log.d("DiagnoseViewModel", "Plant: ${plant.plantName}, imageUri: ${plant.imageUri}")
-            }
-            _plantHistoryItems.value = plants
         }
     }
 

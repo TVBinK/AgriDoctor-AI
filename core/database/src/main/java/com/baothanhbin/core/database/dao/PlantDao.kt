@@ -15,7 +15,7 @@ interface PlantDao {
     suspend fun getPlantById(id: Long): PlantEntity?
 
     @Query("SELECT * FROM plants ORDER BY timestamp DESC")
-    suspend fun getAllPlants(): List<PlantEntity>
+    fun getAllPlants(): kotlinx.coroutines.flow.Flow<List<PlantEntity>>
 
     @Query("DELETE FROM plants WHERE id = :id")
     suspend fun deletePlant(id: Long)
