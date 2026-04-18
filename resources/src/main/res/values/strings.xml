@@ -14,6 +14,13 @@
     <string name="todays_care">Chăm sóc hôm nay</string>
     <string name="tasks_count">0 Nhiệm vụ</string>
     <string name="view_all">Xem tất cả</string>
+    <string name="home_tasks_empty_title">Hôm nay cây của bạn được nghỉ</string>
+    <string name="home_tasks_empty_description">Tạo lịch để không bỏ lỡ việc tưới nước, bón phân, phun thuốc.</string>
+    <string name="home_tasks_empty_suggestion_label">Gợi ý lịch có thể thêm</string>
+    <string name="home_tasks_empty_suggestion_watering">Tưới nước buổi sáng</string>
+    <string name="home_tasks_empty_suggestion_fertilizing">Bón phân theo tuần</string>
+    <string name="home_tasks_empty_suggestion_spraying">Phun thuốc định kỳ</string>
+    <string name="home_tasks_empty_cta">Thêm nhiệm vụ</string>
     <string name="measurement_tools">Công cụ đo lường</string>
     <string name="water_meter">Máy đo nước</string>
     <string name="optimize_watering">Tối ưu hóa tưới tiêu cho cây của bạn</string>

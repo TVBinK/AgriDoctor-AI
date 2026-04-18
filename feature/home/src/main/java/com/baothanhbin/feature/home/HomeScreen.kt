@@ -168,6 +168,15 @@ fun HomeScreen(
                 reminders = todaysReminders,
                 plants = plants,
                 onToggleReminder = { id, isCompleted -> viewModel.toggleReminderStatus(id, isCompleted) },
+                onAddTaskClick = {
+                    navController?.navigateToMyplants(
+                        androidx.navigation.navOptions {
+                            popUpTo(com.baothanhbin.feature.home.navigation.HOME_ROUTE) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    )
+                },
                 onViewAllClick = { 
                     navController?.navigateToMyplants(
                         androidx.navigation.navOptions {
@@ -260,6 +269,7 @@ private fun TodaysCareSection(
     reminders: List<ReminderEntity>,
     plants: List<PlantEntity>,
     onToggleReminder: (Long, Boolean) -> Unit,
+    onAddTaskClick: () -> Unit = {},
     onViewAllClick: () -> Unit = {}
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -280,13 +290,13 @@ private fun TodaysCareSection(
                     .fillMaxWidth()
                     .padding(16.dp),
             ) {
-                Text(
-                    "${reminders.size} ${stringResource(R.string.task)}",
-                    color = GreenSurface,
-                    style = MaterialTheme.typography.TitleLarge3
-                )
-                
                 if (reminders.isNotEmpty()) {
+                    Text(
+                        "${reminders.size} ${stringResource(R.string.task)}",
+                        color = GreenSurface,
+                        style = MaterialTheme.typography.TitleLarge3
+                    )
+
                     Spacer(modifier = Modifier.height(16.dp))
                     reminders.take(2).forEachIndexed { index, reminder ->
                         val plant = plants.find { it.plantName == reminder.plantName }
@@ -331,16 +341,86 @@ private fun TodaysCareSection(
                             Divider(color = Color(0xFFEEEEEE))
                         }
                     }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        stringResource(R.string.view_all),
+                        color = BlueDefault,
+                        modifier = Modifier.align(Alignment.CenterHorizontally).clickable { onViewAllClick() },
+                        textDecoration = TextDecoration.Underline,
+                        fontSize = 14.sp
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.tasks_count),
+                        color = GreenSurface,
+                        style = MaterialTheme.typography.TitleLarge3
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        stringResource(R.string.home_tasks_empty_title),
+                        color = GreenSurface,
+                        style = MaterialTheme.typography.TitleLarge3
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        stringResource(R.string.home_tasks_empty_description),
+                        color = Subtitle,
+                        style = MaterialTheme.typography.Body4
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.home_tasks_empty_suggestion_label),
+                        color = Subtitle,
+                        style = MaterialTheme.typography.Label4
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    ReminderSuggestions()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = stringResource(R.string.home_tasks_empty_cta),
+                        color = BlueDefault,
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .clickable { onAddTaskClick() },
+                        textDecoration = TextDecoration.Underline,
+                        fontSize = 14.sp
+                    )
                 }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    stringResource(R.string.view_all),
-                    color = BlueDefault,
-                    modifier = Modifier.align(Alignment.CenterHorizontally).clickable { onViewAllClick() },
-                    textDecoration = TextDecoration.Underline,
-                    fontSize = 14.sp
-                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ReminderSuggestions() {
+    val suggestions = listOf(
+        stringResource(R.string.home_tasks_empty_suggestion_watering),
+        stringResource(R.string.home_tasks_empty_suggestion_fertilizing),
+    )
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        suggestions.chunked(2).forEach { rowItems ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowItems.forEach { suggestion ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(GreenSurface.copy(alpha = 0.1f))
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = suggestion,
+                            color = GreenSurface,
+                            style = MaterialTheme.typography.Label4
+                        )
+                    }
+                }
             }
         }
     }
