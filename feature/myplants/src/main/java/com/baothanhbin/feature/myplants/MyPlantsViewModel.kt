@@ -19,15 +19,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.Data
 import androidx.work.WorkManager
 import androidx.work.ExistingWorkPolicy
-import androidx.work.ExistingPeriodicWorkPolicy
 import com.baothanhbin.core.data.repository.PlantRepository
 import com.baothanhbin.core.database.model.PlantEntity
-import com.baothanhbin.core.worker.WateringWorker
+import com.baothanhbin.core.worker.ReminderWorker
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import com.baothanhbin.core.database.model.ReminderEntity
@@ -70,42 +68,48 @@ class MyPlantsViewModel @Inject constructor(
     fun scheduleCareReminder(context: Context, plantName: String, actionName: String, targetTimestamp: Long) {
         val delay = targetTimestamp - System.currentTimeMillis()
         if (delay <= 0) {
-            Log.e("WateringWorker", "Loi: Thoi gian hen ($targetTimestamp) phai lon hon hien tai (${System.currentTimeMillis()})")
+            Log.e("ReminderWorker", "Loi: Thoi gian hen ($targetTimestamp) phai lon hon hien tai (${System.currentTimeMillis()})")
+            viewModelScope.launch {
+                _locationError.emit("Thời gian hẹn phải lớn hơn thời gian hiện tại")
+            }
             return
         }
 
         val minutes = TimeUnit.MILLISECONDS.toMinutes(delay)
         val seconds = TimeUnit.MILLISECONDS.toSeconds(delay) % 60
-        Log.d("WateringWorker", "Dang len lich nhac nho cho '$plantName' sau: $minutes phut $seconds giay (Tong: $delay ms)")
+        Log.d("ReminderWorker", "Dang len lich nhac nho cho '$plantName' sau: $minutes phut $seconds giay (Tong: $delay ms)")
 
-        val inputData = Data.Builder()
-            .putString("plantName", plantName)
-            .putString("actionName", actionName)
-            .build()
-            
-        val workRequest = OneTimeWorkRequestBuilder<WateringWorker>()
-            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-            .setInputData(inputData)
-            .build()
-            
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            "Watering_${plantName.hashCode()}",
-            ExistingWorkPolicy.REPLACE,
-            workRequest
-        )
-        
-        Log.d("WateringWorker", "enqueueUniqueWork thanh cong. Kiem tra Logcat filter bang 'WateringWorker'")
-
-        // Cache object into Room Database
         viewModelScope.launch {
             val reminder = ReminderEntity(plantName = plantName, actionName = actionName, targetTimestamp = targetTimestamp, isCompleted = false)
-            plantRepository.insertReminder(reminder)
+            val reminderId = plantRepository.insertReminder(reminder)
+            val workerInputData = Data.Builder()
+                .putString(ReminderWorker.KEY_PLANT_NAME, plantName)
+                .putString(ReminderWorker.KEY_ACTION_NAME, actionName)
+                .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)
+                .build()
+            val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
+                .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+                .setInputData(workerInputData)
+                .build()
+
+            WorkManager.getInstance(context).enqueueUniqueWork(
+                ReminderWorker.uniqueWorkName(reminderId),
+                ExistingWorkPolicy.REPLACE,
+                workRequest
+            )
+
+            Log.d("ReminderWorker", "enqueueUniqueWork thanh cong cho reminderId=$reminderId")
         }
     }
     
     fun toggleReminderStatus(id: Long, isCompleted: Boolean) {
         viewModelScope.launch {
             plantRepository.updateReminderStatus(id, isCompleted)
+            if (isCompleted) {
+                WorkManager.getInstance(getApplication()).cancelUniqueWork(
+                    ReminderWorker.uniqueWorkName(id)
+                )
+            }
         }
     }
 

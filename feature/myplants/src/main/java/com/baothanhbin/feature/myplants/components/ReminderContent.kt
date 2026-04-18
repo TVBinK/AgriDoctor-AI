@@ -8,23 +8,31 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.LocalFlorist
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.White
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.baothanhbin.agridoctorai.resources.R
+import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.database.model.ReminderEntity
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
+import coil.compose.AsyncImage
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -32,6 +40,7 @@ import java.util.Locale
 @Composable
 fun ReminderContent(
     reminders: List<ReminderEntity>,
+    plants: List<PlantEntity>,
     onAddReminderClick: () -> Unit,
     onToggleReminderStatus: (Long, Boolean) -> Unit
 ) {
@@ -211,11 +220,14 @@ fun ReminderContent(
                     val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(task.targetTimestamp)
                     val completedText = stringResource(R.string.completed_at, timeStr)
                     val waitingText = stringResource(R.string.waiting_at, timeStr)
+                    val plant = plants.find { it.plantName == task.plantName }
                     
                     Card(
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            onToggleReminderStatus(task.id, !task.isCompleted)
-                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !task.isCompleted) {
+                                onToggleReminderStatus(task.id, true)
+                            },
                         shape = RoundedCornerShape(16.dp),
                         colors = CardDefaults.cardColors(
                             containerColor = if (task.isCompleted) Color(0xFFECEFF1) else Color(0xFFF1F8F1)
@@ -229,15 +241,36 @@ fun ReminderContent(
                             Box(
                                 modifier = Modifier
                                     .size(48.dp)
-                                    .background(if (task.isCompleted) Subtitle.copy(alpha = 0.3f) else Color.White, CircleShape),
+                                    .background(if (task.isCompleted) Subtitle.copy(alpha = 0.3f) else White, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_water),
-                                    contentDescription = null,
-                                    tint = if (task.isCompleted) Color.White else GreenSurface,
-                                    modifier = Modifier.size(24.dp)
-                                )
+                                if (!plant?.imageUri.isNullOrBlank()) {
+                                    AsyncImage(
+                                        model = File(plant!!.imageUri),
+                                        contentDescription = task.plantName,
+                                        modifier = Modifier
+                                            .size(48.dp)
+                                            .clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    val actionIconRes = reminderActionIconRes(task.actionName)
+                                    if (actionIconRes != null) {
+                                        Icon(
+                                            painter = painterResource(actionIconRes),
+                                            contentDescription = null,
+                                            tint = if (task.isCompleted) White else GreenSurface,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = reminderActionIconVector(task.actionName),
+                                            contentDescription = null,
+                                            tint = if (task.isCompleted) White else GreenSurface,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
                             }
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
@@ -259,7 +292,7 @@ fun ReminderContent(
                             Spacer(Modifier.width(16.dp))
                             Checkbox(
                                 checked = task.isCompleted,
-                                onCheckedChange = { isChecked ->
+                                onCheckedChange = if (task.isCompleted) null else { isChecked ->
                                     onToggleReminderStatus(task.id, isChecked)
                                 },
                                 colors = CheckboxDefaults.colors(
@@ -271,5 +304,28 @@ fun ReminderContent(
                 }
             }
         }
+    }
+}
+
+private fun reminderActionIconRes(actionName: String): Int? {
+    val normalizedAction = actionName.lowercase(Locale.ROOT)
+    return if (
+        normalizedAction.contains("tuoi") ||
+        normalizedAction.contains("tưới") ||
+        normalizedAction.contains("water")
+    ) {
+        R.drawable.ic_water
+    } else {
+        null
+    }
+}
+
+private fun reminderActionIconVector(actionName: String): ImageVector {
+    val normalizedAction = actionName.lowercase(Locale.ROOT)
+    return when {
+        normalizedAction.contains("bon phan") ||
+            normalizedAction.contains("bón phân") ||
+            normalizedAction.contains("fertiliz") -> Icons.Default.LocalFlorist
+        else -> Icons.Default.LocalFlorist
     }
 }

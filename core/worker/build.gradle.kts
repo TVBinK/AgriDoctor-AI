@@ -8,6 +8,7 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.data)
     implementation(projects.core.model)
     implementation(projects.resources)
     implementation(libs.androidx.work.runtime.ktx)

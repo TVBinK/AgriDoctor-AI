@@ -58,6 +58,7 @@ import com.baothanhbin.core.database.model.ReminderEntity
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import android.widget.Toast
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -86,6 +87,12 @@ fun MyplantScreen(
     LaunchedEffect(Unit) {
         if (viewModel.shouldLoadLocationOnStart(context, locationStateHolder)) {
             viewModel.getCurrentLocation(context, locationStateHolder)
+        }
+    }
+
+    LaunchedEffect(viewModel.locationError, context) {
+        viewModel.locationError.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -185,6 +192,7 @@ fun MyplantScreen(
                     )
                     1 -> ReminderContent(
                         reminders = reminders,
+                        plants = myPlants,
                         onAddReminderClick = {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {

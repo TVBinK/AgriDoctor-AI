@@ -13,6 +13,9 @@ interface ReminderDao {
 
     @Query("SELECT * FROM reminders ORDER BY targetTimestamp ASC")
     fun getAllReminders(): kotlinx.coroutines.flow.Flow<List<ReminderEntity>>
+
+    @Query("SELECT * FROM reminders WHERE id = :id LIMIT 1")
+    suspend fun getReminderById(id: Long): ReminderEntity?
     
     @Query("UPDATE reminders SET isCompleted = :isCompleted WHERE id = :id")
     suspend fun updateReminderStatus(id: Long, isCompleted: Boolean)

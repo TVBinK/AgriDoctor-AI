@@ -44,6 +44,10 @@ class PlantRepositoryImpl @Inject constructor(
         return reminderDao.getAllReminders()
     }
 
+    override suspend fun getReminderById(id: Long): ReminderEntity? {
+        return reminderDao.getReminderById(id)
+    }
+
     override suspend fun updateReminderStatus(id: Long, isCompleted: Boolean) {
         reminderDao.updateReminderStatus(id, isCompleted)
     }

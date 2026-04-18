@@ -19,9 +19,11 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import androidx.work.WorkManager
 import com.baothanhbin.core.data.repository.PlantRepository
 import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.database.model.ReminderEntity
+import com.baothanhbin.core.worker.ReminderWorker
 import javax.inject.Inject
 
 @HiltViewModel
@@ -45,6 +47,11 @@ class HomeViewModel @Inject constructor(
     fun toggleReminderStatus(id: Long, isCompleted: Boolean) {
         viewModelScope.launch {
             plantRepository.updateReminderStatus(id, isCompleted)
+            if (isCompleted) {
+                WorkManager.getInstance(getApplication()).cancelUniqueWork(
+                    ReminderWorker.uniqueWorkName(id)
+                )
+            }
         }
     }
 

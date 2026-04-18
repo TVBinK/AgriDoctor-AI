@@ -13,6 +13,7 @@ interface PlantRepository {
     
     suspend fun insertReminder(reminder: ReminderEntity): Long
     fun getAllReminders(): kotlinx.coroutines.flow.Flow<List<ReminderEntity>>
+    suspend fun getReminderById(id: Long): ReminderEntity?
     suspend fun updateReminderStatus(id: Long, isCompleted: Boolean)
     suspend fun deleteReminder(id: Long)
 }
