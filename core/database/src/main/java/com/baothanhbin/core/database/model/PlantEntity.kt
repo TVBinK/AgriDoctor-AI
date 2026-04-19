@@ -1,10 +1,12 @@
 package com.baothanhbin.core.database.model
 
+import android.net.Uri
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.baothanhbin.core.database.converter.StringListConverter
 import com.baothanhbin.core.model.ClassifyData
+import java.io.File
 
 @Entity(tableName = "plants")
 data class PlantEntity(
@@ -66,4 +68,23 @@ fun PlantEntity.toClassifyData(): ClassifyData {
         careTips = careTips,
         commonDiseases = commonDiseases
     )
+}
+
+fun PlantEntity.displayName(): String {
+    return plantNameVN?.takeIf { it.isNotBlank() } ?: plantName
+}
+
+fun PlantEntity.displaySubtitle(): String? {
+    return scientificName?.takeIf { it.isNotBlank() }
+        ?: family?.takeIf { it.isNotBlank() }
+        ?: location?.takeIf { it.isNotBlank() }
+}
+
+fun PlantEntity.imageModel(): Any? {
+    val value = imageUri?.takeIf { it.isNotBlank() } ?: return null
+    return if (value.startsWith("content://") || value.startsWith("file://")) {
+        Uri.parse(value)
+    } else {
+        File(value)
+    }
 }

@@ -32,6 +32,9 @@ import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.database.model.PlantEntity
+import com.baothanhbin.core.database.model.displayName
+import com.baothanhbin.core.database.model.displaySubtitle
+import com.baothanhbin.core.database.model.imageModel
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
 import java.io.File
@@ -249,7 +252,7 @@ fun SetReminderDialog(
     initialPlantName: String,
     availablePlants: List<PlantEntity>,
     onDismissRequest: () -> Unit,
-    onSetReminder: (String, String, Long) -> Unit
+    onSetReminder: (PlantEntity, String, Long) -> Unit
 ) {
     val context = LocalContext.current
     var selectedTimestamp by remember { mutableStateOf<Long?>(null) }
@@ -258,11 +261,12 @@ fun SetReminderDialog(
     var expandedActionMenu by remember { mutableStateOf(false) }
     
     // Default to the initial plant name, except if it's "Tất cả cây" then we try to pick the first one
-    var selectedPlantName by remember { 
+    var selectedPlant by remember {
         mutableStateOf(
-            if (initialPlantName == "Tất cả cây" && availablePlants.isNotEmpty()) availablePlants[0].plantName
-            else initialPlantName
-        ) 
+            availablePlants.firstOrNull { it.plantName == initialPlantName }
+                ?: availablePlants.firstOrNull { it.displayName() == initialPlantName }
+                ?: availablePlants.firstOrNull()
+        )
     }
     var showPlantPicker by remember { mutableStateOf(false) }
     
@@ -301,7 +305,7 @@ fun SetReminderDialog(
             Column {
                 if (availablePlants.isNotEmpty()) {
                     OutlinedTextField(
-                        value = selectedPlantName,
+                        value = selectedPlant?.displayName().orEmpty(),
                         onValueChange = {},
                         readOnly = true,
                         label = { Text(stringResource(R.string.plant_name)) },
@@ -325,7 +329,13 @@ fun SetReminderDialog(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 } else {
-                    Text(stringResource(R.string.setup_watering_reminder_for, selectedPlantName), color = Subtitle)
+                    Text(
+                        stringResource(
+                            R.string.setup_watering_reminder_for,
+                            selectedPlant?.displayName().orEmpty()
+                        ),
+                        color = Subtitle
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
                 
@@ -389,9 +399,13 @@ fun SetReminderDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    selectedTimestamp?.let { onSetReminder(selectedPlantName, actionName.ifBlank { "Chăm sóc" }, it) }
+                    selectedPlant?.let { plant ->
+                        selectedTimestamp?.let { timestamp ->
+                            onSetReminder(plant, actionName.ifBlank { "Chăm sóc" }, timestamp)
+                        }
+                    }
                 },
-                enabled = selectedTimestamp != null,
+                enabled = selectedTimestamp != null && selectedPlant != null,
                 colors = ButtonDefaults.buttonColors(containerColor = GreenSurface)
             ) {
                 Text(stringResource(R.string.action_set))
@@ -431,33 +445,33 @@ fun SetReminderDialog(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        selectedPlantName = plant.plantName
+                                        selectedPlant = plant
                                         showPlantPicker = false
                                     }
                                     .padding(8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                if (plant.imageUri != null) {
+                                if (plant.imageModel() != null) {
                                     coil.compose.AsyncImage(
-                                        model = File(plant.imageUri),
-                                        contentDescription = plant.plantName,
+                                        model = plant.imageModel(),
+                                        contentDescription = plant.displayName(),
                                         modifier = Modifier.size(50.dp).clip(RoundedCornerShape(8.dp)),
                                         contentScale = ContentScale.Crop
                                     )
                                 } else {
                                     Image(
                                         painter = painterResource(id = R.drawable.img_lavender),
-                                        contentDescription = plant.plantName,
+                                        contentDescription = plant.displayName(),
                                         modifier = Modifier.size(50.dp).clip(RoundedCornerShape(8.dp)),
                                         contentScale = ContentScale.Crop
                                     )
                                 }
                                 Spacer(Modifier.width(16.dp))
                                 Column {
-                                    Text(plant.plantName, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                                    Text(plant.displayName(), fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = plant.location ?: stringResource(R.string.no_location),
+                                        text = plant.displaySubtitle() ?: stringResource(R.string.no_location),
                                         fontSize = 14.sp,
                                         color = Subtitle
                                     )

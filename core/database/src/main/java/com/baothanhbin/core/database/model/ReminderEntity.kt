@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 data class ReminderEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val plantId: Long? = null,
     val plantName: String,
     val targetTimestamp: Long,
     val isCompleted: Boolean = false,

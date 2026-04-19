@@ -24,9 +24,11 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.database.model.PlantEntity
+import com.baothanhbin.core.database.model.displayName
+import com.baothanhbin.core.database.model.displaySubtitle
+import com.baothanhbin.core.database.model.imageModel
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
-import java.io.File
 
 @Composable
 fun MyPlantsContent(
@@ -92,10 +94,10 @@ fun PlantItemCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Plant Image
-            if (plant.imageUri != null) {
+            if (plant.imageModel() != null) {
                 AsyncImage(
-                    model = File(plant.imageUri),
-                    contentDescription = plant.plantName,
+                    model = plant.imageModel(),
+                    contentDescription = plant.displayName(),
                     modifier = Modifier
                         .size(60.dp)
                         .clip(RoundedCornerShape(8.dp)),
@@ -104,7 +106,7 @@ fun PlantItemCard(
             } else {
                 Image(
                     painter = painterResource(id = R.drawable.img_lavender), // Default avatar
-                    contentDescription = plant.plantName,
+                    contentDescription = plant.displayName(),
                     modifier = Modifier
                         .size(60.dp)
                         .clip(RoundedCornerShape(8.dp)),
@@ -119,7 +121,7 @@ fun PlantItemCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = plant.plantName,
+                    text = plant.displayName(),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp
@@ -128,7 +130,7 @@ fun PlantItemCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 
                 Text(
-                    text = plant.location ?: stringResource(R.string.no_location),
+                    text = plant.displaySubtitle() ?: stringResource(R.string.no_location),
                     style = MaterialTheme.typography.bodyMedium,
                     color = Subtitle,
                     fontSize = 14.sp

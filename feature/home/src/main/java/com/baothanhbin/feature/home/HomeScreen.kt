@@ -85,6 +85,8 @@ import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.theme.Yellow1
 import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.database.model.ReminderEntity
+import com.baothanhbin.core.database.model.displayName
+import com.baothanhbin.core.database.model.imageModel
 import com.baothanhbin.core.ui.dialog.LocationDialog
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.feature.camera.navigation.navigateToCamera
@@ -299,7 +301,9 @@ private fun TodaysCareSection(
 
                     Spacer(modifier = Modifier.height(16.dp))
                     reminders.take(2).forEachIndexed { index, reminder ->
-                        val plant = plants.find { it.plantName == reminder.plantName }
+                        val plant = reminder.plantId?.let { plantId ->
+                            plants.find { it.id == plantId }
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -310,10 +314,10 @@ private fun TodaysCareSection(
                                 colors = CheckboxDefaults.colors(checkedColor = GreenSurface)
                             )
                             Spacer(Modifier.width(8.dp))
-                            if (plant?.imageUri != null) {
+                            if (plant?.imageModel() != null) {
                                 AsyncImage(
-                                    model = java.io.File(plant.imageUri),
-                                    contentDescription = plant.plantName,
+                                    model = plant.imageModel(),
+                                    contentDescription = plant.displayName(),
                                     modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)),
                                     contentScale = ContentScale.Crop
                                 )
@@ -327,7 +331,7 @@ private fun TodaysCareSection(
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(reminder.plantName, style = MaterialTheme.typography.Body1)
+                                Text(plant?.displayName() ?: reminder.plantName, style = MaterialTheme.typography.Body1)
                                 Text(reminder.actionName, color = Subtitle, style = MaterialTheme.typography.Label4)
                             }
                             Icon(

@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.camera.core.CameraSelector
@@ -13,6 +14,7 @@ import androidx.camera.core.Preview as CameraXPreview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
+import androidx.exifinterface.media.ExifInterface
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LifecycleOwner
@@ -156,10 +158,7 @@ class CameraViewModel @javax.inject.Inject constructor(
         onError: (String) -> Unit
     ) {
         val context = getApplication<Application>()
-        // Read the original image
-        val inputStream = context.contentResolver.openInputStream(originalUri)
-        val originalBitmap = BitmapFactory.decodeStream(inputStream)
-        inputStream?.close()
+        val originalBitmap = loadBitmapWithCorrectOrientation(originalUri)
         
         if (originalBitmap == null) {
             onError("Failed to read captured image")
@@ -216,6 +215,37 @@ class CameraViewModel @javax.inject.Inject constructor(
         context.contentResolver.delete(originalUri, null, null)
         
         onPhotoSaved(outputUri)
+    }
+
+    private fun loadBitmapWithCorrectOrientation(uri: Uri): Bitmap? {
+        val context = getApplication<Application>()
+        val bitmap = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream)
+        } ?: return null
+
+        val rotationDegrees = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+            when (ExifInterface(inputStream).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+        } ?: 0f
+
+        if (rotationDegrees == 0f) return bitmap
+
+        val matrix = Matrix().apply {
+            postRotate(rotationDegrees)
+        }
+
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true).also {
+            if (it != bitmap) {
+                bitmap.recycle()
+            }
+        }
     }
 }
 

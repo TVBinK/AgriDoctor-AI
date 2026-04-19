@@ -20,4 +20,5 @@ dependencies {
     //coil
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
+    implementation(libs.androidx.exifinterface)
 }

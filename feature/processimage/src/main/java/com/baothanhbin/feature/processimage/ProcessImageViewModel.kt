@@ -4,9 +4,11 @@ import android.app.Application
 import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
+import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.baothanhbin.core.data.repository.AuthRepository
@@ -256,9 +258,7 @@ class ProcessImageViewModel @Inject constructor(
             }
             
             // Read the source image
-            val inputStream = context.contentResolver.openInputStream(sourceUri)
-            val bitmap = BitmapFactory.decodeStream(inputStream)
-            inputStream?.close()
+            val bitmap = loadBitmapWithCorrectOrientation(context, sourceUri)
             
             if (bitmap == null) {
                 Log.e("ProcessImage", "Failed to read image from URI: $sourceUri")
@@ -301,6 +301,36 @@ class ProcessImageViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.e("ProcessImage", "Error copying image: ${e.message}", e)
             null
+        }
+    }
+
+    private fun loadBitmapWithCorrectOrientation(context: Application, sourceUri: Uri): Bitmap? {
+        val bitmap = context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
+            BitmapFactory.decodeStream(inputStream)
+        } ?: return null
+
+        val rotationDegrees = context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
+            when (ExifInterface(inputStream).getAttributeInt(
+                ExifInterface.TAG_ORIENTATION,
+                ExifInterface.ORIENTATION_NORMAL
+            )) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                else -> 0f
+            }
+        } ?: 0f
+
+        if (rotationDegrees == 0f) return bitmap
+
+        val matrix = Matrix().apply {
+            postRotate(rotationDegrees)
+        }
+
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true).also {
+            if (it != bitmap) {
+                bitmap.recycle()
+            }
         }
     }
     

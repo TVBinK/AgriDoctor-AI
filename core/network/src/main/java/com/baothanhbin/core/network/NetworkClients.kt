@@ -11,6 +11,7 @@ import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
@@ -28,6 +29,10 @@ object NetworkClients {
         return HttpClient(OkHttp) {
             engine {
                 preconfigured = OkHttpClient.Builder().apply {
+                    connectTimeout(30, TimeUnit.SECONDS)
+                    readTimeout(120, TimeUnit.SECONDS)
+                    writeTimeout(120, TimeUnit.SECONDS)
+                    callTimeout(120, TimeUnit.SECONDS)
                     if (BuildConfig.DEBUG) {
                         val trustAllCerts = arrayOf<TrustManager>(createTrustAllManager())
                         val sslContext = SSLContext.getInstance("TLS")
@@ -42,7 +47,9 @@ object NetworkClients {
                 url(baseUrl)
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = 60_000
+                requestTimeoutMillis = 120_000
+                connectTimeoutMillis = 30_000
+                socketTimeoutMillis = 120_000
             }
             install(ContentNegotiation) {
                 json(Json {

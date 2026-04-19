@@ -28,6 +28,7 @@ import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.worker.ReminderWorker
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import com.baothanhbin.core.database.model.displayName
 import com.baothanhbin.core.database.model.ReminderEntity
 
 @HiltViewModel
@@ -65,7 +66,8 @@ class MyPlantsViewModel @Inject constructor(
         }
     }
 
-    fun scheduleCareReminder(context: Context, plantName: String, actionName: String, targetTimestamp: Long) {
+    fun scheduleCareReminder(context: Context, plant: PlantEntity, actionName: String, targetTimestamp: Long) {
+        val plantName = plant.displayName()
         val delay = targetTimestamp - System.currentTimeMillis()
         if (delay <= 0) {
             Log.e("ReminderWorker", "Loi: Thoi gian hen ($targetTimestamp) phai lon hon hien tai (${System.currentTimeMillis()})")
@@ -80,7 +82,13 @@ class MyPlantsViewModel @Inject constructor(
         Log.d("ReminderWorker", "Dang len lich nhac nho cho '$plantName' sau: $minutes phut $seconds giay (Tong: $delay ms)")
 
         viewModelScope.launch {
-            val reminder = ReminderEntity(plantName = plantName, actionName = actionName, targetTimestamp = targetTimestamp, isCompleted = false)
+            val reminder = ReminderEntity(
+                plantId = plant.id,
+                plantName = plantName,
+                actionName = actionName,
+                targetTimestamp = targetTimestamp,
+                isCompleted = false
+            )
             val reminderId = plantRepository.insertReminder(reminder)
             val workerInputData = Data.Builder()
                 .putString(ReminderWorker.KEY_PLANT_NAME, plantName)

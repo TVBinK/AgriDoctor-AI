@@ -29,10 +29,11 @@ import androidx.compose.ui.unit.sp
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.database.model.ReminderEntity
+import com.baothanhbin.core.database.model.displayName
+import com.baothanhbin.core.database.model.imageModel
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
 import coil.compose.AsyncImage
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -220,7 +221,9 @@ fun ReminderContent(
                     val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(task.targetTimestamp)
                     val completedText = stringResource(R.string.completed_at, timeStr)
                     val waitingText = stringResource(R.string.waiting_at, timeStr)
-                    val plant = plants.find { it.plantName == task.plantName }
+                    val plant = task.plantId?.let { plantId ->
+                        plants.find { it.id == plantId }
+                    }
                     
                     Card(
                         modifier = Modifier
@@ -244,10 +247,10 @@ fun ReminderContent(
                                     .background(if (task.isCompleted) Subtitle.copy(alpha = 0.3f) else White, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
-                                if (!plant?.imageUri.isNullOrBlank()) {
+                                if (plant?.imageModel() != null) {
                                     AsyncImage(
-                                        model = File(plant!!.imageUri),
-                                        contentDescription = task.plantName,
+                                        model = plant.imageModel(),
+                                        contentDescription = plant.displayName(),
                                         modifier = Modifier
                                             .size(48.dp)
                                             .clip(CircleShape),
@@ -275,7 +278,7 @@ fun ReminderContent(
                             Spacer(Modifier.width(16.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "${task.actionName} - ${task.plantName}",
+                                    text = "${task.actionName} - ${plant?.displayName() ?: task.plantName}",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = if (task.isCompleted) Subtitle else GreenSurface,

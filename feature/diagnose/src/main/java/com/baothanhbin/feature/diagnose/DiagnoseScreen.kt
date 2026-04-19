@@ -6,8 +6,10 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -66,6 +69,7 @@ import coil.request.ImageRequest
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.database.model.DiagnoseResultEntity
 import com.baothanhbin.core.database.model.PlantEntity
+import com.baothanhbin.core.database.model.displayName
 import com.baothanhbin.core.theme.Body1
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Label4
@@ -381,9 +385,23 @@ private fun HistorySection(
 
     // Tab state
     var selectedTab by remember { mutableStateOf(0) } // 0: Disease, 1: Plant
+    var activeDiseaseDeleteId by remember { mutableStateOf<Long?>(null) }
+    var activePlantDeleteId by remember { mutableStateOf<Long?>(null) }
 
     if (historyItems.isEmpty() && plantHistoryItems.isEmpty()) {
         return
+    }
+
+    LaunchedEffect(historyItems) {
+        if (historyItems.none { it.id == activeDiseaseDeleteId }) {
+            activeDiseaseDeleteId = null
+        }
+    }
+
+    LaunchedEffect(plantHistoryItems) {
+        if (plantHistoryItems.none { it.id == activePlantDeleteId }) {
+            activePlantDeleteId = null
+        }
     }
 
     Column(
@@ -415,13 +433,19 @@ private fun HistorySection(
                 text = stringResource(R.string.list_disease),
                 selected = selectedTab == 0,
                 modifier = Modifier.weight(1f),
-                onClick = { selectedTab = 0 }
+                onClick = {
+                    selectedTab = 0
+                    activePlantDeleteId = null
+                }
             )
             TabButton(
                 text = stringResource(R.string.list_plant),
                 selected = selectedTab == 1,
                 modifier = Modifier.weight(1f),
-                onClick = { selectedTab = 1 }
+                onClick = {
+                    selectedTab = 1
+                    activeDiseaseDeleteId = null
+                }
             )
         }
 
@@ -448,7 +472,16 @@ private fun HistorySection(
                         ) { item ->
                             HistoryItem(
                                 entity = item,
-                                onClick = { viewModel.onHistoryItemClick(item) }
+                                showDelete = activeDiseaseDeleteId == item.id,
+                                onClick = { viewModel.onHistoryItemClick(item) },
+                                onLongClick = {
+                                    activeDiseaseDeleteId =
+                                        if (activeDiseaseDeleteId == item.id) null else item.id
+                                },
+                                onDeleteClick = {
+                                    viewModel.deleteHistoryItem(item)
+                                    activeDiseaseDeleteId = null
+                                }
                             )
                         }
                     }
@@ -476,7 +509,16 @@ private fun HistorySection(
                         ) { item ->
                             PlantHistoryItem(
                                 entity = item,
-                                onClick = { viewModel.onPlantHistoryItemClick(item) }
+                                showDelete = activePlantDeleteId == item.id,
+                                onClick = { viewModel.onPlantHistoryItemClick(item) },
+                                onLongClick = {
+                                    activePlantDeleteId =
+                                        if (activePlantDeleteId == item.id) null else item.id
+                                },
+                                onDeleteClick = {
+                                    viewModel.deletePlantHistoryItem(item)
+                                    activePlantDeleteId = null
+                                }
                             )
                         }
                     }
@@ -510,10 +552,14 @@ private fun TabButton(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PlantHistoryItem(
     entity: PlantEntity,
-    onClick: () -> Unit
+    showDelete: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     val context = LocalContext.current
     
@@ -522,7 +568,10 @@ private fun PlantHistoryItem(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -590,7 +639,7 @@ private fun PlantHistoryItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = entity.plantNameVN ?: entity.plantName,
+                        text = entity.displayName(),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.SemiBold,
                         color = GreenSurface,
@@ -634,27 +683,47 @@ private fun PlantHistoryItem(
                 )
             }
 
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Subtitle,
-                modifier = Modifier.size(20.dp)
-            )
+            if (showDelete) {
+                IconButton(
+                    onClick = onDeleteClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.delete),
+                        tint = Color.Red
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Subtitle,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HistoryItem(
     entity: DiagnoseResultEntity,
-    onClick: () -> Unit
+    showDelete: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     val context = LocalContext.current
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -761,12 +830,25 @@ private fun HistoryItem(
                 )
             }
 
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = Subtitle,
-                modifier = Modifier.size(20.dp)
-            )
+            if (showDelete) {
+                IconButton(
+                    onClick = onDeleteClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = stringResource(R.string.delete),
+                        tint = Color.Red
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = Subtitle,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
     }
 }

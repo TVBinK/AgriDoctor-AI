@@ -71,6 +71,19 @@ class DiagnoseViewModel @Inject constructor(
         }
     }
 
+    fun deleteHistoryItem(entity: DiagnoseResultEntity) {
+        viewModelScope.launch {
+            diagnoseResultRepository.deleteDiagnoseResult(entity.id)
+            loadHistory()
+        }
+    }
+
+    fun deletePlantHistoryItem(entity: PlantEntity) {
+        viewModelScope.launch {
+            plantRepository.deletePlant(entity.id)
+        }
+    }
+
     fun onHistoryItemClick(entity: DiagnoseResultEntity) {
         viewModelScope.launch {
             val uri = entity.imageUri?.let { Uri.parse(it) }
