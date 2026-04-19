@@ -22,6 +22,60 @@ data class VerifyOtpRequest(
 )
 
 @Serializable
+data class UserProfile(
+    val userId: String,
+    val name: String,
+    val email: String,
+    val phone: String = "",
+    val address: String = "",
+    val createdAt: String? = null,
+    val updatedAt: String? = null
+)
+
+@Serializable
+data class UpdateProfileRequest(
+    val name: String,
+    val phone: String = "",
+    val address: String = ""
+)
+
+@Serializable
+data class UpdateProfileResponse(
+    val message: String,
+    val user: UserProfile
+)
+
+@Serializable
+data class ChangePasswordRequest(
+    val currentPassword: String,
+    val newPassword: String,
+    val confirmPassword: String
+)
+
+@Serializable
+data class ForgotPasswordRequest(
+    val email: String
+)
+
+@Serializable
+data class VerifyForgotOtpRequest(
+    val email: String,
+    val otp: String
+)
+
+@Serializable
+data class ResetPasswordRequest(
+    val email: String,
+    val newPassword: String,
+    val confirmPassword: String
+)
+
+@Serializable
+data class MessageResponse(
+    val message: String
+)
+
+@Serializable
 data class AuthResponse(
     val token: String? = null,
     val userId: String? = null,

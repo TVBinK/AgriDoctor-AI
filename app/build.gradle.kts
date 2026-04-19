@@ -97,6 +97,7 @@ dependencies {
     implementation(projects.feature.lightmeter)
     implementation(projects.feature.settings)
     implementation(projects.feature.login)
+    implementation(projects.feature.forgotpassword)
     implementation(projects.feature.signup)
     implementation(projects.feature.verificationotp)
     implementation(projects.core.ui)

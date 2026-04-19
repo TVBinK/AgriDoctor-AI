@@ -40,6 +40,7 @@
             <option value="$PROJECT_DIR$/feature/diagnose" />
             <option value="$PROJECT_DIR$/feature/diagnosefailed" />
             <option value="$PROJECT_DIR$/feature/diagnoseresult" />
+            <option value="$PROJECT_DIR$/feature/forgotpassword" />
             <option value="$PROJECT_DIR$/feature/home" />
             <option value="$PROJECT_DIR$/feature/lightmeter" />
             <option value="$PROJECT_DIR$/feature/login" />

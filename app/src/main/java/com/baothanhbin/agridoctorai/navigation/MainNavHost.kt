@@ -7,6 +7,8 @@ import com.baothanhbin.feature.camera.navigation.cameraScreen
 import com.baothanhbin.feature.chatbot.navigation.chatbotScreen
 import com.baothanhbin.feature.chatbot.navigation.navigateToChatbot
 import com.baothanhbin.feature.diagnose.navigation.diagnoseScreen
+import com.baothanhbin.feature.forgotpassword.navigation.forgotPasswordScreen
+import com.baothanhbin.feature.forgotpassword.navigation.navigateToForgotPassword
 import com.baothanhbin.feature.home.HomeScreen
 import com.baothanhbin.feature.home.navigation.HOME_ROUTE
 import com.baothanhbin.feature.home.navigation.homeScreen
@@ -48,6 +50,15 @@ fun MainNavHost(
             },
             onNavigateToPin = { email: String ->
                 navController.navigateToVerificationOTP(email) 
+            },
+            onNavigateToForgotPassword = {
+                navController.navigateToForgotPassword()
+            }
+        )
+        forgotPasswordScreen(
+            onBackClick = { navController.navigateUp() },
+            onResetSuccess = {
+                navController.navigateToLogin()
             }
         )
         verificationOTPScreen(

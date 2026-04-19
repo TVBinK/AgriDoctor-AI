@@ -83,6 +83,7 @@ fun LoginRoute(
     onNavigateToSignup: () -> Unit,
     onContinueAsGuest: () -> Unit,
     onNavigateToPin: (String) -> Unit,
+    onNavigateToForgotPassword: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -98,6 +99,7 @@ fun LoginRoute(
         onLoginClick = { email, password -> viewModel.login(email, password) },
         onNavigateToSignup = onNavigateToSignup,
         onContinueAsGuest = onContinueAsGuest,
+        onForgotPasswordClick = onNavigateToForgotPassword,
         isLoading = uiState.isLoading,
         errorMessage = uiState.error
     )
@@ -108,6 +110,7 @@ fun LoginScreen(
     onLoginClick: (String, String) -> Unit,
     onNavigateToSignup: () -> Unit,
     onContinueAsGuest: () -> Unit,
+    onForgotPasswordClick: () -> Unit,
     isLoading: Boolean = false,
     errorMessage: String? = null
 ) {
@@ -268,9 +271,7 @@ fun LoginScreen(
                         text = "Quên mật khẩu?",
                         style = MaterialTheme.typography.Body4,
                         color = BlueDefault,
-                        modifier = Modifier.padding(start = 200.dp).clickable {
-                            // TODO: navigate to forgot password
-                        }
+                        modifier = Modifier.padding(start = 200.dp).clickable(onClick = onForgotPasswordClick)
                     )
                 }
 
@@ -403,5 +404,6 @@ private fun LoginScreenPreview() {
         onLoginClick = { _, _ -> },
         onNavigateToSignup = {},
         onContinueAsGuest = {},
+        onForgotPasswordClick = {},
     )
 }

@@ -3,17 +3,14 @@ plugins {
 }
 
 android {
-    namespace = "com.baothanhbin.feature.settings"
+    namespace = "com.baothanhbin.feature.forgotpassword"
 }
 
 dependencies {
     implementation(projects.core.theme)
     implementation(projects.core.data)
     implementation(projects.core.model)
-    implementation(projects.resources)
     implementation(projects.core.ui)
     implementation(projects.resources)
-    implementation(libs.androidx.biometric)
     implementation(libs.androidx.compose.foundation)
 }
-
