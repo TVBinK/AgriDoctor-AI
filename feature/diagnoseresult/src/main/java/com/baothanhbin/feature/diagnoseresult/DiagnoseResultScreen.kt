@@ -3,6 +3,7 @@ package com.baothanhbin.feature.diagnoseresult
 import android.net.Uri
 import android.os.Build
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -44,14 +45,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -59,6 +65,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -66,11 +73,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import coil.ImageLoader
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.baothanhbin.core.model.ApiType
 import com.baothanhbin.core.model.ClassifyData
+import com.baothanhbin.core.model.DetectionData
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.model.RecoveryItem
@@ -107,7 +116,8 @@ fun DiagnoseResultRoute(
              symptoms = "",
              causes = "",
              treatment = emptyList(),
-             recoveryCare = emptyList()
+             recoveryCare = emptyList(),
+             detections = emptyList()
         )
     } else {
         uiState
@@ -132,6 +142,7 @@ fun DiagnoseResultRoute(
         causes = effectiveUiState.causes,
         treatment = effectiveUiState.treatment,
         recoveryCare = effectiveUiState.recoveryCare,
+        detections = effectiveUiState.detections,
         location = displayLocation,
         apiType = apiType,
         classifyData = classifyData,
@@ -149,6 +160,7 @@ fun DiagnoseResultScreen(
     causes: String,
     treatment: List<TreatmentItem>,
     recoveryCare: List<RecoveryItem>,
+    detections: List<DetectionData> = emptyList(),
     location: String? = null,
     apiType: ApiType = ApiType.DETECT,
     classifyData: ClassifyData? = null,
@@ -179,6 +191,7 @@ fun DiagnoseResultScreen(
                 causes = causes,
                 treatment = treatment,
                 recoveryCare = recoveryCare,
+                detections = detections,
                 location = location,
                 apiType = apiType,
                 onChatWithAi = onChatWithAi
@@ -190,12 +203,18 @@ fun DiagnoseResultScreen(
 @Composable
 private fun HeaderImage(
     imageUri: Uri?,
+    detections: List<DetectionData>,
     onBack: () -> Unit
 ) {
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
+    var sourceImageSize by remember { mutableStateOf(IntSize.Zero) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(270.dp)
+            .clipToBounds()
+            .onSizeChanged { containerSize = it }
     ) {
         IconButton(
             onClick = onBack, modifier = Modifier
@@ -214,14 +233,77 @@ private fun HeaderImage(
                 model = imageUri,
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                onSuccess = { state: AsyncImagePainter.State.Success ->
+                    sourceImageSize = IntSize(
+                        width = state.result.drawable.intrinsicWidth.coerceAtLeast(1),
+                        height = state.result.drawable.intrinsicHeight.coerceAtLeast(1)
+                    )
+                }
             )
+
+            if (
+                detections.isNotEmpty() &&
+                containerSize.width > 0 &&
+                containerSize.height > 0 &&
+                sourceImageSize.width > 0 &&
+                sourceImageSize.height > 0
+            ) {
+                DetectionOverlay(
+                    detections = detections,
+                    sourceImageSize = sourceImageSize,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         } else {
             Image(
                 painter = painterResource(id = R.drawable.img_ca_chua),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
+            )
+        }
+    }
+}
+
+@Composable
+private fun DetectionOverlay(
+    detections: List<DetectionData>,
+    sourceImageSize: IntSize,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val scale = maxOf(
+            size.width / sourceImageSize.width.toFloat(),
+            size.height / sourceImageSize.height.toFloat()
+        )
+        val scaledWidth = sourceImageSize.width * scale
+        val scaledHeight = sourceImageSize.height * scale
+        val offsetX = (size.width - scaledWidth) / 2f
+        val offsetY = (size.height - scaledHeight) / 2f
+
+        detections.forEach { detection ->
+            if (detection.box.size < 4) return@forEach
+
+            val boxColor = if (
+                detection.name.contains("khoe", ignoreCase = true) ||
+                detection.name.contains("healthy", ignoreCase = true)
+            ) {
+                Color(0xFF2E7D32)
+            } else {
+                Color(0xFFD32F2F)
+            }
+
+            val left = detection.box[0].toFloat() * scale + offsetX
+            val top = detection.box[1].toFloat() * scale + offsetY
+            val right = detection.box[2].toFloat() * scale + offsetX
+            val bottom = detection.box[3].toFloat() * scale + offsetY
+
+            drawRect(
+                color = boxColor,
+                topLeft = androidx.compose.ui.geometry.Offset(left, top),
+                size = androidx.compose.ui.geometry.Size(right - left, bottom - top),
+                style = Stroke(width = 4.dp.toPx())
             )
         }
     }
@@ -237,6 +319,7 @@ private fun ContentSection(
     causes: String,
     treatment: List<TreatmentItem>,
     recoveryCare: List<RecoveryItem>,
+    detections: List<DetectionData>,
     location: String?,
     apiType: ApiType,
     onChatWithAi: (String) -> Unit
@@ -247,7 +330,11 @@ private fun ContentSection(
             .verticalScroll(rememberScrollState())
     ) {
         // Header Image
-        HeaderImage(imageUri = imageUri, onBack = onBack)
+        HeaderImage(
+            imageUri = imageUri,
+            detections = emptyList(),
+            onBack = onBack
+        )
         
         Spacer(modifier = Modifier.height(16.dp))
         
@@ -424,7 +511,11 @@ private fun ClassifyContentSection(
             .verticalScroll(rememberScrollState())
     ) {
         // Header Image
-        HeaderImage(imageUri = imageUri, onBack = onBack)
+        HeaderImage(
+            imageUri = imageUri,
+            detections = emptyList(),
+            onBack = onBack
+        )
         
         Spacer(modifier = Modifier.height(16.dp))
         

@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -35,10 +36,15 @@ data class CameraUiState(
 class CameraViewModel @javax.inject.Inject constructor(
     application: Application
 ) : AndroidViewModel(application) {
+    companion object {
+        private const val TARGET_EXPOSURE_COMPENSATION = -2
+    }
+
     private val _uiState = MutableStateFlow(CameraUiState())
     val uiState: StateFlow<CameraUiState> = _uiState.asStateFlow()
     
     private var imageCapture: ImageCapture? = null
+    private var boundCamera: Camera? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private var lifecycleOwner: LifecycleOwner? = null
     private var previewView: PreviewView? = null
@@ -73,7 +79,8 @@ class CameraViewModel @javax.inject.Inject constructor(
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageCapture)
+                boundCamera = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageCapture)
+                applyPreferredExposure()
             } catch (_: Exception) {}
         }, ContextCompat.getMainExecutor(context))
     }
@@ -98,7 +105,8 @@ class CameraViewModel @javax.inject.Inject constructor(
         imageCapture = ImageCapture.Builder().build()
         try {
             provider.unbindAll()
-            provider.bindToLifecycle(owner, cameraSelector, preview, imageCapture)
+            boundCamera = provider.bindToLifecycle(owner, cameraSelector, preview, imageCapture)
+            applyPreferredExposure()
         } catch (_: Exception) {}
     }
     
@@ -116,13 +124,7 @@ class CameraViewModel @javax.inject.Inject constructor(
         }
         
         val context = getApplication<Application>()
-        val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis())
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AgriDoctorAI")
-        }
-        
+        val contentValues = createOutputContentValues()
         val outputFileOptions = ImageCapture.OutputFileOptions
             .Builder(
                 context.contentResolver,
@@ -136,9 +138,13 @@ class CameraViewModel @javax.inject.Inject constructor(
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    output.savedUri?.let { uri ->
-                        cropImage(uri, previewWidth, previewHeight, focusWidth, focusHeight, onPhotoSaved, onError)
-                    } ?: onError("Failed to get saved URI")
+                    val savedUri = output.savedUri
+                    if (savedUri == null) {
+                        onError("Photo capture failed: missing saved uri")
+                        return
+                    }
+
+                    cropImage(savedUri, previewWidth, previewHeight, focusWidth, focusHeight, onPhotoSaved, onError)
                 }
                 
                 override fun onError(exception: ImageCaptureException) {
@@ -161,6 +167,7 @@ class CameraViewModel @javax.inject.Inject constructor(
         val originalBitmap = loadBitmapWithCorrectOrientation(originalUri)
         
         if (originalBitmap == null) {
+            deleteImageUri(originalUri)
             onError("Failed to read captured image")
             return
         }
@@ -183,24 +190,10 @@ class CameraViewModel @javax.inject.Inject constructor(
         )
         
         originalBitmap.recycle()
-        
-        // Save the cropped image
-        val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis())
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AgriDoctorAI")
-        }
-        
-        val outputUri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-        if (outputUri == null) {
-            onError("Failed to create output URI")
-            croppedBitmap.recycle()
-            return
-        }
-        
-        val outputStream: OutputStream? = context.contentResolver.openOutputStream(outputUri)
+
+        val outputStream: OutputStream? = context.contentResolver.openOutputStream(originalUri, "wt")
         if (outputStream == null) {
+            deleteImageUri(originalUri)
             onError("Failed to open output stream")
             croppedBitmap.recycle()
             return
@@ -210,11 +203,40 @@ class CameraViewModel @javax.inject.Inject constructor(
         outputStream.flush()
         outputStream.close()
         croppedBitmap.recycle()
-        
-        // Delete the original full image
-        context.contentResolver.delete(originalUri, null, null)
-        
-        onPhotoSaved(outputUri)
+
+        onPhotoSaved(originalUri)
+    }
+
+    private fun createOutputContentValues(): ContentValues {
+        val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis())
+        return ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AgriDoctorAI")
+        }
+    }
+
+    private fun deleteImageUri(uri: Uri) {
+        runCatching {
+            getApplication<Application>().contentResolver.delete(uri, null, null)
+        }.onFailure { error ->
+            Log.w("CameraViewModel", "Failed to delete image uri $uri: ${error.message}")
+        }
+    }
+
+    private fun applyPreferredExposure() {
+        val camera = boundCamera ?: return
+        val exposureState = camera.cameraInfo.exposureState
+
+        if (!exposureState.isExposureCompensationSupported) {
+            Log.d("CameraViewModel", "Exposure compensation is not supported on this device")
+            return
+        }
+
+        val range = exposureState.exposureCompensationRange
+        val targetIndex = TARGET_EXPOSURE_COMPENSATION.coerceIn(range.lower, range.upper)
+        camera.cameraControl.setExposureCompensationIndex(targetIndex)
+        Log.d("CameraViewModel", "Applied exposure compensation: $targetIndex")
     }
 
     private fun loadBitmapWithCorrectOrientation(uri: Uri): Bitmap? {

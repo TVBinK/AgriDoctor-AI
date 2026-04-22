@@ -5,6 +5,7 @@ import com.baothanhbin.core.model.ApiKeyResponse
 import com.baothanhbin.core.model.DiagnoseApiResponse
 import com.baothanhbin.core.model.DiagnoseData
 import com.baothanhbin.core.model.ClassifyApiResponse
+import com.baothanhbin.core.model.DetectionData
 import com.baothanhbin.core.model.GeminiRequest
 import com.baothanhbin.core.model.GeminiResponse
 import com.baothanhbin.core.model.GeminiContent
@@ -278,7 +279,14 @@ private fun DetectFallbackResponse.toDiagnoseApiResponse(): DiagnoseApiResponse?
             symptoms = debugSummary,
             causes = "",
             treatment = emptyList<TreatmentData>(),
-            recoveryCare = emptyList<RecoveryCareData>()
+            recoveryCare = emptyList<RecoveryCareData>(),
+            detections = detections.map { detection ->
+                DetectionData(
+                    name = detection.name,
+                    confidence = detection.confidence ?: 0.0,
+                    box = detection.box
+                )
+            }
         )
     )
 }

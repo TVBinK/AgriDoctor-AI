@@ -18,7 +18,15 @@ data class DiagnoseData(
     val symptoms: String,
     val causes: String,
     val treatment: List<TreatmentData>,
-    val recoveryCare: List<RecoveryCareData>
+    val recoveryCare: List<RecoveryCareData>,
+    val detections: List<DetectionData> = emptyList()
+)
+
+@Serializable
+data class DetectionData(
+    val name: String,
+    val confidence: Double,
+    val box: List<Double>
 )
 
 @Serializable
@@ -35,4 +43,3 @@ data class RecoveryCareData(
     val steps: List<String>,
     val linkText: String? = null
 )
-

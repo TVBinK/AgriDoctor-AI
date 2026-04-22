@@ -4,7 +4,9 @@ import android.app.Application
 import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.graphics.Matrix
+import android.graphics.Paint
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
@@ -17,6 +19,8 @@ import com.baothanhbin.core.database.model.toEntity
 import com.baothanhbin.core.database.model.toPlantEntity
 import com.baothanhbin.core.model.ApiType
 import com.baothanhbin.core.model.ClassifyData
+import com.baothanhbin.core.model.DetectionData
+import com.baothanhbin.core.model.LatestDiagnoseResultCache
 import com.baothanhbin.core.network.NetworkDataSource
 import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.core.ui.util.LocationStateHolder
@@ -31,6 +35,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.net.URLConnection
 import java.text.SimpleDateFormat
@@ -77,14 +82,17 @@ class ProcessImageViewModel @Inject constructor(
 
             try {
                 val context = getApplication<Application>()
-                val bytes = context.contentResolver.openInputStream(imageUri)?.use { it.readBytes() }
-                if (bytes == null) {
+                val preparedUpload = withContext(Dispatchers.IO) {
+                    prepareImageUpload(context, imageUri)
+                }
+                if (preparedUpload == null) {
                     return@launch
                 }
+                val bytes = preparedUpload.bytes
 
                 // Guess mime from URI path
                 val name = imageUri.lastPathSegment ?: "image.jpg"
-                val mime = URLConnection.guessContentTypeFromName(name) ?: "image/jpeg"
+                val mime = preparedUpload.mimeType
 
                 _uiState.value = ProcessImageUiState(step = 1) // uploading
                 
@@ -120,9 +128,9 @@ class ProcessImageViewModel @Inject constructor(
                     if (isValidResult) {
                     // Cache to Room database - must save before navigating
                     try {
-                        // Copy image to app storage to ensure persistent access
+                        // Render detections directly on the normalized bitmap before caching
                         val savedImageUri = withContext(Dispatchers.IO) {
-                            copyImageToAppStorage(context, imageUri)
+                            cacheDiagnoseImage(context, imageUri, detectResult.data.detections)
                         }
                         
                         // Lấy location hiện tại nếu có quyền
@@ -144,10 +152,12 @@ class ProcessImageViewModel @Inject constructor(
                         
                         // Navigate with saved URI if available
                         val navigationUri = savedImageUri ?: imageUri
+                        LatestDiagnoseResultCache.store(navigationUri?.toString(), detectResult.data)
                         _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(navigationUri, apiType))
                     } catch (dbError: Exception) {
                         Log.e("ProcessImage", "Database save error: ${dbError.message}", dbError)
                         // Continue even if database save fails
+                        LatestDiagnoseResultCache.store(imageUri.toString(), detectResult.data)
                         _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(imageUri, apiType))
                     }
                     } else {
@@ -249,10 +259,9 @@ class ProcessImageViewModel @Inject constructor(
      */
     private suspend fun copyImageToAppStorage(context: Application, sourceUri: Uri): Uri? = withContext(Dispatchers.IO) {
         try {
-            val uriString = sourceUri.toString()
-            
-            // Check if already saved in AgriDoctorAI folder
-            if (uriString.contains("AgriDoctorAI")) {
+            // Skip copying when the captured image is already a MediaStore item
+            // under the app's gallery folder.
+            if (isAlreadyInAppStorage(context, sourceUri)) {
                 Log.d("ProcessImage", "Image already in app storage: $sourceUri")
                 return@withContext sourceUri
             }
@@ -304,6 +313,123 @@ class ProcessImageViewModel @Inject constructor(
         }
     }
 
+    private suspend fun cacheDiagnoseImage(
+        context: Application,
+        sourceUri: Uri,
+        detections: List<DetectionData>
+    ): Uri? = withContext(Dispatchers.IO) {
+        try {
+            if (isAlreadyInAppStorage(context, sourceUri) && detections.isEmpty()) {
+                Log.d("ProcessImage", "Image already in app storage with no detections: $sourceUri")
+                return@withContext sourceUri
+            }
+
+            val bitmap = loadBitmapWithCorrectOrientation(context, sourceUri) ?: return@withContext null
+            val annotatedBitmap = if (detections.isNotEmpty()) {
+                drawDetectionsOnBitmap(bitmap, detections)
+            } else {
+                bitmap
+            }
+
+            saveBitmapToAppStorage(
+                context = context,
+                bitmap = annotatedBitmap,
+                filePrefix = "diagnose"
+            ).also {
+                if (annotatedBitmap != bitmap) {
+                    annotatedBitmap.recycle()
+                }
+                bitmap.recycle()
+            }
+        } catch (e: Exception) {
+            Log.e("ProcessImage", "Error caching diagnose image: ${e.message}", e)
+            null
+        }
+    }
+
+    private fun drawDetectionsOnBitmap(
+        source: Bitmap,
+        detections: List<DetectionData>
+    ): Bitmap {
+        val mutableBitmap = source.copy(Bitmap.Config.ARGB_8888, true)
+        val canvas = Canvas(mutableBitmap)
+        val strokeWidthPx = (mutableBitmap.width / 120f).coerceAtLeast(4f)
+        val textSizePx = (mutableBitmap.width / 24f).coerceAtLeast(28f)
+
+        val boxPaint = Paint().apply {
+            style = Paint.Style.STROKE
+            strokeWidth = strokeWidthPx
+            isAntiAlias = true
+        }
+
+        detections.forEach { detection ->
+            if (detection.box.size < 4) return@forEach
+
+            val isHealthy = detection.name.contains("khoe", ignoreCase = true) ||
+                detection.name.contains("healthy", ignoreCase = true)
+            val color = if (isHealthy) {
+                android.graphics.Color.parseColor("#2E7D32")
+            } else {
+                android.graphics.Color.parseColor("#D32F2F")
+            }
+
+            val left = detection.box[0].toFloat().coerceIn(0f, mutableBitmap.width.toFloat())
+            val top = detection.box[1].toFloat().coerceIn(0f, mutableBitmap.height.toFloat())
+            val right = detection.box[2].toFloat().coerceIn(0f, mutableBitmap.width.toFloat())
+            val bottom = detection.box[3].toFloat().coerceIn(0f, mutableBitmap.height.toFloat())
+
+            boxPaint.color = color
+            canvas.drawRect(left, top, right, bottom, boxPaint)
+        }
+
+        return mutableBitmap
+    }
+
+    private fun saveBitmapToAppStorage(
+        context: Application,
+        bitmap: Bitmap,
+        filePrefix: String
+    ): Uri? {
+        val timestamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(Date())
+        val contentValues = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, "${filePrefix}_$timestamp.jpg")
+            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AgriDoctorAI")
+        }
+
+        val outputUri = context.contentResolver.insert(
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            contentValues
+        ) ?: return null
+
+        val outputStream = context.contentResolver.openOutputStream(outputUri) ?: return null
+        outputStream.use { stream ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, stream)
+            stream.flush()
+        }
+        return outputUri
+    }
+
+    private fun isAlreadyInAppStorage(context: Application, sourceUri: Uri): Boolean {
+        if (sourceUri.scheme != "content") return false
+
+        return runCatching {
+            val projection = arrayOf(MediaStore.Images.Media.RELATIVE_PATH)
+            context.contentResolver.query(sourceUri, projection, null, null, null)?.use { cursor ->
+                val relativePathIndex = cursor.getColumnIndex(MediaStore.Images.Media.RELATIVE_PATH)
+                if (relativePathIndex == -1 || !cursor.moveToFirst()) {
+                    return@use false
+                }
+
+                val relativePath = cursor.getString(relativePathIndex).orEmpty()
+                relativePath.contains("Pictures/AgriDoctorAI", ignoreCase = true)
+            } ?: false
+        }.getOrElse { error ->
+            Log.w("ProcessImage", "Unable to inspect MediaStore path for $sourceUri: ${error.message}")
+            false
+        }
+    }
+
     private fun loadBitmapWithCorrectOrientation(context: Application, sourceUri: Uri): Bitmap? {
         val bitmap = context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
             BitmapFactory.decodeStream(inputStream)
@@ -331,6 +457,26 @@ class ProcessImageViewModel @Inject constructor(
             if (it != bitmap) {
                 bitmap.recycle()
             }
+        }
+    }
+
+    private data class PreparedUploadImage(
+        val bytes: ByteArray,
+        val mimeType: String = "image/jpeg"
+    )
+
+    private fun prepareImageUpload(context: Application, sourceUri: Uri): PreparedUploadImage? {
+        val bitmap = loadBitmapWithCorrectOrientation(context, sourceUri) ?: return null
+
+        return try {
+            val output = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)
+            PreparedUploadImage(
+                bytes = output.toByteArray(),
+                mimeType = "image/jpeg"
+            )
+        } finally {
+            bitmap.recycle()
         }
     }
     
