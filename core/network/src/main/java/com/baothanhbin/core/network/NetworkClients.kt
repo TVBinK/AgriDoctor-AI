@@ -17,6 +17,10 @@ import javax.net.ssl.TrustManager
 import javax.net.ssl.X509TrustManager
 
 object NetworkClients {
+    // EC2 is currently exposed through Nginx on port 80.
+    // Replace with your HTTPS domain later when SSL is configured.
+    private const val API_BASE_URL = "http://54.173.14.193"
+
     private fun createTrustAllManager(): X509TrustManager {
         return object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
@@ -60,11 +64,11 @@ object NetworkClients {
         }
     }
 
-    val detectClient = createClient("https://localhost:3443/api/detect")
-    val apiKeyClient = createClient("https://localhost:3443/api/gemini-key")
-    val diseasesClient = createClient("https://localhost:3443/api/diseases")
-    val classifyClient = createClient("https://localhost:3443/api/classify")
-    val authClient = createClient("https://localhost:3443/api/auth/")
+    val detectClient = createClient("$API_BASE_URL/api/detect")
+    val apiKeyClient = createClient("$API_BASE_URL/api/gemini-key")
+    val diseasesClient = createClient("$API_BASE_URL/api/diseases")
+    val classifyClient = createClient("$API_BASE_URL/api/classify")
+    val authClient = createClient("$API_BASE_URL/api/auth/")
 }
 
 

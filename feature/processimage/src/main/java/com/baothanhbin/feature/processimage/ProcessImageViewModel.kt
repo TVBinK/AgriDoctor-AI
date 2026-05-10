@@ -1,14 +1,12 @@
 package com.baothanhbin.feature.processimage
 
 import android.app.Application
-import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.net.Uri
-import android.provider.MediaStore
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
 import androidx.lifecycle.AndroidViewModel
@@ -36,8 +34,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
-import java.io.OutputStream
-import java.net.URLConnection
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -63,6 +63,9 @@ class ProcessImageViewModel @Inject constructor(
     private val plantRepository: com.baothanhbin.core.data.repository.PlantRepository,
     private val authRepository: AuthRepository
 ) : AndroidViewModel(application) {
+    companion object {
+        private const val PRIVATE_IMAGE_DIRECTORY = "diagnose_images"
+    }
 
     private val _uiState = MutableStateFlow(ProcessImageUiState())
     val uiState: StateFlow<ProcessImageUiState> = _uiState.asStateFlow()
@@ -259,8 +262,7 @@ class ProcessImageViewModel @Inject constructor(
      */
     private suspend fun copyImageToAppStorage(context: Application, sourceUri: Uri): Uri? = withContext(Dispatchers.IO) {
         try {
-            // Skip copying when the captured image is already a MediaStore item
-            // under the app's gallery folder.
+            // Skip copying when the image already lives in app-private storage.
             if (isAlreadyInAppStorage(context, sourceUri)) {
                 Log.d("ProcessImage", "Image already in app storage: $sourceUri")
                 return@withContext sourceUri
@@ -274,35 +276,11 @@ class ProcessImageViewModel @Inject constructor(
                 return@withContext null
             }
             
-            // Save to app storage
-            val timestamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(Date())
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, "plant_$timestamp.jpg")
-                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AgriDoctorAI")
-            }
-            
-            val outputUri = context.contentResolver.insert(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                contentValues
+            val outputUri = saveBitmapToAppStorage(
+                context = context,
+                bitmap = bitmap,
+                filePrefix = "plant"
             )
-            
-            if (outputUri == null) {
-                Log.e("ProcessImage", "Failed to create output URI")
-                bitmap.recycle()
-                return@withContext null
-            }
-            
-            val outputStream: OutputStream? = context.contentResolver.openOutputStream(outputUri)
-            if (outputStream == null) {
-                Log.e("ProcessImage", "Failed to open output stream")
-                bitmap.recycle()
-                return@withContext null
-            }
-            
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, outputStream)
-            outputStream.flush()
-            outputStream.close()
             bitmap.recycle()
             
             Log.d("ProcessImage", "Image copied from $sourceUri to $outputUri")
@@ -391,51 +369,32 @@ class ProcessImageViewModel @Inject constructor(
         filePrefix: String
     ): Uri? {
         val timestamp = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(Date())
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, "${filePrefix}_$timestamp.jpg")
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AgriDoctorAI")
-        }
+        val directory = File(context.filesDir, PRIVATE_IMAGE_DIRECTORY).apply { mkdirs() }
+        val outputFile = File(directory, "${filePrefix}_$timestamp.jpg")
 
-        val outputUri = context.contentResolver.insert(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            contentValues
-        ) ?: return null
-
-        val outputStream = context.contentResolver.openOutputStream(outputUri) ?: return null
-        outputStream.use { stream ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, stream)
-            stream.flush()
+        return runCatching {
+            FileOutputStream(outputFile, false).use { stream ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, stream)
+                stream.flush()
+            }
+            Uri.fromFile(outputFile)
+        }.getOrElse { error ->
+            Log.e("ProcessImage", "Failed to save bitmap to app storage: ${error.message}", error)
+            null
         }
-        return outputUri
     }
 
     private fun isAlreadyInAppStorage(context: Application, sourceUri: Uri): Boolean {
-        if (sourceUri.scheme != "content") return false
-
-        return runCatching {
-            val projection = arrayOf(MediaStore.Images.Media.RELATIVE_PATH)
-            context.contentResolver.query(sourceUri, projection, null, null, null)?.use { cursor ->
-                val relativePathIndex = cursor.getColumnIndex(MediaStore.Images.Media.RELATIVE_PATH)
-                if (relativePathIndex == -1 || !cursor.moveToFirst()) {
-                    return@use false
-                }
-
-                val relativePath = cursor.getString(relativePathIndex).orEmpty()
-                relativePath.contains("Pictures/AgriDoctorAI", ignoreCase = true)
-            } ?: false
-        }.getOrElse { error ->
-            Log.w("ProcessImage", "Unable to inspect MediaStore path for $sourceUri: ${error.message}")
-            false
-        }
+        val localFile = resolveLocalFile(sourceUri) ?: return false
+        return isInsideDirectory(localFile, context.filesDir) || isInsideDirectory(localFile, context.cacheDir)
     }
 
     private fun loadBitmapWithCorrectOrientation(context: Application, sourceUri: Uri): Bitmap? {
-        val bitmap = context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
+        val bitmap = openInputStream(context, sourceUri)?.use { inputStream ->
             BitmapFactory.decodeStream(inputStream)
         } ?: return null
 
-        val rotationDegrees = context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
+        val rotationDegrees = openInputStream(context, sourceUri)?.use { inputStream ->
             when (ExifInterface(inputStream).getAttributeInt(
                 ExifInterface.TAG_ORIENTATION,
                 ExifInterface.ORIENTATION_NORMAL
@@ -457,6 +416,32 @@ class ProcessImageViewModel @Inject constructor(
             if (it != bitmap) {
                 bitmap.recycle()
             }
+        }
+    }
+
+    private fun openInputStream(context: Application, sourceUri: Uri): InputStream? {
+        return resolveLocalFile(sourceUri)?.let(::FileInputStream)
+            ?: context.contentResolver.openInputStream(sourceUri)
+    }
+
+    private fun resolveLocalFile(sourceUri: Uri): File? {
+        val path = when (sourceUri.scheme) {
+            null -> sourceUri.toString().takeIf { it.isNotBlank() }
+            "file" -> sourceUri.path
+            else -> null
+        } ?: return null
+
+        return File(path)
+    }
+
+    private fun isInsideDirectory(file: File, directory: File): Boolean {
+        return runCatching {
+            val filePath = file.canonicalPath
+            val directoryPath = directory.canonicalPath.removeSuffix(File.separator) + File.separator
+            filePath.startsWith(directoryPath)
+        }.getOrElse { error ->
+            Log.w("ProcessImage", "Unable to inspect private file path for $file: ${error.message}")
+            false
         }
     }
 

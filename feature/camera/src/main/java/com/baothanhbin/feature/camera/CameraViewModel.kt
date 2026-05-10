@@ -1,12 +1,10 @@
 package com.baothanhbin.feature.camera
 
 import android.app.Application
-import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
-import android.provider.MediaStore
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
@@ -23,7 +21,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.io.OutputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.InputStream
 import java.text.SimpleDateFormat
 import java.util.*
 import javax.inject.Inject
@@ -38,6 +39,7 @@ class CameraViewModel @javax.inject.Inject constructor(
 ) : AndroidViewModel(application) {
     companion object {
         private const val TARGET_EXPOSURE_COMPENSATION = -2
+        private const val CAPTURE_DIRECTORY = "captured_images"
     }
 
     private val _uiState = MutableStateFlow(CameraUiState())
@@ -124,13 +126,9 @@ class CameraViewModel @javax.inject.Inject constructor(
         }
         
         val context = getApplication<Application>()
-        val contentValues = createOutputContentValues()
+        val outputFile = createPrivateCaptureFile(context)
         val outputFileOptions = ImageCapture.OutputFileOptions
-            .Builder(
-                context.contentResolver,
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                contentValues
-            )
+            .Builder(outputFile)
             .build()
         
         imageCapture.takePicture(
@@ -138,11 +136,7 @@ class CameraViewModel @javax.inject.Inject constructor(
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val savedUri = output.savedUri
-                    if (savedUri == null) {
-                        onError("Photo capture failed: missing saved uri")
-                        return
-                    }
+                    val savedUri = output.savedUri ?: Uri.fromFile(outputFile)
 
                     cropImage(savedUri, previewWidth, previewHeight, focusWidth, focusHeight, onPhotoSaved, onError)
                 }
@@ -163,7 +157,6 @@ class CameraViewModel @javax.inject.Inject constructor(
         onPhotoSaved: (Uri) -> Unit,
         onError: (String) -> Unit
     ) {
-        val context = getApplication<Application>()
         val originalBitmap = loadBitmapWithCorrectOrientation(originalUri)
         
         if (originalBitmap == null) {
@@ -177,21 +170,27 @@ class CameraViewModel @javax.inject.Inject constructor(
         val scaleY = originalBitmap.height.toFloat() / previewHeight
         
         val focusLeft = ((previewWidth - focusWidth) / 2f * scaleX).toInt()
+            .coerceIn(0, originalBitmap.width - 1)
         val focusTop = ((previewHeight - focusHeight) / 2f * scaleY).toInt()
-        val focusRight = focusLeft + (focusWidth * scaleX).toInt()
-        val focusBottom = focusTop + (focusHeight * scaleY).toInt()
+            .coerceIn(0, originalBitmap.height - 1)
+        val cropWidth = (focusWidth * scaleX).toInt()
+            .coerceAtLeast(1)
+            .coerceAtMost(originalBitmap.width - focusLeft)
+        val cropHeight = (focusHeight * scaleY).toInt()
+            .coerceAtLeast(1)
+            .coerceAtMost(originalBitmap.height - focusTop)
         
         val croppedBitmap = Bitmap.createBitmap(
             originalBitmap,
             focusLeft,
             focusTop,
-            focusRight - focusLeft,
-            focusBottom - focusTop
+            cropWidth,
+            cropHeight
         )
         
         originalBitmap.recycle()
 
-        val outputStream: OutputStream? = context.contentResolver.openOutputStream(originalUri, "wt")
+        val outputStream = openOutputStream(originalUri)
         if (outputStream == null) {
             deleteImageUri(originalUri)
             onError("Failed to open output stream")
@@ -207,18 +206,16 @@ class CameraViewModel @javax.inject.Inject constructor(
         onPhotoSaved(originalUri)
     }
 
-    private fun createOutputContentValues(): ContentValues {
+    private fun createPrivateCaptureFile(context: Application): File {
+        val directory = File(context.filesDir, CAPTURE_DIRECTORY).apply { mkdirs() }
         val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis())
-        return ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AgriDoctorAI")
-        }
+        return File(directory, "capture_$name.jpg")
     }
 
     private fun deleteImageUri(uri: Uri) {
         runCatching {
-            getApplication<Application>().contentResolver.delete(uri, null, null)
+            resolveLocalFile(uri)?.delete()
+                ?: getApplication<Application>().contentResolver.delete(uri, null, null)
         }.onFailure { error ->
             Log.w("CameraViewModel", "Failed to delete image uri $uri: ${error.message}")
         }
@@ -240,12 +237,11 @@ class CameraViewModel @javax.inject.Inject constructor(
     }
 
     private fun loadBitmapWithCorrectOrientation(uri: Uri): Bitmap? {
-        val context = getApplication<Application>()
-        val bitmap = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+        val bitmap = openInputStream(uri)?.use { inputStream ->
             BitmapFactory.decodeStream(inputStream)
         } ?: return null
 
-        val rotationDegrees = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+        val rotationDegrees = openInputStream(uri)?.use { inputStream ->
             when (ExifInterface(inputStream).getAttributeInt(
                 ExifInterface.TAG_ORIENTATION,
                 ExifInterface.ORIENTATION_NORMAL
@@ -268,6 +264,29 @@ class CameraViewModel @javax.inject.Inject constructor(
                 bitmap.recycle()
             }
         }
+    }
+
+    private fun openInputStream(uri: Uri): InputStream? {
+        val context = getApplication<Application>()
+        return resolveLocalFile(uri)?.let(::FileInputStream)
+            ?: context.contentResolver.openInputStream(uri)
+    }
+
+    private fun openOutputStream(uri: Uri): FileOutputStream? {
+        return resolveLocalFile(uri)?.let { file ->
+            file.parentFile?.mkdirs()
+            FileOutputStream(file, false)
+        }
+    }
+
+    private fun resolveLocalFile(uri: Uri): File? {
+        val path = when (uri.scheme) {
+            null -> uri.toString().takeIf { it.isNotBlank() }
+            "file" -> uri.path
+            else -> null
+        } ?: return null
+
+        return File(path)
     }
 }
 
