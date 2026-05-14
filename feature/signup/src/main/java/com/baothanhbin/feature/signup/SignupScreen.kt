@@ -70,7 +70,6 @@ import com.baothanhbin.core.theme.White
 
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import android.widget.Toast
 
 @Composable
 fun SignupRoute(
@@ -79,18 +78,11 @@ fun SignupRoute(
     viewModel: SignupViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
 
     androidx.compose.runtime.LaunchedEffect(uiState.isSignupSuccess) {
         if (uiState.isSignupSuccess) {
             onSignupSuccess(uiState.identifier)
             viewModel.resetState()
-        }
-    }
-    
-    androidx.compose.runtime.LaunchedEffect(uiState.error) {
-        if (uiState.error != null) {
-            Toast.makeText(context, uiState.error, Toast.LENGTH_LONG).show()
         }
     }
 
@@ -115,11 +107,12 @@ fun SignupScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    val isConfirmPasswordMismatch = confirmPassword.isNotEmpty() && password != confirmPassword
 
     val isFormValid = name.isNotBlank() &&
         identifier.isNotBlank() &&
         password.length >= 6 &&
-        password == confirmPassword
+        !isConfirmPasswordMismatch
 
     Box(
         modifier = Modifier
@@ -331,11 +324,14 @@ fun SignupScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(56.dp),
+                            isError = isConfirmPasswordMismatch,
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color(0xFF34A853),
                                 unfocusedBorderColor = Color(0xFFE8E8E8),
                                 focusedContainerColor = Color(0xFFF8F9FA),
-                                unfocusedContainerColor = Color(0xFFF8F9FA)
+                                unfocusedContainerColor = Color(0xFFF8F9FA),
+                                errorBorderColor = MaterialTheme.colorScheme.error,
+                                errorContainerColor = Color(0xFFF8F9FA)
                             ),
                             shape = RoundedCornerShape(12.dp),
                             keyboardOptions = KeyboardOptions(
@@ -351,6 +347,24 @@ fun SignupScreen(
                                 }
                             )
                         )
+
+                        AnimatedVisibility(visible = isConfirmPasswordMismatch) {
+                            Text(
+                                text = "Mật khẩu xác nhận không khớp.",
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(top = 6.dp, start = 4.dp)
+                            )
+                        }
+
+                        uiState.error?.let { errorMessage ->
+                            Text(
+                                text = errorMessage,
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(top = 8.dp, start = 4.dp)
+                            )
+                        }
                     }
                 }
 

@@ -12,12 +12,18 @@ Project này là một **Android multi-module monolith theo feature modules**, k
 - `feature/*` chứa UI, screen logic, navigation cho từng tính năng
 - `core/*` chứa shared model, data access, persistence, networking, theme, UI utility, background worker
 
+Module boundary mang tính **pragmatic** hơn là strict:
+
+- phần lớn dependency đi qua `core/*`
+- nhưng có một số dependency `feature -> feature` để reuse screen/navigation theo flow thực tế, ví dụ `home`, `camera`, `diagnose`, `processimage`
+
 Nó **không phải Clean Architecture thuần** vì:
 
 - không có domain layer/use case riêng
 - `ViewModel` thường gọi repository trực tiếp
 - một số `ViewModel` còn gọi `NetworkDataSource` trực tiếp
 - `AndroidViewModel` được dùng ở những nơi cần `Application` context
+- một số feature modules phụ thuộc trực tiếp vào feature khác thay vì chỉ đi qua `core/*`
 
 Mô hình thực tế gần nhất là:
 
@@ -29,7 +35,7 @@ Mô hình thực tế gần nhất là:
 - UI layer: Jetpack Compose screens trong `feature/*`
 - State layer: `ViewModel` + `MutableStateFlow` / `StateFlow` / `SharedFlow`
 - Navigation layer: `navigation/*Navigation.kt` trong từng feature
-- Data layer: repository interfaces ở `core:data/repository`, implementations ở `core:data/impl`
+- Data layer: phần lớn repository interfaces ở `core:data/repository`, implementations ở `core:data/impl`
 - Local persistence: Room trong `core:database`
 - Key/token persistence: Proto DataStore trong `core:datastore`
 - Remote access: Ktor clients + `NetworkDataSource` trong `core:network`
@@ -39,15 +45,17 @@ Mô hình thực tế gần nhất là:
 
 ### Mandatory rules
 - Giữ nguyên **feature-first modular structure**. Tính năng mới đi vào `feature:<name>`, không nhét thẳng vào `app`.
-- Mọi dependency app-wide phải đi qua **Hilt**. Repository dùng interface + binding trong Hilt module.
+- Ưu tiên phụ thuộc qua `core/*`; repo hiện có một số dependency `feature -> feature` để ghép flow, nhưng không nên mở rộng kiểu phụ thuộc này nếu chưa thực sự cần.
+- Mọi dependency app-wide phải đi qua **Hilt**. Phần lớn repository ở `core:data` dùng interface + binding; một số service-style repository như `ApiKeyRepository` là concrete class được provide trực tiếp bằng `@Provides`.
 - UI phải viết bằng **Jetpack Compose**.
-- State màn hình phải đi qua **`ViewModel` + Flow/StateFlow`**, không giữ business state phân tán trong Composable nếu state đó ảnh hưởng luồng xử lý.
+- State màn hình phải đi qua **`ViewModel` + Flow/StateFlow**, không giữ business state phân tán trong Composable nếu state đó ảnh hưởng luồng xử lý.
 - Navigation phải khai báo trong file riêng `navigation/<Feature>Navigation.kt`.
 - Model API phải ở `core:model`.
 - Cache/local DB phải qua `core:database`.
 - Token/API key phải qua `core:datastore`, không hardcode trong feature.
 - Async phải chạy bằng coroutine trong `viewModelScope` hoặc `withContext(Dispatchers.IO)`.
 - Nếu một feature cần `Application` context, theo pattern hiện tại có thể dùng `AndroidViewModel`; nếu không cần thì dùng `ViewModel`.
+- Nếu đang sửa code cũ, ưu tiên giữ pattern cục bộ của module hơn là ép toàn repo về một style mới.
 
 ### Naming conventions
 
@@ -69,6 +77,7 @@ Mô hình thực tế gần nhất là:
 - Repository interface: `<Thing>Repository`
 - Repository implementation: `<Thing>RepositoryImpl`
 - Room entity: `<Thing>Entity`
+- Có một vài tên legacy chưa hoàn toàn chuẩn như `MyplantRoute`, `MyplantNavigation`, `VerifycationOTPScreen`; không rename hàng loạt nếu task không yêu cầu.
 - Mapper extension:
   - remote/domain to entity: `toEntity()`, `toPlantEntity()`
   - entity to model: `toClassifyData()`
@@ -85,8 +94,8 @@ Mô hình thực tế gần nhất là:
 - Public state flow: `uiState`
 - One-off event flow: `_navigationEvent`, `navigationEvent`
 - Boolean UI flags thường dùng prefix `is`, `show`, `has`, `should`
-- Route constants viết `UPPER_SNAKE_CASE`
-- Navigation args viết `ARG_*`
+- Route constants hiện đang có cả `UPPER_SNAKE_CASE` (`HOME_ROUTE`) lẫn lowercase string (`login`, `settings`, `verification_otp_route`); follow pattern của module đang sửa.
+- Navigation args hiện có cả `ARG_*` và tên cụ thể như `EMAIL_ARG`; ưu tiên nhất quán trong chính feature đó.
 
 ### Style conventions observed
 - `data class` cho UI state, API payload, response, entity
@@ -110,7 +119,7 @@ core/datastore/       Proto DataStore cho auth token và API key
 core/theme/           Colors, fonts, typography extensions, app theme
 core/ui/              Shared UI helpers/dialog/location utilities
 core/worker/          WorkManager workers + notification helper
-feature/*/            Mỗi feature độc lập: screen, viewmodel, navigation, đôi khi components/
+feature/*/            Feature UI modules: screen, viewmodel, navigation, đôi khi components/; một số module phụ thuộc feature khác để nối flow
 resources/            Shared drawables, strings, raw assets
 ```
 
@@ -130,6 +139,7 @@ resources/            Shared drawables, strings, raw assets
 - Chứa Ktor `HttpClient` singleton theo từng endpoint group trong `NetworkClients`
 - `NetworkDataSource` là facade gọi HTTP thực tế
 - Pattern hiện tại: object singleton, không DI bằng interface
+- Runtime hiện tại đang hardcode một `API_BASE_URL` dạng HTTP trong `NetworkClients`; app cho phép cleartext qua `network_security_config`
 
 #### `core:data`
 - Chứa contracts truy cập dữ liệu
@@ -137,6 +147,7 @@ resources/            Shared drawables, strings, raw assets
 - `impl/`: implementation
 - `di/`: Hilt bindings/provides
 - Đây là cầu nối giữa feature với DB/DataStore/network
+- Ngoại lệ đáng chú ý: `ApiKeyRepository` đang là concrete class nằm trong `repository/` và được provide trực tiếp, không có `impl/` riêng
 
 #### `core:database`
 - `AgriDoctorDatabase`
@@ -144,6 +155,7 @@ resources/            Shared drawables, strings, raw assets
 - `model/` cho Room entities
 - `converter/` cho list/object serialization
 - `di/DatabaseModule.kt` cung cấp singleton DB
+- Runtime hiện tại dùng `fallbackToDestructiveMigration()`, nên không được giả định migration dữ liệu luôn an toàn
 
 #### `core:datastore`
 - Proto DataStore cho auth/api key
@@ -180,6 +192,7 @@ components/
 Ví dụ:
 - `feature:myplants` có `components/`
 - `feature:chatbot` vẫn giữ file screen/viewmodel ở root package feature
+- một số feature import trực tiếp feature khác để reuse navigation/screen trong cùng flow
 
 ## Data and Logic Flow
 
@@ -192,13 +205,13 @@ Luồng điển hình trong project:
    - `NavController.navigateToFeature(...)`
    - `NavGraphBuilder.featureScreen(...)`
 3. Destination gọi `<Feature>Route(...)`.
-4. `<Feature>Route(...)` lấy `ViewModel` bằng `hiltViewModel()`, collect state, xử lý `LaunchedEffect`, rồi truyền data xuống `<Feature>Screen(...)`.
-5. `<Feature>Screen(...)` chủ yếu render UI + callback.
-6. Callback gọi `ViewModel`.
-7. `ViewModel` dùng repository hoặc data source để load/save/process dữ liệu.
-8. Repository gọi Room/DataStore/network.
-9. Kết quả được đẩy ngược lên `StateFlow` hoặc `SharedFlow`.
-10. UI recompose theo state mới hoặc điều hướng theo event.
+4. Thường `<Feature>Route(...)` lấy `ViewModel` bằng `hiltViewModel()`, collect state, xử lý `LaunchedEffect`, rồi truyền data xuống `<Feature>Screen(...)`.
+5. Ở một số module cũ, `Route(...)` chỉ forward tham số còn `Screen(...)` tự `hiltViewModel()` và collect state.
+6. `<Feature>Screen(...)` chủ yếu render UI + callback.
+7. Callback gọi `ViewModel`.
+8. `ViewModel` dùng repository hoặc data source để load/save/process dữ liệu.
+9. Repository hoặc object datasource gọi Room/DataStore/network.
+10. Kết quả được đẩy ngược lên `StateFlow` hoặc `SharedFlow`, hoặc một số auth/onboarding flow dùng boolean flag trong `UiState` kết hợp `LaunchedEffect`.
 
 ### Concrete data flow examples
 
@@ -221,7 +234,7 @@ Luồng điển hình trong project:
   - map response bằng `DiagnoseData.toEntity(...)`
   - lưu qua `DiagnoseResultRepository.insertDiagnoseResult(...)`
   - phát `ProcessImageNavigationEvent.NavigateToResult`
-- `DiagnoseResultViewModel` load lại kết quả gần nhất từ Room
+- `DiagnoseResultViewModel` ưu tiên đọc `LatestDiagnoseResultCache`, fallback về Room nếu cache không còn
 
 #### Plant classify flow
 - Flow giống diagnose nhưng gọi `NetworkDataSource.classifyImageTyped(...)`
@@ -240,10 +253,12 @@ Luồng điển hình trong project:
   - gọi Gemini SDK
   - append bot message
   - lưu toàn bộ conversation vào `ChatEntity`
+- Đây là feature có mức coupling cao hơn phần còn lại: dùng trực tiếp `AgriDoctorDatabase`, `ApiKeyRepository`, và `NetworkDataSource.getDiseasesJson()`
 
 ### State management
 - Chuẩn chính: `MutableStateFlow` + public `StateFlow`
 - Event một lần: `MutableSharedFlow`
+- Một số auth/reset flow hiện dùng cờ trong `UiState` như `isOtpSent`, `isSignupSuccess`, `isSuccess`, `isResetSuccessful` + `LaunchedEffect` + hàm reset/consume thay vì `SharedFlow`
 - DB Flow thường được convert bằng `stateIn(viewModelScope, SharingStarted.WhileSubscribed(...), initial)`
 - Shared non-ViewModel UI state nhỏ dùng `remember...StateHolder()`, ví dụ `LocationStateHolder`
 
@@ -252,8 +267,9 @@ Luồng điển hình trong project:
 - `@HiltAndroidApp` tại `App`
 - `@AndroidEntryPoint` cho `MainActivity`
 - `@HiltViewModel` cho ViewModel
-- Repository bind qua `@Binds` trong `core:data:di/DataModule.kt`
-- Singleton services khác dùng `@Provides`
+- Phần lớn repository bind qua `@Binds` trong `core:data:di/DataModule.kt`
+- Một số concrete service/repository và DataStore wrapper được cung cấp bằng `@Provides`
+- `NetworkDataSource` và `NetworkClients` hiện là object singleton, không có abstraction DI riêng
 - Worker dùng `@HiltWorker` + `HiltWorkerFactory`
 
 ### Async handling
@@ -326,6 +342,8 @@ android {
 - `:core:model`
 - `androidx.navigation.compose`
 
+Repo hiện vẫn chấp nhận một số dependency `feature -> feature` nếu flow reuse trực tiếp screen/navigation; tuy nhiên tránh tạo vòng phụ thuộc mới.
+
 ## Implementation Guide
 
 ### Boilerplate for a new simple feature screen
@@ -336,6 +354,7 @@ Khi thêm một feature chuẩn dạng screen + viewmodel + navigation:
 - Tạo `feature/newfeature/build.gradle.kts`
 - Dùng plugin `agridoctor.feature`
 - Add thêm dependencies thực sự cần như `projects.core.data`, `projects.core.theme`, `projects.core.ui`
+- Chỉ thêm dependency sang feature khác nếu đang reuse trực tiếp flow/navigation đã có và không có cách tách qua `core/*` hợp lý hơn
 
 #### 2. Tạo package structure
 ```text
@@ -465,7 +484,7 @@ fun NavGraphBuilder.newFeatureScreen(
 #### When to place code where
 - API request/response DTO: `core:model`
 - HTTP call: `core:network`
-- Repository contract: `core:data/repository`
+- Repository contract hoặc service-style repository: `core:data/repository`
 - Repository implementation: `core:data/impl`
 - Hilt binding/provision: `core:data/di`
 - Local cache entity/dao nếu cần: `core:database`
@@ -541,10 +560,426 @@ abstract fun bindNewThingRepository(
 ): NewThingRepository
 ```
 
+Nếu repository đó chưa cần abstraction ngay, repo hiện tại cũng có precedent provide concrete class trực tiếp bằng `@Provides` như `ApiKeyRepository`.
+
+### Additional base templates
+
+#### Boilerplate for a new Room-backed local feature
+Khi data là local-first hoặc cần cache/query lại nhiều lần, pattern thực tế của repo là:
+
+##### Entity + DAO
+```kotlin
+@Entity(tableName = "care_tasks")
+data class CareTaskEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val plantId: Long,
+    val title: String,
+    val targetTimestamp: Long,
+    val isCompleted: Boolean = false
+)
+
+@Dao
+interface CareTaskDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTask(task: CareTaskEntity): Long
+
+    @Query("SELECT * FROM care_tasks ORDER BY targetTimestamp ASC")
+    fun getAllTasks(): Flow<List<CareTaskEntity>>
+
+    @Query("UPDATE care_tasks SET isCompleted = :isCompleted WHERE id = :id")
+    suspend fun updateTaskStatus(id: Long, isCompleted: Boolean)
+}
+```
+
+##### Repository contract + implementation
+```kotlin
+interface CareTaskRepository {
+    suspend fun insertTask(task: CareTaskEntity): Long
+    fun getAllTasks(): Flow<List<CareTaskEntity>>
+    suspend fun updateTaskStatus(id: Long, isCompleted: Boolean)
+}
+
+class CareTaskRepositoryImpl @Inject constructor(
+    private val database: AgriDoctorDatabase
+) : CareTaskRepository {
+    private val taskDao get() = database.careTaskDao()
+
+    override suspend fun insertTask(task: CareTaskEntity): Long =
+        taskDao.insertTask(task)
+
+    override fun getAllTasks(): Flow<List<CareTaskEntity>> =
+        taskDao.getAllTasks()
+
+    override suspend fun updateTaskStatus(id: Long, isCompleted: Boolean) {
+        taskDao.updateTaskStatus(id, isCompleted)
+    }
+}
+```
+
+##### ViewModel consume pattern
+```kotlin
+@HiltViewModel
+class CareTaskViewModel @Inject constructor(
+    private val repository: CareTaskRepository
+) : ViewModel() {
+
+    val tasks: StateFlow<List<CareTaskEntity>> = repository.getAllTasks()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun toggleTask(id: Long, isCompleted: Boolean) {
+        viewModelScope.launch {
+            repository.updateTaskStatus(id, isCompleted)
+        }
+    }
+}
+```
+
+#### Boilerplate for a new Proto DataStore wrapper
+Repo đang dùng Proto DataStore wrapper class, không dùng Preferences DataStore.
+
+##### `.proto`
+```proto
+syntax = "proto3";
+
+option java_package = "com.baothanhbin.core.datastore";
+option java_multiple_files = true;
+
+message FeatureSettingProto {
+  string value = 1;
+  int64 timestamp = 2;
+}
+```
+
+##### Serializer + wrapper class
+```kotlin
+object FeatureSettingSerializer : Serializer<FeatureSettingProto> {
+    override val defaultValue: FeatureSettingProto = FeatureSettingProto.getDefaultInstance()
+
+    override suspend fun readFrom(input: InputStream): FeatureSettingProto {
+        return FeatureSettingProto.parseFrom(input)
+    }
+
+    override suspend fun writeTo(t: FeatureSettingProto, output: OutputStream) {
+        t.writeTo(output)
+    }
+}
+
+class FeatureSettingDataStore(private val context: Context) {
+    private val Context.featureSettingDataStore: DataStore<FeatureSettingProto> by dataStore(
+        fileName = "feature_setting.pb",
+        serializer = FeatureSettingSerializer
+    )
+
+    suspend fun saveValue(value: String) {
+        context.featureSettingDataStore.updateData { current ->
+            current.toBuilder()
+                .setValue(value)
+                .setTimestamp(System.currentTimeMillis())
+                .build()
+        }
+    }
+
+    suspend fun getValue(): String? {
+        return context.featureSettingDataStore.data
+            .map { proto -> proto.value.ifEmpty { null } }
+            .first()
+    }
+
+    suspend fun clearValue() {
+        context.featureSettingDataStore.updateData {
+            FeatureSettingProto.getDefaultInstance()
+        }
+    }
+}
+```
+
+##### Hilt provide
+```kotlin
+@Provides
+@Singleton
+fun provideFeatureSettingDataStore(
+    @ApplicationContext context: Context
+): FeatureSettingDataStore {
+    return FeatureSettingDataStore(context)
+}
+```
+
+#### Boilerplate for a new Worker-backed reminder/background task
+Pattern hiện tại là: lưu metadata vào Room trước, sau đó schedule `WorkManager`.
+
+##### Worker
+```kotlin
+@HiltWorker
+class CareReminderWorker @AssistedInject constructor(
+    @Assisted private val context: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val repository: CareTaskRepository
+) : CoroutineWorker(context, workerParams) {
+
+    override suspend fun doWork(): Result {
+        val taskId = inputData.getLong(KEY_TASK_ID, -1L)
+        val title = inputData.getString(KEY_TITLE) ?: "Nhắc chăm sóc"
+
+        NotificationHelper.showCareNotification(context, "Cây của bạn", title)
+
+        if (taskId != -1L) {
+            repository.updateTaskStatus(taskId, true)
+        }
+
+        return Result.success()
+    }
+
+    companion object {
+        const val KEY_TASK_ID = "taskId"
+        const val KEY_TITLE = "title"
+
+        fun uniqueWorkName(taskId: Long): String = "CareReminder_$taskId"
+    }
+}
+```
+
+##### Schedule from ViewModel or feature layer
+```kotlin
+fun scheduleReminder(
+    context: Context,
+    plantId: Long,
+    title: String,
+    targetTimestamp: Long
+) {
+    val delay = targetTimestamp - System.currentTimeMillis()
+    if (delay <= 0) return
+
+    viewModelScope.launch {
+        val entity = CareTaskEntity(
+            plantId = plantId,
+            title = title,
+            targetTimestamp = targetTimestamp
+        )
+        val taskId = repository.insertTask(entity)
+
+        val inputData = Data.Builder()
+            .putLong(CareReminderWorker.KEY_TASK_ID, taskId)
+            .putString(CareReminderWorker.KEY_TITLE, title)
+            .build()
+
+        val workRequest = OneTimeWorkRequestBuilder<CareReminderWorker>()
+            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
+            .setInputData(inputData)
+            .build()
+
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            CareReminderWorker.uniqueWorkName(taskId),
+            ExistingWorkPolicy.REPLACE,
+            workRequest
+        )
+    }
+}
+```
+
+##### Cancel when user marks complete manually
+```kotlin
+fun toggleTask(id: Long, isCompleted: Boolean) {
+    viewModelScope.launch {
+        repository.updateTaskStatus(id, isCompleted)
+        if (isCompleted) {
+            WorkManager.getInstance(getApplication()).cancelUniqueWork(
+                CareReminderWorker.uniqueWorkName(id)
+            )
+        }
+    }
+}
+```
+
+#### Boilerplate for app shell top-level destination
+Khi thêm top-level tab mới, phải sửa đủ `TopLevelDestination`, `AppState`, và `MainNavHost`.
+
+##### Top-level destination enum
+```kotlin
+enum class TopLevelDestination(
+    val label: Int,
+    val selectedIcon: Int,
+    val unselectedIcon: Int,
+) {
+    NEW_FEATURE(
+        label = R.string.new_feature,
+        selectedIcon = R.drawable.ic_selected_new_feature,
+        unselectedIcon = R.drawable.ic_unselected_new_feature
+    )
+}
+```
+
+##### `AppState` route mapping + navigate
+```kotlin
+val currentTopLevelDestination: TopLevelDestination?
+    @Composable get() {
+        val currentDestination = navController.currentBackStackEntryAsState().value?.destination
+        return when (currentDestination?.route) {
+            NEW_FEATURE_ROUTE -> TopLevelDestination.NEW_FEATURE
+            else -> null
+        }
+    }
+
+fun navigateToTopLevelDestination(destination: TopLevelDestination) {
+    val topLevelNavOptions = navOptions {
+        popUpTo(HOME_ROUTE) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+
+    when (destination) {
+        TopLevelDestination.NEW_FEATURE -> navController.navigateToNewFeature(topLevelNavOptions)
+        else -> Unit
+    }
+}
+```
+
+##### Register in `MainNavHost`
+```kotlin
+NavHost(
+    navController = navController,
+    startDestination = startDestination
+) {
+    newFeatureScreen(
+        onBackClick = { navController.navigateUp() }
+    )
+}
+```
+
+#### Boilerplate for one-off navigation via boolean flag in `UiState`
+Đây là pattern đang tồn tại khá nhiều ở auth/onboarding. Với code mới, ưu tiên `SharedFlow`; nhưng nếu đang follow flow cũ thì dùng mẫu này.
+
+##### ViewModel
+```kotlin
+data class VerifyUiState(
+    val isLoading: Boolean = false,
+    val isSuccess: Boolean = false,
+    val error: String? = null
+)
+
+@HiltViewModel
+class VerifyViewModel @Inject constructor(
+    private val repository: AuthRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(VerifyUiState())
+    val uiState: StateFlow<VerifyUiState> = _uiState.asStateFlow()
+
+    fun verify(code: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            repository.verifySomething(code)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isSuccess = true
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = error.message
+                    )
+                }
+        }
+    }
+
+    fun consumeSuccess() {
+        _uiState.value = _uiState.value.copy(isSuccess = false)
+    }
+}
+```
+
+##### Route
+```kotlin
+@Composable
+fun VerifyRoute(
+    onVerifySuccess: () -> Unit,
+    viewModel: VerifyViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            onVerifySuccess()
+            viewModel.consumeSuccess()
+        }
+    }
+
+    VerifyScreen(
+        isLoading = uiState.isLoading,
+        error = uiState.error,
+        onVerify = viewModel::verify
+    )
+}
+```
+
+#### Boilerplate for `Screen`-owned `ViewModel`
+Một vài module cũ để `Route(...)` chỉ forward arg, còn `Screen(...)` tự inject `ViewModel`.
+
+```kotlin
+@Composable
+fun NewFeatureRoute(
+    navController: NavController,
+    sharedStateHolder: LocationStateHolder
+) {
+    NewFeatureScreen(
+        navController = navController,
+        sharedStateHolder = sharedStateHolder
+    )
+}
+
+@Composable
+fun NewFeatureScreen(
+    navController: NavController,
+    sharedStateHolder: LocationStateHolder,
+    viewModel: NewFeatureViewModel = hiltViewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadData(sharedStateHolder)
+    }
+
+    // render UI
+}
+```
+
+Chỉ dùng biến thể này khi đang sửa một module vốn đã đi theo style đó.
+
+#### Boilerplate for feature-to-feature reuse
+Repo hiện có precedent `feature -> feature` khi reuse trực tiếp screen/navigation theo flow người dùng.
+
+##### `build.gradle.kts`
+```kotlin
+dependencies {
+    implementation(projects.feature.camera)
+    implementation(projects.feature.settings)
+}
+```
+
+##### Call navigation extension từ feature khác
+```kotlin
+fun onDiagnoseClick(navController: NavController) {
+    navController.navigateToCamera(modeIndex = 0)
+}
+
+fun onSettingsClick(navController: NavController) {
+    navController.navigateToSettings()
+}
+```
+
+Điều kiện chấp nhận:
+- reuse cả flow hoặc screen/navigation đã ổn định
+- không tạo vòng phụ thuộc
+- không lôi business logic shared sang `feature/*` nếu đáng ra nên đặt ở `core/*`
+
 ### Pattern notes for Compose routes
-- Giữ `Route` làm lớp nối giữa `ViewModel` và `Screen`
+- Ưu tiên giữ `Route` làm lớp nối giữa `ViewModel` và `Screen`
+- Nhưng nếu module hiện hữu đang để `Screen` tự `hiltViewModel()` thì đừng refactor chỉ để đồng nhất hình thức
 - `Screen` nên nhận primitive/UI-ready state + callbacks, tránh tự fetch data
-- Điều hướng một lần nên đi qua `SharedFlow` + `LaunchedEffect`
+- Ưu tiên điều hướng một lần qua `SharedFlow` + `LaunchedEffect`
+- Tuy nhiên auth/onboarding hiện có nhiều flow dùng boolean flag trong `UiState` + `LaunchedEffect` + reset/consume
 - Nếu cần xử lý khi vào màn hình, dùng `LaunchedEffect(Unit)` hoặc key theo arg
 
 ### Pattern notes for Room integration
@@ -552,6 +987,7 @@ abstract fun bindNewThingRepository(
 - DAO trong `core:database:dao`
 - DB access qua repository, trừ một số legacy/current exceptions như `ChatbotViewModel` dùng DB trực tiếp
 - Nếu thêm object/list phức tạp, tạo `TypeConverter`
+- Đừng quên repo hiện tại đang `fallbackToDestructiveMigration()`, nên thay đổi schema cần cân nhắc dữ liệu cũ
 
 ### Pattern notes for DataStore integration
 - Dùng Proto DataStore, không phải Preferences DataStore
@@ -570,16 +1006,22 @@ abstract fun bindNewThingRepository(
 ## Important Existing Patterns and Exceptions
 
 ### Strong existing patterns to preserve
-- Feature module = `Screen + ViewModel + navigation`
-- Repository interface + implementation cho data access
+- Feature module thường có `Screen + ViewModel + navigation`, đôi khi `Screen` tự lấy `ViewModel`
+- Phần lớn data access đi theo `Repository interface + implementation`
 - `MutableStateFlow` state holder
 - Hilt constructor injection
-- `NavController` extension for navigation
+- `NavController` extension cho navigation
 - Mapping via extension functions
+- Cross-feature dependency hiện có nhưng chủ yếu theo flow một chiều; tránh tạo vòng phụ thuộc mới
 
 ### Existing inconsistencies you should be aware of
 - Không phải mọi remote call đều đi qua repository; `ProcessImageViewModel` gọi `NetworkDataSource` trực tiếp
 - Không phải mọi DB access đều đi qua repository; `ChatbotViewModel` dùng `AgriDoctorDatabase` trực tiếp
+- Không phải mọi data service đều có `interface + impl`; `ApiKeyRepository` là concrete class
+- Không phải mọi feature đều độc lập; có các dependency `feature -> feature` ở `home`, `camera`, `diagnose`, `processimage`
+- Ownership giữa `Route` và `Screen` không thống nhất hoàn toàn giữa các module
+- One-off event pattern đang bị trộn giữa `SharedFlow` và boolean flag trong `UiState`
+- Route naming đang bị trộn giữa uppercase constant style và lowercase route string style
 - Có cả `ViewModel` và `AndroidViewModel`
 - Có chỗ dùng `collectAsStateWithLifecycle`, có chỗ dùng `collectAsState`
 
@@ -601,20 +1043,32 @@ Khi viết code mới, **ưu tiên pattern tốt hơn nhưng vẫn tương thíc
 
 ## Recommended Workflow for Any New Change
 1. Xác định feature module chịu trách nhiệm UI.
-2. Kiểm tra đã có repository contract phù hợp chưa.
-3. Nếu chưa có, thêm model + network + repository + DI binding.
+2. Kiểm tra đã có repository contract hoặc concrete service phù hợp chưa.
+3. Nếu chưa có, thêm model + network + repository/service + DI binding/provide.
 4. Tạo hoặc cập nhật `ViewModel` với `UiState`.
-5. Giữ `Route` lo collect state và side effects.
+5. Ưu tiên để `Route` lo collect state và side effects; nếu module hiện hữu đang để `Screen` tự lấy `ViewModel` thì follow local pattern.
 6. Giữ `Screen` tập trung vào Compose UI.
-7. Đăng ký navigation trong file `navigation/*`.
+7. Đăng ký navigation trong file `navigation/*`; nếu flow đã reuse feature khác thì dùng lại extension/navigation có sẵn thay vì copy.
 8. Nếu dữ liệu cần tồn tại sau process death hoặc dùng lại, lưu vào Room/DataStore.
 
 ## Reference Files Worth Reading First
 - `app/src/main/java/com/baothanhbin/agridoctorai/navigation/MainNavHost.kt`
 - `app/src/main/java/com/baothanhbin/agridoctorai/navigation/AppState.kt`
+- `app/src/main/java/com/baothanhbin/agridoctorai/navigation/TopLevelDestination.kt`
 - `core/data/src/main/java/com/baothanhbin/core/data/di/DataModule.kt`
+- `core/network/src/main/java/com/baothanhbin/core/network/NetworkClients.kt`
 - `core/network/src/main/java/com/baothanhbin/core/network/NetworkDataSource.kt`
+- `core/database/src/main/java/com/baothanhbin/core/database/di/DatabaseModule.kt`
+- `core/database/src/main/java/com/baothanhbin/core/database/model/ReminderEntity.kt`
+- `core/database/src/main/java/com/baothanhbin/core/database/dao/ReminderDao.kt`
+- `core/datastore/src/main/java/com/baothanhbin/core/datastore/AuthDataStore.kt`
+- `core/datastore/src/main/proto/auth.proto`
+- `core/worker/src/main/java/com/baothanhbin/core/worker/ReminderWorker.kt`
 - `feature/login/src/main/java/com/baothanhbin/feature/login/LoginScreen.kt`
+- `feature/home/src/main/java/com/baothanhbin/feature/home/HomeScreen.kt`
+- `feature/myplants/src/main/java/com/baothanhbin/feature/myplants/MyPlantsScreen.kt`
+- `feature/myplants/src/main/java/com/baothanhbin/feature/myplants/MyPlantsViewModel.kt`
+- `feature/verificationotp/src/main/java/com/baothanhbin/feature/verificationotp/VerificationOTPViewModel.kt`
 - `feature/processimage/src/main/java/com/baothanhbin/feature/processimage/ProcessImageViewModel.kt`
 - `feature/chatbot/src/main/java/com/baothanhbin/feature/chatbot/ChatbotViewModel.kt`
 
@@ -625,5 +1079,6 @@ Nếu phải chọn giữa “sạch hơn theo lý thuyết” và “giống co
 - giống naming hiện tại
 - giống navigation pattern hiện tại
 - giống state/update flow hiện tại
+- không tự chuẩn hóa route name, typo legacy, hay ownership `Route/Screen` nếu task không yêu cầu
 
 Sau đó mới tối ưu dần, nhưng không phá consistency của repo.

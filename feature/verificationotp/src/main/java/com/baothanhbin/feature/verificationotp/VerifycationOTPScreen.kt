@@ -55,6 +55,8 @@ import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.Title
 import com.baothanhbin.core.theme.White
+import androidx.compose.ui.res.stringResource
+import com.baothanhbin.agridoctorai.resources.R
 
 @Composable
 fun VerifycationOTPScreen(
@@ -108,7 +110,7 @@ fun VerifycationOTPScreen(
 
             // Title
             Text(
-                text = "Enter verification code",
+                text = stringResource(id = R.string.enter_verification_code),
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 24.sp
@@ -122,7 +124,7 @@ fun VerifycationOTPScreen(
             // Subtitle
             Text(
                 text = buildAnnotatedString {
-                    append("We've sent a 6-digit verification code to\n")
+                    append(stringResource(id = R.string.verification_code_sent))
                     withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = Title)) {
                         append(uiState.email)
                     }
@@ -156,7 +158,7 @@ fun VerifycationOTPScreen(
 
             // Resend Options
             Text(
-                text = "Didn't receive the code?",
+                text = stringResource(id = R.string.didnt_receive_code),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Subtitle
             )
@@ -165,7 +167,7 @@ fun VerifycationOTPScreen(
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = if (uiState.isLoading) "Sending..." else "Resend code",
+                    text = if (uiState.isLoading) stringResource(id = R.string.sending) else stringResource(id = R.string.resend_code),
                     style = MaterialTheme.typography.bodyMedium.copy(
                         color = if (uiState.isLoading) Subtitle else GreenSurface,
                         fontWeight = FontWeight.Bold
@@ -177,7 +179,7 @@ fun VerifycationOTPScreen(
                 Spacer(modifier = Modifier.height(4.dp))
                 // Static timer for now as text
                 Text(
-                    text = "Resend in 00:53",
+                    text = stringResource(id = R.string.resend_in_timer),
                     style = MaterialTheme.typography.bodySmall,
                     color = Disabled
                 )
@@ -208,7 +210,7 @@ fun VerifycationOTPScreen(
                     )
                 } else {
                     Text(
-                        text = "Verify Code",
+                        text = stringResource(id = R.string.verify_code),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = if (isPinComplete) White else Subtitle
                     )
@@ -241,7 +243,7 @@ private fun TopBar(onBackClick: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Filled.ArrowBack,
-                contentDescription = "Back",
+                contentDescription = stringResource(id = R.string.back),
                 tint = Title,
                 modifier = Modifier.size(24.dp)
             )
@@ -324,7 +326,7 @@ fun SecurityTipCard() {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = "Security tip",
+                    text = stringResource(id = R.string.security_tip),
                     style = MaterialTheme.typography.titleSmall.copy(
                         fontWeight = FontWeight.Bold,
                         color = GreenSurface
@@ -332,7 +334,7 @@ fun SecurityTipCard() {
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Never share your verification code with anyone. We'll never ask for it.",
+                    text = stringResource(id = R.string.security_tip_desc),
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = Color(0xFF2E7D32), // Darker green for text readability
                         lineHeight = 16.sp

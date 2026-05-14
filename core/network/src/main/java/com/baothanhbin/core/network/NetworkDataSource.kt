@@ -1,20 +1,20 @@
 package com.baothanhbin.core.network
 
 import android.util.Log
-import com.baothanhbin.core.model.ApiKeyResponse
-import com.baothanhbin.core.model.DiagnoseApiResponse
-import com.baothanhbin.core.model.DiagnoseData
+import com.baothanhbin.core.model.ApiErrorResponse
+import com.baothanhbin.core.model.ChatbotHistoryMessage
+import com.baothanhbin.core.model.ChatbotRequest
+import com.baothanhbin.core.model.ChatbotResponse
 import com.baothanhbin.core.model.ClassifyApiResponse
 import com.baothanhbin.core.model.DetectionData
-import com.baothanhbin.core.model.GeminiRequest
-import com.baothanhbin.core.model.GeminiResponse
-import com.baothanhbin.core.model.GeminiContent
-import com.baothanhbin.core.model.GeminiPart
+import com.baothanhbin.core.model.DiagnoseApiResponse
+import com.baothanhbin.core.model.DiagnoseData
 import com.baothanhbin.core.model.RecoveryCareData
 import com.baothanhbin.core.model.TreatmentData
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.post
@@ -25,18 +25,18 @@ import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
+import java.net.SocketTimeoutException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import java.net.SocketTimeoutException
 
 object NetworkDataSource {
     private val networkJson = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
     }
-    
+
     suspend fun detectImageTyped(
         imageBytes: ByteArray,
         fileName: String,
@@ -51,33 +51,15 @@ object NetworkDataSource {
         token: String? = null
     ): DiagnoseApiResponse? = withContext(Dispatchers.IO) {
         try {
-            val startedAt = System.currentTimeMillis()
-            Log.d("detectImageTyped", "Starting API call")
-            val ensuredFileName = run {
-                val hasExt = fileName.contains('.')
-                if (hasExt) fileName else {
-                    val mimeString = mimeType.toString().lowercase()
-                    val extension = when {
-                        mimeString.contains("jpeg") || mimeString.contains("jpg") -> ".jpg"
-                        mimeString.contains("png") -> ".png"
-                        mimeString.contains("webp") -> ".webp"
-                        mimeString.contains("gif") -> ".gif"
-                        else -> ".jpg"
-                    }
-                    "$fileName$extension"
-                }
-            }
-            Log.d("detectImageTyped", "Ensured file name: $ensuredFileName")
-            val contentTypeHeader = mimeType.toString()
-            val contentDispositionHeader = "filename=\"$ensuredFileName\""
+            val ensuredFileName = ensureFileName(fileName, mimeType)
             val response = NetworkClients.detectClient.submitFormWithBinaryData(
                 formData = formData {
                     append(
                         key = "image",
                         value = imageBytes,
                         headers = Headers.build {
-                            append(HttpHeaders.ContentType, contentTypeHeader)
-                            append(HttpHeaders.ContentDisposition, contentDispositionHeader)
+                            append(HttpHeaders.ContentType, mimeType.toString())
+                            append(HttpHeaders.ContentDisposition, "filename=\"$ensuredFileName\"")
                         }
                     )
                 }
@@ -86,75 +68,58 @@ object NetworkDataSource {
                     headers.append(HttpHeaders.Authorization, "Bearer $token")
                 }
             }
-            Log.d("detectImageTyped", "${response}")
-            Log.d(
-                "detectImageTyped",
-                "API call completed with status: ${response.status} in ${System.currentTimeMillis() - startedAt} ms"
-            )
+
             if (response.status == HttpStatusCode.OK) {
-                Log.d("detectImageTyped", "API call successful")
-                val responseBody = response.bodyAsText()
-                Log.d("detectImageTyped", "Raw detect response: $responseBody")
-                parseDetectResponse(responseBody)
+                parseDetectResponse(response.bodyAsText())
             } else {
                 null
             }
         } catch (e: HttpRequestTimeoutException) {
-            Log.e("detectImageTyped", "Request timeout after 60000 ms: ${e.message}", e)
+            Log.e("detectImageTyped", "Detect request timed out", e)
             null
         } catch (e: SocketTimeoutException) {
-            Log.e("detectImageTyped", "Socket timeout: ${e.message}", e)
+            Log.e("detectImageTyped", "Detect socket timed out", e)
             null
         } catch (e: Exception) {
-            Log.e("detectImageTyped", "Error parsing response: ${e.message}", e)
+            Log.e("detectImageTyped", "Detect request failed", e)
             null
         }
     }
 
-    private fun parseDetectResponse(responseBody: String): DiagnoseApiResponse? {
-        return try {
-            networkJson.decodeFromString<DiagnoseApiResponse>(responseBody)
-        } catch (primaryError: Exception) {
-            Log.w("detectImageTyped", "Primary detect parser failed, trying fallback schema", primaryError)
-            try {
-                val fallback = networkJson.decodeFromString<DetectFallbackResponse>(responseBody)
-                fallback.toDiagnoseApiResponse()
-            } catch (fallbackError: Exception) {
-                Log.e("detectImageTyped", "Fallback detect parser failed: ${fallbackError.message}", fallbackError)
-                null
-            }
-        }
-    }
-
-    /**
-     * Lấy Gemini API key từ server
-     * Server trả về JSON: { "success": true, "data": { "apiKey": "..." } }
-     */
-    suspend fun getGeminiApiKey(token: String? = null): String? = withContext(Dispatchers.IO) {
+    suspend fun sendChatMessage(
+        message: String,
+        history: List<ChatbotHistoryMessage>,
+        token: String
+    ): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val response = NetworkClients.apiKeyClient.get("")
-            
+            val response = NetworkClients.chatbotClient.post("") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                contentType(ContentType.Application.Json)
+                setBody(
+                    ChatbotRequest(
+                        message = message,
+                        history = history
+                    )
+                )
+            }
+
             if (response.status == HttpStatusCode.OK) {
-                val apiKeyResponse: ApiKeyResponse = response.body()
-                
-                if (apiKeyResponse.success && apiKeyResponse.data.apiKey.isNotEmpty()) {
-                    return@withContext apiKeyResponse.data.apiKey
+                val payload: ChatbotResponse = response.body()
+                val text = payload.data.text.trim()
+                if (payload.success && text.isNotEmpty()) {
+                    Result.success(text)
                 } else {
-                    return@withContext null
+                    Result.failure(IllegalStateException("Dịch vụ chatbot tạm thời không khả dụng."))
                 }
             } else {
-                null
+                Result.failure(IllegalStateException(parseApiError(response.bodyAsText())))
             }
         } catch (e: Exception) {
-            Log.e("getGeminiApiKey", "Error getting API key: ${e.message}", e)
-            null
+            Log.e("sendChatMessage", "Chatbot request failed", e)
+            Result.failure(IllegalStateException("Không thể kết nối đến trợ lý cây trồng."))
         }
     }
 
-    /**
-     * Lấy danh sách bệnh cây (raw JSON) từ API /api/diseases.
-     * Trả về String JSON để lưu vào Room, tránh phụ thuộc chặt vào schema server.
-     */
     suspend fun getDiseasesJson(): String? = withContext(Dispatchers.IO) {
         try {
             val response = NetworkClients.diseasesClient.get("")
@@ -166,15 +131,11 @@ object NetworkDataSource {
                 null
             }
         } catch (e: Exception) {
-            Log.e("getDiseasesJson", "Error getting diseases: ${e.message}", e)
+            Log.e("getDiseasesJson", "Error getting diseases", e)
             null
         }
     }
-    
-    /**
-     * Nhận diện cây từ ảnh
-     * Gọi API /api/classify với ảnh được upload
-     */
+
     suspend fun classifyImageTyped(
         imageBytes: ByteArray,
         fileName: String,
@@ -189,30 +150,15 @@ object NetworkDataSource {
         token: String? = null
     ): ClassifyApiResponse? = withContext(Dispatchers.IO) {
         try {
-            val ensuredFileName = run {
-                val hasExt = fileName.contains('.')
-                if (hasExt) fileName else {
-                    val mimeString = mimeType.toString().lowercase()
-                    val extension = when {
-                        mimeString.contains("jpeg") || mimeString.contains("jpg") -> ".jpg"
-                        mimeString.contains("png") -> ".png"
-                        mimeString.contains("webp") -> ".webp"
-                        mimeString.contains("gif") -> ".gif"
-                        else -> ".jpg"
-                    }
-                    "$fileName$extension"
-                }
-            }
-            val contentTypeHeader = mimeType.toString()
-            val contentDispositionHeader = "filename=\"$ensuredFileName\""
+            val ensuredFileName = ensureFileName(fileName, mimeType)
             val response = NetworkClients.classifyClient.submitFormWithBinaryData(
                 formData = formData {
                     append(
                         key = "image",
                         value = imageBytes,
                         headers = Headers.build {
-                            append(HttpHeaders.ContentType, contentTypeHeader)
-                            append(HttpHeaders.ContentDisposition, contentDispositionHeader)
+                            append(HttpHeaders.ContentType, mimeType.toString())
+                            append(HttpHeaders.ContentDisposition, "filename=\"$ensuredFileName\"")
                         }
                     )
                 }
@@ -223,17 +169,55 @@ object NetworkDataSource {
             }
 
             if (response.status == HttpStatusCode.OK) {
-                Log.d("classifyImageTyped", "API call successful")
-                val result: ClassifyApiResponse = response.body()
-                result
+                response.body()
             } else {
                 null
             }
         } catch (e: Exception) {
-            Log.e("classifyImageTyped", "Error parsing response: ${e.message}", e)
+            Log.e("classifyImageTyped", "Classify request failed", e)
             null
         }
     }
+
+    private fun parseDetectResponse(responseBody: String): DiagnoseApiResponse? {
+        return try {
+            networkJson.decodeFromString<DiagnoseApiResponse>(responseBody)
+        } catch (primaryError: Exception) {
+            Log.w("detectImageTyped", "Primary detect parser failed, trying fallback schema", primaryError)
+            try {
+                val fallback = networkJson.decodeFromString<DetectFallbackResponse>(responseBody)
+                fallback.toDiagnoseApiResponse()
+            } catch (fallbackError: Exception) {
+                Log.e("detectImageTyped", "Fallback detect parser failed", fallbackError)
+                null
+            }
+        }
+    }
+
+    private fun ensureFileName(fileName: String, mimeType: ContentType): String {
+        val hasExtension = fileName.contains('.')
+        if (hasExtension) {
+            return fileName
+        }
+
+        val extension = when {
+            mimeType.match(ContentType.Image.JPEG) -> ".jpg"
+            mimeType.match(ContentType.Image.PNG) -> ".png"
+            mimeType.toString().contains("webp", ignoreCase = true) -> ".webp"
+            mimeType.toString().contains("gif", ignoreCase = true) -> ".gif"
+            else -> ".jpg"
+        }
+
+        return "$fileName$extension"
+    }
+}
+
+private fun parseApiError(responseBody: String): String {
+    return runCatching {
+        val payload = Json { ignoreUnknownKeys = true }
+            .decodeFromString<ApiErrorResponse>(responseBody)
+        payload.message ?: payload.error ?: "Yêu cầu không thành công."
+    }.getOrDefault("Yêu cầu không thành công.")
 }
 
 @Serializable
@@ -290,5 +274,3 @@ private fun DetectFallbackResponse.toDiagnoseApiResponse(): DiagnoseApiResponse?
         )
     )
 }
-
-

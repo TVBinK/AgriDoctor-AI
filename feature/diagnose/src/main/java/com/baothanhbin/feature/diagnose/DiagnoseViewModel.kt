@@ -3,7 +3,6 @@ package com.baothanhbin.feature.diagnose
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
-import android.location.Location
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -17,16 +16,16 @@ import com.baothanhbin.core.model.ClassifyData
 import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 sealed class DiagnoseNavigationEvent {
     data class NavigateToResult(
@@ -95,11 +94,13 @@ class DiagnoseViewModel @Inject constructor(
         viewModelScope.launch {
             val uri = entity.imageUri?.let { Uri.parse(it) }
             val classifyData = entity.toClassifyData()
-            _navigationEvent.emit(DiagnoseNavigationEvent.NavigateToResult(
-                imageUri = uri,
-                apiType = ApiType.CLASSIFY,
-                classifyData = classifyData
-            ))
+            _navigationEvent.emit(
+                DiagnoseNavigationEvent.NavigateToResult(
+                    imageUri = uri,
+                    apiType = ApiType.CLASSIFY,
+                    classifyData = classifyData
+                )
+            )
         }
     }
 
@@ -111,12 +112,10 @@ class DiagnoseViewModel @Inject constructor(
 
     fun checkAndGetLocation(context: Context, locationStateHolder: LocationStateHolder) {
         if (!LocationHelper.hasLocationPermission(context)) {
-            // Chưa có permission, hiển thị dialog yêu cầu permission
             _showLocationDialog.value = true
             return
         }
 
-        // Đã có permission, lấy location
         getCurrentLocation(context, locationStateHolder)
     }
 
@@ -125,9 +124,6 @@ class DiagnoseViewModel @Inject constructor(
         LocationHelper.getCurrentLocation(
             context = context,
             onLocationReceived = { location ->
-                Log.d("DiagnoseViewModel", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
-                
-                // Lấy địa chỉ từ tọa độ
                 viewModelScope.launch {
                     val address = LocationHelper.getAddressFromLocation(
                         context = context,
@@ -135,7 +131,6 @@ class DiagnoseViewModel @Inject constructor(
                         longitude = location.longitude
                     )
                     locationStateHolder.updateAddress(address)
-                    Log.d("DiagnoseViewModel", "Địa chỉ: $address")
                 }
             },
             onError = { exception ->
@@ -165,8 +160,7 @@ class DiagnoseViewModel @Inject constructor(
     }
 
     fun shouldLoadLocationOnStart(context: Context, locationStateHolder: LocationStateHolder): Boolean {
-        return LocationHelper.hasLocationPermission(context) && 
-               locationStateHolder.currentAddress == null
+        return LocationHelper.hasLocationPermission(context) &&
+            locationStateHolder.currentAddress == null
     }
 }
-

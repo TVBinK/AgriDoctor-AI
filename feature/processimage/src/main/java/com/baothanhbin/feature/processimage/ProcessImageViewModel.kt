@@ -54,6 +54,7 @@ sealed class ProcessImageNavigationEvent {
         val classifyData: com.baothanhbin.core.model.ClassifyData? = null // For CLASSIFY API - chứa tất cả thông tin
     ) : ProcessImageNavigationEvent()
     data class NavigateToFailed(val imageUri: Uri?, val apiType: ApiType = ApiType.DETECT) : ProcessImageNavigationEvent()
+    data object NavigateToLogin : ProcessImageNavigationEvent()
 }
 
 @HiltViewModel
@@ -99,26 +100,16 @@ class ProcessImageViewModel @Inject constructor(
 
                 _uiState.value = ProcessImageUiState(step = 1) // uploading
                 
-                // Get Auth Token
                 val token = authRepository.getToken()
-                Log.d("ProcessImage", "Token retrieved: ${if (token != null) "Yes (length=${token.length})" else "No"}")
-
-                // Log apiType received
-                Log.d("ProcessImage", "Processing image with apiType: $apiType (DETECT=${apiType == ApiType.DETECT}, CLASSIFY=${apiType == ApiType.CLASSIFY})")
+                if (token.isNullOrBlank()) {
+                    Log.w("ProcessImage", "Missing auth token, redirecting to login before upload.")
+                    _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToLogin)
+                    return@launch
+                }
 
                 // For detect API, use existing logic
                 if (apiType == ApiType.DETECT) {
-                    Log.d("ProcessImage", "Calling DETECT API")
                     val detectResult = NetworkDataSource.detectImageTyped(bytes, name, mime, token)
-
-                    // Log API response
-                    Log.d("ProcessImage", "API Response received")
-                    if (detectResult != null) {
-                        Log.d("ProcessImage", "Result: success=${detectResult.success}, diseaseName=${detectResult.data.diseaseName}")
-                        Log.d("ProcessImage", "Full result: $detectResult")
-                    } else {
-                        Log.d("ProcessImage", "Result is null")
-                    }
 
                     _uiState.value = ProcessImageUiState(step = 2) // processing done
                     delay(500) // Small delay to show processing state
@@ -164,35 +155,19 @@ class ProcessImageViewModel @Inject constructor(
                         _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(imageUri, apiType))
                     }
                     } else {
-                        val reason = when {
-                            detectResult == null -> "result is null"
-                            !detectResult.success -> "success=false"
-                            detectResult.data.diseaseName == "No disease detected" -> "No disease detected"
-                            else -> "unknown reason"
-                        }
-                        Log.d("ProcessImage", "Navigating to DiagnoseFailedScreen - $reason")
                         // Navigate to failed screen (fail case, null result, or no disease detected)
                         _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToFailed(imageUri, apiType))
                     }
                 } else {
                     // Handle classify API
-                    Log.d("ProcessImage", "Calling CLASSIFY API")
                     val classifyResult = NetworkDataSource.classifyImageTyped(bytes, name, mime, token)
-                    
-                    Log.d("ProcessImage", "Classify API Response received")
-                    if (classifyResult != null) {
-                        Log.d("ProcessImage", "Result: success=${classifyResult.success}, plantName=${classifyResult.data.plantName}")
-                    } else {
-                        Log.d("ProcessImage", "Classify result is null")
-                    }
-                    
+
                     _uiState.value = ProcessImageUiState(step = 2) // processing done
                     delay(500)
                     
                     // Check if classify result is valid
                     if (classifyResult != null && classifyResult.success) {
                         val classifyData = classifyResult.data
-                        Log.d("ProcessImage", "Classify successful: plantName=${classifyData.plantName}, plantNameVN=${classifyData.plantNameVN}, confidence=${classifyData.confidence}")
                         // Navigate to result screen (DiagnoseResultScreen will handle displaying classify data)
                         try {
                             // Copy image to app storage to ensure persistent access
@@ -264,7 +239,6 @@ class ProcessImageViewModel @Inject constructor(
         try {
             // Skip copying when the image already lives in app-private storage.
             if (isAlreadyInAppStorage(context, sourceUri)) {
-                Log.d("ProcessImage", "Image already in app storage: $sourceUri")
                 return@withContext sourceUri
             }
             
@@ -272,7 +246,7 @@ class ProcessImageViewModel @Inject constructor(
             val bitmap = loadBitmapWithCorrectOrientation(context, sourceUri)
             
             if (bitmap == null) {
-                Log.e("ProcessImage", "Failed to read image from URI: $sourceUri")
+                Log.e("ProcessImage", "Failed to read image from source")
                 return@withContext null
             }
             
@@ -283,7 +257,6 @@ class ProcessImageViewModel @Inject constructor(
             )
             bitmap.recycle()
             
-            Log.d("ProcessImage", "Image copied from $sourceUri to $outputUri")
             outputUri
         } catch (e: Exception) {
             Log.e("ProcessImage", "Error copying image: ${e.message}", e)
@@ -298,7 +271,6 @@ class ProcessImageViewModel @Inject constructor(
     ): Uri? = withContext(Dispatchers.IO) {
         try {
             if (isAlreadyInAppStorage(context, sourceUri) && detections.isEmpty()) {
-                Log.d("ProcessImage", "Image already in app storage with no detections: $sourceUri")
                 return@withContext sourceUri
             }
 
@@ -440,7 +412,7 @@ class ProcessImageViewModel @Inject constructor(
             val directoryPath = directory.canonicalPath.removeSuffix(File.separator) + File.separator
             filePath.startsWith(directoryPath)
         }.getOrElse { error ->
-            Log.w("ProcessImage", "Unable to inspect private file path for $file: ${error.message}")
+            Log.w("ProcessImage", "Unable to inspect private file path: ${error.message}")
             false
         }
     }
@@ -512,7 +484,7 @@ class ProcessImageViewModel @Inject constructor(
                 longitude = location.longitude
             )
             
-            Log.d("ProcessImage", "Đã lấy location: $address")
+            Log.d("ProcessImage", "Da lay thong tin vi tri de luu vao lich su.")
             return@withContext address
         } catch (e: Exception) {
             Log.e("ProcessImage", "Lỗi khi lấy location address: ${e.message}", e)

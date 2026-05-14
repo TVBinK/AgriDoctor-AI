@@ -64,8 +64,15 @@ data class VerifyForgotOtpRequest(
 )
 
 @Serializable
+data class VerifyForgotOtpResponse(
+    val message: String,
+    val resetToken: String
+)
+
+@Serializable
 data class ResetPasswordRequest(
     val email: String,
+    val resetToken: String,
     val newPassword: String,
     val confirmPassword: String
 )
@@ -73,6 +80,12 @@ data class ResetPasswordRequest(
 @Serializable
 data class MessageResponse(
     val message: String
+)
+
+@Serializable
+data class ApiErrorResponse(
+    val message: String? = null,
+    val error: String? = null
 )
 
 @Serializable

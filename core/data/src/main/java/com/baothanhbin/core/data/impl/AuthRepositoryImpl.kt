@@ -2,6 +2,7 @@ package com.baothanhbin.core.data.impl
 
 import com.baothanhbin.core.data.repository.AuthRepository
 import com.baothanhbin.core.datastore.AuthDataStore
+import com.baothanhbin.core.model.ApiErrorResponse
 import com.baothanhbin.core.model.AuthResponse
 import com.baothanhbin.core.model.ChangePasswordRequest
 import com.baothanhbin.core.model.ForgotPasswordRequest
@@ -12,95 +13,68 @@ import com.baothanhbin.core.model.SignupRequest
 import com.baothanhbin.core.model.UpdateProfileRequest
 import com.baothanhbin.core.model.UpdateProfileResponse
 import com.baothanhbin.core.model.UserProfile
-import com.baothanhbin.core.model.VerifyOtpRequest
 import com.baothanhbin.core.model.VerifyForgotOtpRequest
+import com.baothanhbin.core.model.VerifyForgotOtpResponse
+import com.baothanhbin.core.model.VerifyOtpRequest
 import com.baothanhbin.core.network.NetworkClients
 import io.ktor.client.call.body
+import io.ktor.client.plugins.ResponseException
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
-import io.ktor.client.request.header
 import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
-import kotlinx.coroutines.flow.Flow
-import io.ktor.client.statement.bodyAsText
-import kotlinx.serialization.json.Json
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.json.Json
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val authDataStore: AuthDataStore
 ) : AuthRepository {
 
+    private val errorJson = Json { ignoreUnknownKeys = true }
+
     override val isLoggedIn: Flow<Boolean> = authDataStore.isLoggedInFlow()
 
-    override suspend fun login(request: LoginRequest): Result<AuthResponse> {
-        android.util.Log.d("AuthRepository", "Logging in with email: ${request.email}")
-        android.util.Log.d("AuthRepository", "Login request body: $request")
-        return try {
-            val response = NetworkClients.authClient.post("login") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }.body<AuthResponse>()
-            
-            android.util.Log.d("AuthRepository", "Login response: $response")
+    override suspend fun login(request: LoginRequest): Result<AuthResponse> = executeRequest {
+        val response = NetworkClients.authClient.post("login") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body<AuthResponse>()
 
-            // If API returns token immediately (e.g. password login), save it
-            if (!response.token.isNullOrEmpty()) {
-                response.token?.let { saveToken(it) }
-            }
-            Result.success(response)
-        } catch (e: Exception) {
-            android.util.Log.e("AuthRepository", "Login failed", e)
-            Result.failure(e)
+        if (!response.token.isNullOrEmpty()) {
+            response.token?.let { saveToken(it) }
         }
+
+        response
     }
 
-    override suspend fun signup(request: SignupRequest): Result<AuthResponse> {
-        android.util.Log.d("AuthRepository", "Signing up with email: ${request.email}")
-        android.util.Log.d("AuthRepository", "Signup request body: $request")
-        return try {
-            val response = NetworkClients.authClient.post("signup") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }
-            
-            val responseBody = response.bodyAsText()
-            android.util.Log.d("AuthRepository", "Signup raw response: $responseBody")
-            
-            val authResponse = Json { 
-                ignoreUnknownKeys = true 
-                coerceInputValues = true
-            }.decodeFromString<AuthResponse>(responseBody)
-            
-            Result.success(authResponse)
-        } catch (e: Exception) {
-            android.util.Log.e("AuthRepository", "Signup failed", e)
-            Result.failure(e)
-        }
+    override suspend fun signup(request: SignupRequest): Result<AuthResponse> = executeRequest {
+        NetworkClients.authClient.post("signup") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
     }
 
-    override suspend fun verifyOtp(request: VerifyOtpRequest): Result<AuthResponse> {
-        android.util.Log.d("AuthRepository", "Verify OTP request body: $request")
-        return try {
-            val response = NetworkClients.authClient.post("verify-otp") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }.body<AuthResponse>()
-            
-            android.util.Log.d("AuthRepository", "Verify OTP response: $response")
-            
-            if (!response.token.isNullOrEmpty()) {
-                response.token?.let { saveToken(it) }
-            }
-            Result.success(response)
-        } catch (e: Exception) {
-            android.util.Log.e("AuthRepository", "Verify OTP failed", e)
-            Result.failure(e)
+    override suspend fun verifyOtp(request: VerifyOtpRequest): Result<AuthResponse> = executeRequest {
+        val response = NetworkClients.authClient.post("verify-otp") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body<AuthResponse>()
+
+        if (!response.token.isNullOrEmpty()) {
+            response.token?.let { saveToken(it) }
         }
+
+        response
     }
 
     override suspend fun getProfile(): Result<UserProfile> {
@@ -131,31 +105,25 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun forgotPassword(request: ForgotPasswordRequest): Result<MessageResponse> {
-        return runCatching {
-            NetworkClients.authClient.post("forgot-password") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }.body()
-        }
+    override suspend fun forgotPassword(request: ForgotPasswordRequest): Result<MessageResponse> = executeRequest {
+        NetworkClients.authClient.post("forgot-password") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
     }
 
-    override suspend fun verifyForgotOtp(request: VerifyForgotOtpRequest): Result<MessageResponse> {
-        return runCatching {
-            NetworkClients.authClient.post("verify-forgot-otp") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }.body()
-        }
+    override suspend fun verifyForgotOtp(request: VerifyForgotOtpRequest): Result<VerifyForgotOtpResponse> = executeRequest {
+        NetworkClients.authClient.post("verify-forgot-otp") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
     }
 
-    override suspend fun resetPassword(request: ResetPasswordRequest): Result<MessageResponse> {
-        return runCatching {
-            NetworkClients.authClient.post("reset-password") {
-                contentType(ContentType.Application.Json)
-                setBody(request)
-            }.body()
-        }
+    override suspend fun resetPassword(request: ResetPasswordRequest): Result<MessageResponse> = executeRequest {
+        NetworkClients.authClient.post("reset-password") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
     }
 
     override suspend fun logout() {
@@ -171,7 +139,6 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override fun isUserLoggedIn(): Boolean {
-        // Synchronous check - may need to be called from coroutine context
         return runCatching {
             kotlinx.coroutines.runBlocking {
                 authDataStore.getToken() != null
@@ -179,11 +146,35 @@ class AuthRepositoryImpl @Inject constructor(
         }.getOrDefault(false)
     }
 
-    private suspend fun <T> runAuthorized(block: suspend (String) -> T): Result<T> {
+    private suspend inline fun <reified T> executeRequest(
+        crossinline requestBlock: suspend () -> T
+    ): Result<T> {
+        return try {
+            Result.success(requestBlock())
+        } catch (error: ResponseException) {
+            Result.failure(IllegalStateException(extractApiError(error.response)))
+        } catch (error: IOException) {
+            Result.failure(IllegalStateException("Không thể kết nối đến máy chủ."))
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+    }
+
+    private suspend fun extractApiError(response: HttpResponse): String {
+        return runCatching {
+            val bodyText = response.bodyAsText()
+            val parsed = errorJson.decodeFromString<ApiErrorResponse>(bodyText)
+            parsed.message ?: parsed.error ?: "Yêu cầu không thành công."
+        }.getOrDefault("Yêu cầu không thành công.")
+    }
+
+    private suspend inline fun <reified T> runAuthorized(
+        crossinline block: suspend (String) -> T
+    ): Result<T> {
         val token = authDataStore.getToken()
             ?: return Result.failure(IllegalStateException("Phiên đăng nhập không hợp lệ."))
 
-        return runCatching {
+        return executeRequest {
             block(token)
         }
     }

@@ -25,6 +25,7 @@ data class ForgotPasswordUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val message: String? = null,
+    val resetToken: String? = null,
     val isResetSuccessful: Boolean = false
 )
 
@@ -61,6 +62,7 @@ class ForgotPasswordViewModel @Inject constructor(
                         step = ForgotPasswordStep.VerifyOtp,
                         isLoading = false,
                         message = response.message,
+                        resetToken = null,
                         error = null
                     )
                 }
@@ -99,6 +101,7 @@ class ForgotPasswordViewModel @Inject constructor(
                         step = ForgotPasswordStep.ResetPassword,
                         isLoading = false,
                         message = response.message,
+                        resetToken = response.resetToken,
                         error = null
                     )
                 }
@@ -141,11 +144,20 @@ class ForgotPasswordViewModel @Inject constructor(
             }
         }
 
+        val resetToken = _uiState.value.resetToken
+        if (resetToken.isNullOrBlank()) {
+            _uiState.value = _uiState.value.copy(
+                error = "Phiên đặt lại mật khẩu không hợp lệ. Vui lòng xác thực OTP lại."
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null, message = null)
             authRepository.resetPassword(
                 ResetPasswordRequest(
                     email = email.trim(),
+                    resetToken = resetToken,
                     newPassword = newPassword,
                     confirmPassword = confirmPassword
                 )

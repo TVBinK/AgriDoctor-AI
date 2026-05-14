@@ -3,33 +3,32 @@ package com.baothanhbin.feature.myplants
 import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Context
-import android.location.Location
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.baothanhbin.core.data.repository.PlantRepository
+import com.baothanhbin.core.database.model.PlantEntity
+import com.baothanhbin.core.database.model.ReminderEntity
+import com.baothanhbin.core.database.model.displayName
 import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.core.ui.util.LocationStateHolder
+import com.baothanhbin.core.worker.ReminderWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.Data
-import androidx.work.WorkManager
-import androidx.work.ExistingWorkPolicy
-import com.baothanhbin.core.data.repository.PlantRepository
-import com.baothanhbin.core.database.model.PlantEntity
-import com.baothanhbin.core.worker.ReminderWorker
-import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import com.baothanhbin.core.database.model.displayName
-import com.baothanhbin.core.database.model.ReminderEntity
 
 @HiltViewModel
 class MyPlantsViewModel @Inject constructor(
@@ -109,7 +108,7 @@ class MyPlantsViewModel @Inject constructor(
             Log.d("ReminderWorker", "enqueueUniqueWork thanh cong cho reminderId=$reminderId")
         }
     }
-    
+
     fun toggleReminderStatus(id: Long, isCompleted: Boolean) {
         viewModelScope.launch {
             plantRepository.updateReminderStatus(id, isCompleted)
@@ -123,12 +122,10 @@ class MyPlantsViewModel @Inject constructor(
 
     fun checkAndGetLocation(context: Context, locationStateHolder: LocationStateHolder) {
         if (!LocationHelper.hasLocationPermission(context)) {
-            // Chưa có permission, hiển thị dialog yêu cầu permission
             _showLocationDialog.value = true
             return
         }
 
-        // Đã có permission, lấy location
         getCurrentLocation(context, locationStateHolder)
     }
 
@@ -137,9 +134,6 @@ class MyPlantsViewModel @Inject constructor(
         LocationHelper.getCurrentLocation(
             context = context,
             onLocationReceived = { location ->
-                Log.d("MyPlantsViewModel", "Vị trí: Latitude=${location.latitude}, Longitude=${location.longitude}")
-                
-                // Lấy địa chỉ từ tọa độ
                 viewModelScope.launch {
                     val address = LocationHelper.getAddressFromLocation(
                         context = context,
@@ -147,7 +141,6 @@ class MyPlantsViewModel @Inject constructor(
                         longitude = location.longitude
                     )
                     locationStateHolder.updateAddress(address)
-                    Log.d("MyPlantsViewModel", "Địa chỉ: $address")
                 }
             },
             onError = { exception ->
@@ -177,8 +170,7 @@ class MyPlantsViewModel @Inject constructor(
     }
 
     fun shouldLoadLocationOnStart(context: Context, locationStateHolder: LocationStateHolder): Boolean {
-        return LocationHelper.hasLocationPermission(context) && 
-               locationStateHolder.currentAddress == null
+        return LocationHelper.hasLocationPermission(context) &&
+            locationStateHolder.currentAddress == null
     }
 }
-

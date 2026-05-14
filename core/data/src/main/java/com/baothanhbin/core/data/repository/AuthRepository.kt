@@ -12,6 +12,7 @@ import com.baothanhbin.core.model.UpdateProfileResponse
 import com.baothanhbin.core.model.UserProfile
 import com.baothanhbin.core.model.VerifyOtpRequest
 import com.baothanhbin.core.model.VerifyForgotOtpRequest
+import com.baothanhbin.core.model.VerifyForgotOtpResponse
 import kotlinx.coroutines.flow.Flow
 
 interface AuthRepository {
@@ -23,7 +24,7 @@ interface AuthRepository {
     suspend fun updateProfile(request: UpdateProfileRequest): Result<UpdateProfileResponse>
     suspend fun changePassword(request: ChangePasswordRequest): Result<MessageResponse>
     suspend fun forgotPassword(request: ForgotPasswordRequest): Result<MessageResponse>
-    suspend fun verifyForgotOtp(request: VerifyForgotOtpRequest): Result<MessageResponse>
+    suspend fun verifyForgotOtp(request: VerifyForgotOtpRequest): Result<VerifyForgotOtpResponse>
     suspend fun resetPassword(request: ResetPasswordRequest): Result<MessageResponse>
     suspend fun logout()
     suspend fun saveToken(token: String)

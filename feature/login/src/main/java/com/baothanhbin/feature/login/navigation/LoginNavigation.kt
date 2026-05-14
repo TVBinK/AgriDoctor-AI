@@ -13,14 +13,12 @@ fun NavController.navigateToLogin() {
 
 fun NavGraphBuilder.loginScreen(
     onNavigateToSignup: () -> Unit,
-    onContinueAsGuest: () -> Unit,
     onNavigateToPin: (String) -> Unit,
     onNavigateToForgotPassword: () -> Unit,
 ) {
     composable(route = LOGIN_ROUTE) {
         LoginRoute(
             onNavigateToSignup = onNavigateToSignup,
-            onContinueAsGuest = onContinueAsGuest,
             onNavigateToPin = onNavigateToPin,
             onNavigateToForgotPassword = onNavigateToForgotPassword
         )

@@ -61,7 +61,7 @@ object LocationHelper {
                     locationReceived = true
                     Log.d(
                         TAG,
-                        "getCurrentLocation() -> nhận được location: lat=${location.latitude}, lon=${location.longitude}, accuracy=${location.accuracy}m, provider=${location.provider}"
+                        "getCurrentLocation() -> da nhan duoc location hop le"
                     )
                     onLocationReceived(location)
                 } else if (!locationReceived && location == null) {
@@ -150,7 +150,7 @@ object LocationHelper {
                 // Tăng maxResults lên 3 để có nhiều kết quả hơn, chọn kết quả chi tiết nhất
                 Log.d(
                     TAG,
-                    "getAddressFromLocation() -> gọi geocoder.getFromLocation(lat=$latitude, lon=$longitude, maxResults=3)"
+                    "getAddressFromLocation() -> dang goi geocoder async"
                 )
                 geocoder.getFromLocation(latitude, longitude, 3, geocodeListener)
                 
@@ -165,7 +165,7 @@ object LocationHelper {
                 if (addressResult == null) {
                     Log.w(TAG, "getAddressFromLocation() -> hết thời gian đợi geocoding, trả về null")
                 } else {
-                    Log.d(TAG, "getAddressFromLocation() -> geocoding thành công: $addressResult")
+                    Log.d(TAG, "getAddressFromLocation() -> geocoding thanh cong")
                 }
                 return@withContext addressResult
             } else {
@@ -173,7 +173,7 @@ object LocationHelper {
                 @Suppress("DEPRECATION")
                 Log.d(
                     TAG,
-                    "getAddressFromLocation() -> (API<=32) gọi geocoder.getFromLocation(lat=$latitude, lon=$longitude, maxResults=3)"
+                    "getAddressFromLocation() -> dang goi geocoder dong bo"
                 )
                 val addresses = geocoder.getFromLocation(latitude, longitude, 3)
                 
@@ -217,7 +217,7 @@ object LocationHelper {
         try {
             val fullAddress = address.getAddressLine(0)
             if (!fullAddress.isNullOrBlank()) {
-                Log.d(TAG, "formatAddress() -> sử dụng getAddressLine(0): $fullAddress")
+                Log.d(TAG, "formatAddress() -> su dung dia chi day du tu geocoder")
                 return fullAddress
             }
         } catch (e: Exception) {
@@ -274,12 +274,12 @@ object LocationHelper {
         // Nếu có ít nhất một phần, ghép lại bằng dấu phẩy
         return if (parts.isNotEmpty()) {
             val formatted = parts.joinToString(", ")
-            Log.d(TAG, "formatAddress() -> format thủ công: $formatted")
+            Log.d(TAG, "formatAddress() -> da format dia chi thanh cong")
             formatted
         } else {
             // Fallback: nếu không có thông tin địa chỉ nào, hiển thị tọa độ
             val fallback = "Lat: ${"%.4f".format(address.latitude)}, Lon: ${"%.4f".format(address.longitude)}"
-            Log.w(TAG, "formatAddress() -> không có thông tin, dùng fallback: $fallback")
+            Log.w(TAG, "formatAddress() -> khong co du lieu dia chi, dung fallback toa do")
             fallback
         }
     }

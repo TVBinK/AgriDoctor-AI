@@ -536,7 +536,7 @@ private fun PlantHistoryItem(
 ) {
     val context = LocalContext.current
     
-    Log.d("PlantHistoryItem", "Rendering plant: ${entity.plantName}, imageUri: ${entity.imageUri}")
+    Log.d("PlantHistoryItem", "Rendering plant history item")
 
     Card(
         modifier = Modifier
@@ -699,7 +699,7 @@ private fun HistoryItem(
                         // Log.d("HistoryItem", "Loading image from URI: $uriString")
                         parsed
                     } catch (e: Exception) {
-                        Log.e("HistoryItem", "Error parsing URI: $uriString", e)
+                        Log.e("HistoryItem", "Error parsing image URI", e)
                         null
                     }
 
@@ -713,16 +713,11 @@ private fun HistoryItem(
                                     onError = { _, result ->
                                         Log.e(
                                             "HistoryItem",
-                                            "Error loading image from URI: $uriString",
+                                            "Error loading image from URI",
                                             result.throwable
                                         )
                                     },
-                                    onSuccess = { _, _ ->
-                                        Log.d(
-                                            "HistoryItem",
-                                            "Successfully loaded image from URI: $uriString"
-                                        )
-                                    }
+                                    onSuccess = { _, _ -> }
                                 )
                                 .build(),
                             contentDescription = null,

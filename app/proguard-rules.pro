@@ -55,10 +55,6 @@
 -keep class androidx.compose.** { *; }
 -keep interface androidx.compose.** { *; }
 -dontwarn androidx.compose.**
--keep class com.google.ai.client.generativeai.** { *; }
--keep interface com.google.ai.client.generativeai.** { *; }
--dontwarn com.google.ai.client.generativeai.**
-
 # ============================================
 # Room Database & DataStore
 # ============================================

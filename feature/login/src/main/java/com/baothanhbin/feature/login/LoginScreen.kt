@@ -1,11 +1,12 @@
 package com.baothanhbin.feature.login
 
+import android.os.Build
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,9 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -28,9 +27,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +35,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,9 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.net.Uri
-import android.os.Build
-import android.util.Log
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.GifDecoder
@@ -69,19 +66,12 @@ import coil.request.ImageRequest
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.theme.BlueDefault
 import com.baothanhbin.core.theme.Body4
-import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.Title
-import com.baothanhbin.core.theme.White
-
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun LoginRoute(
     onNavigateToSignup: () -> Unit,
-    onContinueAsGuest: () -> Unit,
     onNavigateToPin: (String) -> Unit,
     onNavigateToForgotPassword: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel()
@@ -98,7 +88,6 @@ fun LoginRoute(
     LoginScreen(
         onLoginClick = { email, password -> viewModel.login(email, password) },
         onNavigateToSignup = onNavigateToSignup,
-        onContinueAsGuest = onContinueAsGuest,
         onForgotPasswordClick = onNavigateToForgotPassword,
         isLoading = uiState.isLoading,
         errorMessage = uiState.error
@@ -109,7 +98,6 @@ fun LoginRoute(
 fun LoginScreen(
     onLoginClick: (String, String) -> Unit,
     onNavigateToSignup: () -> Unit,
-    onContinueAsGuest: () -> Unit,
     onForgotPasswordClick: () -> Unit,
     isLoading: Boolean = false,
     errorMessage: String? = null
@@ -120,8 +108,7 @@ fun LoginScreen(
     val isFormValid = identifier.isNotEmpty() && password.isNotEmpty()
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = Modifier.fillMaxSize()
     ) {
         Image(
             painter = painterResource(id = R.drawable.bg_home),
@@ -144,7 +131,7 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Box(
                     modifier = Modifier.fillMaxWidth(),
@@ -152,14 +139,14 @@ fun LoginScreen(
                 ) {
                     GifImage(animatedRaw = R.raw.ic_tinh_linh)
                 }
+
                 Text(
                     text = "Đăng nhập",
                     style = MaterialTheme.typography.titleLarge,
                     color = Title,
-                    textAlign = TextAlign.Center,
+                    textAlign = TextAlign.Center
                 )
 
-                // ===== Form đăng nhập với style giống snippet =====
                 AnimatedVisibility(
                     visible = true,
                     enter = fadeIn(animationSpec = tween(600, delayMillis = 600)),
@@ -169,7 +156,6 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.Start
                     ) {
-                        // Email label
                         Text(
                             text = "Email",
                             fontSize = 16.sp,
@@ -207,7 +193,6 @@ fun LoginScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Password label
                         Text(
                             text = "Mật khẩu",
                             fontSize = 16.sp,
@@ -226,12 +211,24 @@ fun LoginScreen(
                                     color = Color(0xFFB0B4BA)
                                 )
                             },
-                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            visualTransformation = if (passwordVisible) {
+                                VisualTransformation.None
+                            } else {
+                                PasswordVisualTransformation()
+                            },
                             trailingIcon = {
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                     Icon(
-                                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                        contentDescription = if (passwordVisible) "Ẩn mật khẩu" else "Hiển thị mật khẩu",
+                                        imageVector = if (passwordVisible) {
+                                            Icons.Default.Visibility
+                                        } else {
+                                            Icons.Default.VisibilityOff
+                                        },
+                                        contentDescription = if (passwordVisible) {
+                                            "Ẩn mật khẩu"
+                                        } else {
+                                            "Hiển thị mật khẩu"
+                                        },
                                         tint = Color(0xFFB0B4BA)
                                     )
                                 }
@@ -271,7 +268,9 @@ fun LoginScreen(
                         text = "Quên mật khẩu?",
                         style = MaterialTheme.typography.Body4,
                         color = BlueDefault,
-                        modifier = Modifier.padding(start = 200.dp).clickable(onClick = onForgotPasswordClick)
+                        modifier = Modifier
+                            .padding(start = 200.dp)
+                            .clickable(onClick = onForgotPasswordClick)
                     )
                 }
 
@@ -283,6 +282,7 @@ fun LoginScreen(
                     exit = fadeOut(animationSpec = tween(600))
                 ) {
                     val buttonScale = if (isFormValid && !isLoading) 1f else 0.98f
+
                     Button(
                         onClick = {
                             if (isFormValid && !isLoading) {
@@ -294,15 +294,17 @@ fun LoginScreen(
                             .height(56.dp)
                             .scale(buttonScale),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isFormValid) Color(0xFF34A853) else Color(
-                                0xFFD3D3D3
-                            )
+                            containerColor = if (isFormValid) {
+                                Color(0xFF34A853)
+                            } else {
+                                Color(0xFFD3D3D3)
+                            }
                         ),
                         shape = RoundedCornerShape(12.dp),
                         enabled = isFormValid && !isLoading
                     ) {
                         if (isLoading) {
-                            androidx.compose.material3.CircularProgressIndicator(
+                            CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
                                 color = Color.White
                             )
@@ -316,7 +318,7 @@ fun LoginScreen(
                         }
                     }
                 }
-                
+
                 if (errorMessage != null) {
                     Text(
                         text = errorMessage,
@@ -345,27 +347,16 @@ fun LoginScreen(
                     color = BlueDefault,
                     style = MaterialTheme.typography.bodyMedium
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onContinueAsGuest),
-                    text = "Tiếp tục không cần tài khoản",
-                    textAlign = TextAlign.Center,
-                    color = Subtitle,
-                    style = MaterialTheme.typography.bodyMedium
-                )
             }
         }
+
         Image(
             painter = painterResource(id = R.drawable.bg_bottom_login),
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight()
-                .align (Alignment.BottomCenter),
+                .align(Alignment.BottomCenter),
             contentScale = ContentScale.FillWidth
         )
     }
@@ -403,7 +394,6 @@ private fun LoginScreenPreview() {
     LoginScreen(
         onLoginClick = { _, _ -> },
         onNavigateToSignup = {},
-        onContinueAsGuest = {},
-        onForgotPasswordClick = {},
+        onForgotPasswordClick = {}
     )
 }

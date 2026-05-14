@@ -45,9 +45,6 @@ fun MainNavHost(
             onNavigateToSignup = {
                 navController.navigateToSignup()
             },
-            onContinueAsGuest = {
-                navController.navigateToHome()
-            },
             onNavigateToPin = { email: String ->
                 navController.navigateToVerificationOTP(email) 
             },
@@ -97,7 +94,13 @@ fun MainNavHost(
         cameraScreen(navController = navController)
         processImageScreen(
             navController = navController,
-            locationStateHolder = appState.locationStateHolder
+            locationStateHolder = appState.locationStateHolder,
+            onRequireLogin = {
+                navController.navigate(LOGIN_ROUTE) {
+                    popUpTo(0) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
         )
 
 

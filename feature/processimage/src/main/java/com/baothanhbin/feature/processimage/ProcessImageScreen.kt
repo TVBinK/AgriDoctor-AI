@@ -1,6 +1,7 @@
 package com.baothanhbin.feature.processimage
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -79,9 +80,11 @@ fun ProcessImageRoute(
     imageUri: Uri? = null,
     locationStateHolder: LocationStateHolder,
     apiType: ApiType = ApiType.DETECT,
+    onRequireLogin: () -> Unit,
     viewModel: ProcessImageViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     // Handle navigation events
     LaunchedEffect(Unit) {
@@ -108,6 +111,14 @@ fun ProcessImageRoute(
                         apiType = event.apiType,
                         navOptions = navOptions
                     )
+                }
+                ProcessImageNavigationEvent.NavigateToLogin -> {
+                    Toast.makeText(
+                        context,
+                        "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    onRequireLogin()
                 }
             }
         }

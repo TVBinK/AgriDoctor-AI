@@ -26,7 +26,8 @@ fun NavController.navigateToProcessImage(
 
 fun NavGraphBuilder.processImageScreen(
     navController: NavHostController,
-    locationStateHolder: LocationStateHolder
+    locationStateHolder: LocationStateHolder,
+    onRequireLogin: () -> Unit
 ) {
     composable(
         route = "$PROCESS_IMAGE_ROUTE_WITH_ARG?$ARG_API_TYPE={$ARG_API_TYPE}",
@@ -50,7 +51,8 @@ fun NavGraphBuilder.processImageScreen(
             navController = navController,
             imageUri = uri,
             locationStateHolder = locationStateHolder,
-            apiType = apiType
+            apiType = apiType,
+            onRequireLogin = onRequireLogin
         )
     }
 }

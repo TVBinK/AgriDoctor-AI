@@ -229,6 +229,16 @@
     <string name="waiting_at">Đang chờ lúc %1$s</string>
     <string name="no_location">Chưa có vị trí</string>
     <string name="watering">Tưới nước</string>
+    <!-- Verification OTP Screen -->
+    <string name="enter_verification_code">Nhập mã xác thực</string>
+    <string name="verification_code_sent">Chúng tôi đã gửi mã xác thực gồm 6 chữ số đến\n</string>
+    <string name="didnt_receive_code">Chưa nhận được mã?</string>
+    <string name="sending">Đang gửi...</string>
+    <string name="resend_code">Gửi lại mã</string>
+    <string name="resend_in_timer">Gửi lại sau 00:53</string>
+    <string name="verify_code">Xác thực</string>
+    <string name="security_tip">Mẹo bảo mật</string>
+    <string name="security_tip_desc">Không bao giờ chia sẻ mã xác thực của bạn với bất kỳ ai. Chúng tôi sẽ không bao giờ yêu cầu mã này.</string>
 </resources>
 
 

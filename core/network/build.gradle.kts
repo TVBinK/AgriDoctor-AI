@@ -5,9 +5,16 @@ plugins {
 
 android {
     namespace = "com.baothanhbin.core.network"
-    
+
     buildFeatures {
         buildConfig = true
+    }
+
+    defaultConfig {
+        val apiBaseUrl = (findProperty("api.baseUrl") as String?)
+            ?: System.getenv("API_BASE_URL")
+            ?: "https://api.example.com"
+        buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl.trimEnd('/')}\"")
     }
 }
 

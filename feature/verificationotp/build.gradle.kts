@@ -12,6 +12,7 @@ dependencies {
     implementation(projects.core.ui)
     implementation(projects.core.data)
     implementation(projects.core.model)
+    implementation(projects.resources)
     
     // Compose
     implementation(platform(libs.androidx.compose.bom))

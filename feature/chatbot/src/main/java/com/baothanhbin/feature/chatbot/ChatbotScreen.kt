@@ -114,11 +114,6 @@ fun ChatbotScreen(
         }
     }
 
-    // Log state changes
-    LaunchedEffect(uiState.inputText) {
-        android.util.Log.d("ChatbotScreen", "uiState.inputText changed to: '${uiState.inputText}'")
-    }
-    
     LaunchedEffect(uiState.messages.size) {
         if (uiState.messages.isNotEmpty()) {
             listState.animateScrollToItem(uiState.messages.size - 1)

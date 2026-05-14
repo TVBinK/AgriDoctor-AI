@@ -32,5 +32,6 @@ dependencies {
     implementation(projects.core.network)
     implementation(libs.hilt.android)
     implementation(libs.androidx.datastore)
+    implementation(libs.androidx.security.crypto)
     implementation(libs.protobuf.kotlin.lite)
 }
