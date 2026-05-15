@@ -5,7 +5,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,14 +18,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -54,22 +54,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import android.net.Uri
-import android.os.Build
-import coil.ImageLoader
-import coil.compose.AsyncImage
-import coil.decode.GifDecoder
-import coil.decode.ImageDecoderDecoder
-import coil.request.ImageRequest
-import com.baothanhbin.agridoctorai.resources.R
-import com.baothanhbin.core.theme.BlueDefault
-import com.baothanhbin.core.theme.Body4
-import com.baothanhbin.core.theme.Subtitle
-import com.baothanhbin.core.theme.Title
-import com.baothanhbin.core.theme.White
-
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.baothanhbin.agridoctorai.resources.R
+import com.baothanhbin.core.theme.BlueDefault
+import com.baothanhbin.core.theme.Subtitle
+import com.baothanhbin.core.theme.Title
+import com.baothanhbin.core.ui.feedback.LoadingOverlay
 
 @Composable
 fun SignupRoute(
@@ -79,7 +70,7 @@ fun SignupRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    androidx.compose.runtime.LaunchedEffect(uiState.isSignupSuccess) {
+    LaunchedEffect(uiState.isSignupSuccess) {
         if (uiState.isSignupSuccess) {
             onSignupSuccess(uiState.identifier)
             viewModel.resetState()
@@ -91,7 +82,7 @@ fun SignupRoute(
         onSignupClick = { name, identifier, password ->
             viewModel.signup(name, identifier, password)
         },
-        onNavigateToLogin = onNavigateToLogin,
+        onNavigateToLogin = onNavigateToLogin
     )
 }
 
@@ -99,7 +90,7 @@ fun SignupRoute(
 fun SignupScreen(
     uiState: SignupUiState = SignupUiState(),
     onSignupClick: (name: String, identifier: String, password: String) -> Unit,
-    onNavigateToLogin: () -> Unit,
+    onNavigateToLogin: () -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var identifier by remember { mutableStateOf("") }
@@ -114,10 +105,7 @@ fun SignupScreen(
         password.length >= 6 &&
         !isConfirmPasswordMismatch
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.bg_home),
             contentDescription = null,
@@ -135,30 +123,20 @@ fun SignupScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-            
-            // Show Loading Indicator if needed
-             if (uiState.isLoading) {
-                 androidx.compose.material3.CircularProgressIndicator(
-                     modifier = Modifier.padding(bottom = 16.dp)
-                 )
-             }
-
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                
                 Text(
                     text = "Đăng ký",
                     style = MaterialTheme.typography.titleLarge,
                     color = Title,
-                    textAlign = TextAlign.Center,
+                    textAlign = TextAlign.Center
                 )
 
-                // ===== Form đăng ký với style giống LoginScreen =====
                 AnimatedVisibility(
                     visible = true,
                     enter = fadeIn(animationSpec = tween(600, delayMillis = 600)),
@@ -168,7 +146,6 @@ fun SignupScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.Start
                     ) {
-                        // Name label
                         Text(
                             text = "Họ và tên",
                             fontSize = 16.sp,
@@ -206,7 +183,6 @@ fun SignupScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Email label
                         Text(
                             text = "Email",
                             fontSize = 16.sp,
@@ -244,7 +220,6 @@ fun SignupScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Password label
                         Text(
                             text = "Mật khẩu",
                             fontSize = 16.sp,
@@ -263,12 +238,24 @@ fun SignupScreen(
                                     color = Color(0xFFB0B4BA)
                                 )
                             },
-                            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            visualTransformation = if (passwordVisible) {
+                                VisualTransformation.None
+                            } else {
+                                PasswordVisualTransformation()
+                            },
                             trailingIcon = {
                                 IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                     Icon(
-                                        imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                        contentDescription = if (passwordVisible) "Ẩn mật khẩu" else "Hiển thị mật khẩu",
+                                        imageVector = if (passwordVisible) {
+                                            Icons.Default.Visibility
+                                        } else {
+                                            Icons.Default.VisibilityOff
+                                        },
+                                        contentDescription = if (passwordVisible) {
+                                            "Ẩn mật khẩu"
+                                        } else {
+                                            "Hiển thị mật khẩu"
+                                        },
                                         tint = Color(0xFFB0B4BA)
                                     )
                                 }
@@ -292,7 +279,6 @@ fun SignupScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Confirm Password label
                         Text(
                             text = "Xác nhận mật khẩu",
                             fontSize = 16.sp,
@@ -311,12 +297,26 @@ fun SignupScreen(
                                     color = Color(0xFFB0B4BA)
                                 )
                             },
-                            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                            visualTransformation = if (confirmPasswordVisible) {
+                                VisualTransformation.None
+                            } else {
+                                PasswordVisualTransformation()
+                            },
                             trailingIcon = {
-                                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                                IconButton(
+                                    onClick = { confirmPasswordVisible = !confirmPasswordVisible }
+                                ) {
                                     Icon(
-                                        imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                        contentDescription = if (confirmPasswordVisible) "Ẩn mật khẩu" else "Hiển thị mật khẩu",
+                                        imageVector = if (confirmPasswordVisible) {
+                                            Icons.Default.Visibility
+                                        } else {
+                                            Icons.Default.VisibilityOff
+                                        },
+                                        contentDescription = if (confirmPasswordVisible) {
+                                            "Ẩn mật khẩu"
+                                        } else {
+                                            "Hiển thị mật khẩu"
+                                        },
                                         tint = Color(0xFFB0B4BA)
                                     )
                                 }
@@ -341,7 +341,7 @@ fun SignupScreen(
                             singleLine = true,
                             keyboardActions = KeyboardActions(
                                 onDone = {
-                                    if (isFormValid) {
+                                    if (isFormValid && !uiState.isLoading) {
                                         onSignupClick(name.trim(), identifier.trim(), password)
                                     }
                                 }
@@ -375,10 +375,11 @@ fun SignupScreen(
                     enter = fadeIn(animationSpec = tween(600, delayMillis = 800)),
                     exit = fadeOut(animationSpec = tween(600))
                 ) {
-                    val buttonScale = if (isFormValid) 1f else 0.98f
+                    val buttonScale = if (isFormValid && !uiState.isLoading) 1f else 0.98f
+
                     Button(
                         onClick = {
-                            if (isFormValid) {
+                            if (isFormValid && !uiState.isLoading) {
                                 onSignupClick(name.trim(), identifier.trim(), password)
                             }
                         },
@@ -387,19 +388,29 @@ fun SignupScreen(
                             .height(56.dp)
                             .scale(buttonScale),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isFormValid) Color(0xFFFF7A3C) else Color(
-                                0xFFD3D3D3
-                            )
+                            containerColor = if (isFormValid) {
+                                Color(0xFFFF7A3C)
+                            } else {
+                                Color(0xFFD3D3D3)
+                            }
                         ),
                         shape = RoundedCornerShape(12.dp),
-                        enabled = isFormValid
+                        enabled = isFormValid && !uiState.isLoading
                     ) {
-                        Text(
-                            text = "Đăng ký",
-                            color = if (isFormValid) Color.White else Color(0xFF9E9E9E),
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White,
+                                strokeWidth = 2.5.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Đăng ký",
+                                color = if (isFormValid) Color.White else Color(0xFF9E9E9E),
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
@@ -423,6 +434,8 @@ fun SignupScreen(
                 )
             }
         }
+
+        LoadingOverlay(isVisible = uiState.isLoading)
     }
 }
 
@@ -431,6 +444,6 @@ fun SignupScreen(
 private fun SignupScreenPreview() {
     SignupScreen(
         onSignupClick = { _, _, _ -> },
-        onNavigateToLogin = {},
+        onNavigateToLogin = {}
     )
 }

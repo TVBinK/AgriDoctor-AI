@@ -1,7 +1,12 @@
 package com.baothanhbin.agridoctorai.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import com.baothanhbin.feature.camera.navigation.cameraScreen
 import com.baothanhbin.feature.chatbot.navigation.chatbotScreen
@@ -9,7 +14,6 @@ import com.baothanhbin.feature.chatbot.navigation.navigateToChatbot
 import com.baothanhbin.feature.diagnose.navigation.diagnoseScreen
 import com.baothanhbin.feature.forgotpassword.navigation.forgotPasswordScreen
 import com.baothanhbin.feature.forgotpassword.navigation.navigateToForgotPassword
-import com.baothanhbin.feature.home.HomeScreen
 import com.baothanhbin.feature.home.navigation.HOME_ROUTE
 import com.baothanhbin.feature.home.navigation.homeScreen
 import com.baothanhbin.feature.home.navigation.navigateToHome
@@ -22,7 +26,6 @@ import com.baothanhbin.feature.diagnoseresult.navigation.diagnoseResultScreen
 import com.baothanhbin.feature.diagnosefailed.navigation.diagnoseFailedScreen
 import com.baothanhbin.feature.lightmeter.navigation.lightMeterScreen
 import com.baothanhbin.feature.settings.navigation.settingsScreen
-import com.baothanhbin.feature.signup.navigation.SIGNUP_ROUTE
 import com.baothanhbin.feature.signup.navigation.signupScreen
 import com.baothanhbin.feature.signup.navigation.navigateToSignup
 import com.baothanhbin.feature.verificationotp.navigation.verificationOTPScreen
@@ -39,7 +42,11 @@ fun MainNavHost(
     NavHost(
         modifier = modifier,
         startDestination = startDestination,
-        navController = navController
+        navController = navController,
+        enterTransition = { forwardEnterTransition() },
+        exitTransition = { forwardExitTransition() },
+        popEnterTransition = { backwardEnterTransition() },
+        popExitTransition = { backwardExitTransition() }
     ) {
         loginScreen(
             onNavigateToSignup = {
@@ -129,3 +136,30 @@ fun MainNavHost(
         )
     }
 }
+
+private const val NAV_TRANSITION_DURATION_MS = 320
+private const val NAV_FADE_DURATION_MS = 220
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.forwardEnterTransition() =
+    slideIntoContainer(
+        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+        animationSpec = tween(durationMillis = NAV_TRANSITION_DURATION_MS)
+    ) + fadeIn(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MS))
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.forwardExitTransition() =
+    slideOutOfContainer(
+        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+        animationSpec = tween(durationMillis = NAV_TRANSITION_DURATION_MS)
+    ) + fadeOut(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MS))
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.backwardEnterTransition() =
+    slideIntoContainer(
+        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+        animationSpec = tween(durationMillis = NAV_TRANSITION_DURATION_MS)
+    ) + fadeIn(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MS))
+
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.backwardExitTransition() =
+    slideOutOfContainer(
+        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+        animationSpec = tween(durationMillis = NAV_TRANSITION_DURATION_MS)
+    ) + fadeOut(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MS))

@@ -78,6 +78,7 @@ import com.baothanhbin.core.theme.Body2
 import com.baothanhbin.core.theme.Body3
 import com.baothanhbin.core.theme.Body4
 import com.baothanhbin.core.theme.Button1
+import com.baothanhbin.core.theme.Green1
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Label2
 import com.baothanhbin.core.theme.Subtitle
@@ -128,19 +129,19 @@ fun SettingsScreen(
     var showChangePasswordDialog by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = Blue1,
+        containerColor = Green1,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Blue1)
+                .background(Green1)
                 .padding(innerPadding)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Blue1)
+                    .background(Green1)
                     .padding(horizontal = 16.dp, vertical = 24.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -404,7 +405,7 @@ private fun DividerSpacer() {
         modifier = Modifier
             .fillMaxWidth()
             .height(1.dp)
-            .background(Blue1.copy(alpha = 0.4f))
+            .background(GreenSurface.copy(alpha = 0.16f))
     )
 }
 
@@ -701,9 +702,9 @@ private fun DialogTextField(
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             visualTransformation = visualTransformation,
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = Blue1.copy(alpha = 0.45f),
-                unfocusedContainerColor = Blue1.copy(alpha = 0.45f),
-                disabledContainerColor = Blue1.copy(alpha = 0.45f),
+                focusedContainerColor = Green1,
+                unfocusedContainerColor = Green1,
+                disabledContainerColor = Green1,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
                 disabledIndicatorColor = Color.Transparent,

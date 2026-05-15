@@ -1,11 +1,9 @@
 package com.baothanhbin.agridoctorai.ui
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,92 +37,85 @@ fun MainBottomNavBar(
     currentDestination: TopLevelDestination?,
     navController: NavController
 ) {
-    Column(Modifier.fillMaxWidth()) {
-        Box(
+    Box(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        NavigationBar(
             modifier = Modifier
                 .fillMaxWidth()
+                .shadow(
+                    elevation = 15.dp
+                )
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
+            containerColor = Color.White
         ) {
-            // Bottom bar with rounded top corners and shadow
-            NavigationBar(
-                modifier = modifier
-                    .shadow(
-                        elevation = 15.dp
-                    )
-                    .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)),
-                containerColor = Color.White
-            ) {
-                val splitIndex = (destinations.size + 1) / 2
-                val first = destinations.take(splitIndex)
-                val second = destinations.drop(splitIndex)
+            val splitIndex = (destinations.size + 1) / 2
+            val first = destinations.take(splitIndex)
+            val second = destinations.drop(splitIndex)
 
-                first.forEach { destination ->
-                    val selected = currentDestination == destination
-                    MainBottomBarItem(
-                        label = stringResource(id = destination.label),
-                        selected = selected,
-                        onclick = { onNavigateToDestination(destination) },
-                        icon = {
-                            Icon(
-                                painter = painterResource(id = destination.unselectedIcon),
-                                tint = Color.Unspecified,
-                                contentDescription = null
-                            )
-                        },
-                        selectedIcon = {
-                            Icon(
-                                painter = painterResource(id = destination.selectedIcon),
-                                tint = Color.Unspecified,
-                                contentDescription = null
-                            )
-                        }
-                    )
-                }
-
-                // Spacer to create a notch-like gap under the center FAB
-                Spacer(modifier = Modifier.weight(1f))
-
-                second.forEach { destination ->
-                    val selected = currentDestination == destination
-                    MainBottomBarItem(
-                        label = stringResource(id = destination.label),
-                        selected = selected,
-                        onclick = { onNavigateToDestination(destination) },
-                        icon = {
-                            Icon(
-                                painter = painterResource(id = destination.unselectedIcon),
-                                tint = Color.Unspecified,
-                                contentDescription = null
-                            )
-                        },
-                        selectedIcon = {
-                            Icon(
-                                painter = painterResource(id = destination.selectedIcon),
-                                tint = Color.Unspecified,
-                                contentDescription = null
-                            )
-                        }
-                    )
-                }
+            first.forEach { destination ->
+                val selected = currentDestination == destination
+                MainBottomBarItem(
+                    label = stringResource(id = destination.label),
+                    selected = selected,
+                    onclick = { onNavigateToDestination(destination) },
+                    icon = {
+                        Icon(
+                            painter = painterResource(id = destination.unselectedIcon),
+                            tint = Color.Unspecified,
+                            contentDescription = null
+                        )
+                    },
+                    selectedIcon = {
+                        Icon(
+                            painter = painterResource(id = destination.selectedIcon),
+                            tint = Color.Unspecified,
+                            contentDescription = null
+                        )
+                    }
+                )
             }
 
-            // Center floating action button (camera-like action)
-            FloatingActionButton(
-                onClick = { navController.navigateToCamera(0) },
-                shape = CircleShape,
-                containerColor = Color(0xFF2E7D32),
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .offset(y = (-20).dp)
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_camera),
-                    contentDescription = null,
-                    tint = Color.White
+            Spacer(modifier = Modifier.weight(1f))
+
+            second.forEach { destination ->
+                val selected = currentDestination == destination
+                MainBottomBarItem(
+                    label = stringResource(id = destination.label),
+                    selected = selected,
+                    onclick = { onNavigateToDestination(destination) },
+                    icon = {
+                        Icon(
+                            painter = painterResource(id = destination.unselectedIcon),
+                            tint = Color.Unspecified,
+                            contentDescription = null
+                        )
+                    },
+                    selectedIcon = {
+                        Icon(
+                            painter = painterResource(id = destination.selectedIcon),
+                            tint = Color.Unspecified,
+                            contentDescription = null
+                        )
+                    }
                 )
             }
         }
-        // Add a small spacer to ensure content above doesn't collide with the FAB overlap
-        Spacer(modifier = Modifier.height(8.dp))
+
+        FloatingActionButton(
+            onClick = { navController.navigateToCamera(0) },
+            shape = CircleShape,
+            containerColor = Color(0xFF2E7D32),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = (-20).dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_camera),
+                contentDescription = null,
+                tint = Color.White
+            )
+        }
     }
 }
 @Composable

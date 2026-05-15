@@ -68,6 +68,7 @@ import com.baothanhbin.core.theme.BlueDefault
 import com.baothanhbin.core.theme.Body4
 import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.Title
+import com.baothanhbin.core.ui.feedback.LoadingOverlay
 
 @Composable
 fun LoginRoute(
@@ -359,6 +360,8 @@ fun LoginScreen(
                 .align(Alignment.BottomCenter),
             contentScale = ContentScale.FillWidth
         )
+
+        LoadingOverlay(isVisible = isLoading)
     }
 }
 
