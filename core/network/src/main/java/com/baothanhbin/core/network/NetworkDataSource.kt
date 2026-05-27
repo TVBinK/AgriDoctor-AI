@@ -13,6 +13,7 @@ import com.baothanhbin.core.model.RecoveryCareData
 import com.baothanhbin.core.model.TreatmentData
 import com.baothanhbin.core.model.UserHistoryResponse
 import io.ktor.client.call.body
+import io.ktor.client.request.delete
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -241,6 +242,30 @@ object NetworkDataSource {
         } catch (e: Exception) {
             Log.e("downloadHistoryImage", "Failed to download history image", e)
             null
+        }
+    }
+
+    suspend fun deleteUserHistory(
+        historyId: String,
+        token: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = NetworkClients.historyClient.delete(historyId) {
+                header(HttpHeaders.Authorization, "Bearer $token")
+            }
+
+            when (response.status) {
+                HttpStatusCode.OK,
+                HttpStatusCode.NoContent,
+                HttpStatusCode.NotFound -> Result.success(Unit)
+
+                else -> Result.failure(
+                    IllegalStateException(parseApiError(response.bodyAsText()))
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("deleteUserHistory", "Failed to delete history", e)
+            Result.failure(IllegalStateException("Khong the xoa lich su tren may chu."))
         }
     }
 

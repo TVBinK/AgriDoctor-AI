@@ -2,9 +2,12 @@ package com.baothanhbin.core.data.impl
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.baothanhbin.core.data.repository.AuthRepository
 import com.baothanhbin.core.data.repository.DiagnoseResultRepository
 import com.baothanhbin.core.data.repository.PlantRepository
+import com.baothanhbin.core.database.model.DiagnoseResultEntity
+import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.network.NetworkDataSource
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -22,6 +25,11 @@ class HistorySyncRepository @Inject constructor(
     private val diagnoseResultRepository: DiagnoseResultRepository,
     private val plantRepository: PlantRepository
 ) {
+    companion object {
+        private const val SYNC_IMAGES_DIRECTORY = "history_sync_images"
+        private const val TAG = "HistorySyncRepository"
+    }
+
     private val syncMutex = Mutex()
 
     suspend fun syncFromServer() {
@@ -79,6 +87,22 @@ class HistorySyncRepository @Inject constructor(
         }
     }
 
+    suspend fun deleteDiagnoseHistoryItem(item: DiagnoseResultEntity): Result<Unit> {
+        return deleteHistoryItem(
+            serverHistoryId = item.serverHistoryId,
+            imageUri = item.imageUri,
+            deleteLocalRecord = { diagnoseResultRepository.deleteDiagnoseResult(item.id) }
+        )
+    }
+
+    suspend fun deletePlantHistoryItem(item: PlantEntity): Result<Unit> {
+        return deleteHistoryItem(
+            serverHistoryId = item.serverHistoryId,
+            imageUri = item.imageUri,
+            deleteLocalRecord = { plantRepository.deletePlant(item.id) }
+        )
+    }
+
     private suspend fun ensureCurrentUserId(): String? {
         authRepository.getCurrentUserId()
             ?.takeIf { it.isNotBlank() }
@@ -98,7 +122,7 @@ class HistorySyncRepository @Inject constructor(
             else -> ".jpg"
         }
 
-        val directory = File(context.filesDir, "history_sync_images").apply { mkdirs() }
+        val directory = File(context.filesDir, SYNC_IMAGES_DIRECTORY).apply { mkdirs() }
         val outputFile = File(directory, "${historyId}$extension")
 
         return runCatching {
@@ -108,5 +132,60 @@ class HistorySyncRepository @Inject constructor(
             }
             Uri.fromFile(outputFile).toString()
         }.getOrNull()
+    }
+
+    private suspend fun deleteHistoryItem(
+        serverHistoryId: String?,
+        imageUri: String?,
+        deleteLocalRecord: suspend () -> Unit
+    ): Result<Unit> {
+        return try {
+            syncMutex.withLock {
+                if (!serverHistoryId.isNullOrBlank()) {
+                    val token = authRepository.getToken()
+                        ?.takeIf { it.isNotBlank() }
+                        ?: throw IllegalStateException(
+                            "Khong the xoa lich su tren server vi ban chua dang nhap."
+                        )
+
+                    NetworkDataSource.deleteUserHistory(serverHistoryId, token).getOrThrow()
+                }
+
+                deleteLocalRecord()
+                deleteSyncedImageIfOwned(imageUri)
+            }
+            Result.success(Unit)
+        } catch (error: Exception) {
+            Result.failure(error)
+        }
+    }
+
+    private fun deleteSyncedImageIfOwned(imageUri: String?) {
+        if (imageUri.isNullOrBlank()) {
+            return
+        }
+
+        val imagePath = runCatching { Uri.parse(imageUri).path }.getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: return
+
+        val syncDirectory = runCatching {
+            File(context.filesDir, SYNC_IMAGES_DIRECTORY).canonicalFile
+        }.getOrNull() ?: return
+        val targetFile = runCatching { File(imagePath).canonicalFile }.getOrNull() ?: return
+
+        val targetPath = targetFile.path
+        val syncDirectoryPath = syncDirectory.path + File.separator
+        if (!targetPath.startsWith(syncDirectoryPath)) {
+            return
+        }
+
+        runCatching {
+            if (targetFile.exists() && !targetFile.delete()) {
+                Log.w(TAG, "Failed to delete synced history image: $targetPath")
+            }
+        }.onFailure { error ->
+            Log.w(TAG, "Failed to cleanup synced history image", error)
+        }
     }
 }

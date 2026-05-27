@@ -3,6 +3,7 @@ package com.baothanhbin.feature.diagnose
 import android.Manifest
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -128,6 +129,12 @@ fun DiagnoseScreen(
 ) {
     val context = LocalContext.current
     val showLocationDialog by viewModel.showLocationDialog.collectAsState()
+
+    LaunchedEffect(viewModel, context) {
+        viewModel.uiMessage.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Kiểm tra permission khi khởi động - chỉ load nếu chưa có address
     LaunchedEffect(Unit) {

@@ -6,4 +6,5 @@ option java_multiple_files = true;
 message AuthProto {
   string jwt_token = 1;
   int64 timestamp = 2;
+  string user_id = 3;
 }

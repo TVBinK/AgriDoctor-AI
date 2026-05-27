@@ -7,6 +7,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.baothanhbin.core.data.impl.HistorySyncRepository
 import com.baothanhbin.core.data.repository.DiagnoseResultRepository
 import com.baothanhbin.core.data.repository.PlantRepository
 import com.baothanhbin.core.database.model.DiagnoseResultEntity
@@ -43,7 +44,8 @@ sealed class DiagnoseNavigationEvent {
 class DiagnoseViewModel @Inject constructor(
     application: Application,
     private val diagnoseResultRepository: DiagnoseResultRepository,
-    private val plantRepository: PlantRepository
+    private val plantRepository: PlantRepository,
+    private val historySyncRepository: HistorySyncRepository
 ) : AndroidViewModel(application) {
 
     private val _historyItems = MutableStateFlow<List<DiagnoseResultEntity>>(emptyList())
@@ -58,8 +60,8 @@ class DiagnoseViewModel @Inject constructor(
     private val _showLocationDialog = MutableStateFlow(false)
     val showLocationDialog: StateFlow<Boolean> = _showLocationDialog.asStateFlow()
 
-    private val _locationError = MutableSharedFlow<String>()
-    val locationError: SharedFlow<String> = _locationError.asSharedFlow()
+    private val _uiMessage = MutableSharedFlow<String>()
+    val uiMessage: SharedFlow<String> = _uiMessage.asSharedFlow()
 
     init {
         observeDiagnoseHistory()
@@ -88,13 +90,19 @@ class DiagnoseViewModel @Inject constructor(
 
     fun deleteHistoryItem(item: DiagnoseResultEntity) {
         viewModelScope.launch {
-            diagnoseResultRepository.deleteDiagnoseResult(item.id)
+            historySyncRepository.deleteDiagnoseHistoryItem(item)
+                .onFailure { error ->
+                    _uiMessage.emit(error.message ?: "Khong the xoa lich su.")
+                }
         }
     }
 
     fun deletePlantHistoryItem(item: PlantEntity) {
         viewModelScope.launch {
-            plantRepository.deletePlant(item.id)
+            historySyncRepository.deletePlantHistoryItem(item)
+                .onFailure { error ->
+                    _uiMessage.emit(error.message ?: "Khong the xoa lich su.")
+                }
         }
     }
 
@@ -152,9 +160,9 @@ class DiagnoseViewModel @Inject constructor(
                 }
             },
             onError = { exception ->
-                Log.e("DiagnoseViewModel", "Lá»—i láº¥y vá»‹ trÃ­: ${exception.message}", exception)
+                Log.e("DiagnoseViewModel", "Location lookup failed: ${exception.message}", exception)
                 viewModelScope.launch {
-                    _locationError.emit(exception.message ?: "KhÃ´ng thá»ƒ láº¥y vá»‹ trÃ­")
+                    _uiMessage.emit(exception.message ?: "Khong the lay vi tri")
                 }
             }
         )
