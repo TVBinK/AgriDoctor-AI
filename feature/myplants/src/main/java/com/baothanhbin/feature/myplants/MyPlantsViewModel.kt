@@ -35,6 +35,7 @@ class MyPlantsViewModel @Inject constructor(
     application: Application,
     private val plantRepository: PlantRepository
 ) : AndroidViewModel(application) {
+    private var hasAttemptedInitialLocationLoad = false
 
     private val _showLocationDialog = MutableStateFlow(false)
     val showLocationDialog: StateFlow<Boolean> = _showLocationDialog.asStateFlow()
@@ -170,7 +171,17 @@ class MyPlantsViewModel @Inject constructor(
     }
 
     fun shouldLoadLocationOnStart(context: Context, locationStateHolder: LocationStateHolder): Boolean {
-        return LocationHelper.hasLocationPermission(context) &&
+        if (hasAttemptedInitialLocationLoad) {
+            return false
+        }
+
+        val shouldLoad = LocationHelper.hasLocationPermission(context) &&
             locationStateHolder.currentAddress == null
+
+        if (shouldLoad) {
+            hasAttemptedInitialLocationLoad = true
+        }
+
+        return shouldLoad
     }
 }

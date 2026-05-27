@@ -8,7 +8,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class DiagnoseApiResponse(
     val success: Boolean,
-    val data: DiagnoseData
+    val data: DiagnoseData,
+    val historyId: String? = null
 )
 
 @Serializable
@@ -19,7 +20,9 @@ data class DiagnoseData(
     val causes: String,
     val treatment: List<TreatmentData>,
     val recoveryCare: List<RecoveryCareData>,
-    val detections: List<DetectionData> = emptyList()
+    val detections: List<DetectionData> = emptyList(),
+    val resultType: String? = null,
+    val rejectedInput: Boolean = false
 )
 
 @Serializable

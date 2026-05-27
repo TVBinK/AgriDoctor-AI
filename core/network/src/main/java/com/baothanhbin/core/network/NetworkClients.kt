@@ -44,5 +44,6 @@ object NetworkClients {
     val diseasesClient = createClient("$API_BASE_URL/api/diseases")
     val classifyClient = createClient("$API_BASE_URL/api/classify")
     val chatbotClient = createClient("$API_BASE_URL/api/chatbot")
+    val historyClient = createClient("$API_BASE_URL/api/history/")
     val authClient = createClient("$API_BASE_URL/api/auth/")
 }

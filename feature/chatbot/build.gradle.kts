@@ -17,4 +17,5 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.resources)
     implementation(libs.androidx.compose.foundation)
+    implementation(libs.coil.compose)
 }

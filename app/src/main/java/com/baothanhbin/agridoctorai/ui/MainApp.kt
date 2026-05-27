@@ -4,8 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -48,16 +46,8 @@ fun MainApp(
             }
             AnimatedVisibility(
                 visible = currentDestination != null,
-                enter = fadeIn(animationSpec = tween(durationMillis = 220)) +
-                    slideInVertically(
-                        initialOffsetY = { it / 2 },
-                        animationSpec = tween(durationMillis = 280)
-                    ),
-                exit = fadeOut(animationSpec = tween(durationMillis = 180)) +
-                    slideOutVertically(
-                        targetOffsetY = { it / 2 },
-                        animationSpec = tween(durationMillis = 220)
-                    )
+                enter = fadeIn(animationSpec = tween(durationMillis = 160)),
+                exit = fadeOut(animationSpec = tween(durationMillis = 120))
             ) {
                 bottomBarDestination?.let { destination ->
                     MainBottomNavBar(

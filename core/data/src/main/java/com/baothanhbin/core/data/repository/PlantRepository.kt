@@ -8,6 +8,8 @@ interface PlantRepository {
     suspend fun getPlantById(id: Long): PlantEntity?
     suspend fun getLatestPlant(): PlantEntity?
     fun getAllPlants(): kotlinx.coroutines.flow.Flow<List<PlantEntity>>
+    fun getRecognizedPlants(): kotlinx.coroutines.flow.Flow<List<PlantEntity>>
+    suspend fun getExistingServerHistoryIds(): Set<String>
     suspend fun deletePlant(id: Long)
     suspend fun deleteAllPlants()
     

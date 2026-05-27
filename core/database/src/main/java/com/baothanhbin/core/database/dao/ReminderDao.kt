@@ -11,8 +11,8 @@ interface ReminderDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertReminder(reminder: ReminderEntity): Long
 
-    @Query("SELECT * FROM reminders ORDER BY targetTimestamp ASC")
-    fun getAllReminders(): kotlinx.coroutines.flow.Flow<List<ReminderEntity>>
+    @Query("SELECT * FROM reminders WHERE ownerUserId = :ownerUserId ORDER BY targetTimestamp ASC")
+    fun getAllReminders(ownerUserId: String): kotlinx.coroutines.flow.Flow<List<ReminderEntity>>
 
     @Query("SELECT * FROM reminders WHERE id = :id LIMIT 1")
     suspend fun getReminderById(id: Long): ReminderEntity?

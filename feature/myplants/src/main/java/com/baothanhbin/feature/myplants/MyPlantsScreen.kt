@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
@@ -44,6 +45,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.theme.GreenSurface
@@ -55,16 +57,22 @@ import com.baothanhbin.feature.myplants.components.MyPlantsContent
 import com.baothanhbin.feature.myplants.components.MyPlantsTopBar
 import com.baothanhbin.feature.myplants.components.ReminderContent
 import com.baothanhbin.feature.myplants.components.SetReminderDialog
+import com.baothanhbin.feature.settings.navigation.navigateToSettings
 
 @Composable
 fun MyplantRoute(
+    navController: NavHostController? = null,
     locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder
 ) {
-    MyplantScreen(locationStateHolder = locationStateHolder)
+    MyplantScreen(
+        navController = navController,
+        locationStateHolder = locationStateHolder
+    )
 }
 
 @Composable
 fun MyplantScreen(
+    navController: NavHostController? = null,
     locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder,
     viewModel: MyPlantsViewModel = hiltViewModel()
 ) {
@@ -119,13 +127,6 @@ fun MyplantScreen(
                 .fillMaxWidth()
                 .wrapContentHeight(),
             contentScale = ContentScale.FillWidth
-        )
-        // Top Bar
-        MyPlantsTopBar(
-            currentAddress = locationStateHolder.currentAddress,
-            onLocationClick = { 
-                viewModel.checkAndGetLocation(context, locationStateHolder)
-            }
         )
         Column(
             modifier = Modifier
@@ -189,7 +190,7 @@ fun MyplantScreen(
                                 }
                             }
                             showSetReminderDialog = PlantEntity(
-                                plantName = "Tất cả cây",
+                                plantName = context.getString(R.string.all_plants),
                                 imageUri = null,
                                 location = null
                             )
@@ -232,10 +233,29 @@ fun MyplantScreen(
                         containerColor = GreenSurface,
                         contentColor = Color.White
                     ) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add plant")
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = stringResource(R.string.add_plant)
+                        )
                     }
                 }
             }
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+                .align(Alignment.TopStart)
+        ) {
+            MyPlantsTopBar(
+                currentAddress = locationStateHolder.currentAddress,
+                onLocationClick = {
+                    viewModel.checkAndGetLocation(context, locationStateHolder)
+                },
+                onSettingsClick = {
+                    navController?.navigateToSettings()
+                }
+            )
         }
         
         if (showAddPlantDialog) {

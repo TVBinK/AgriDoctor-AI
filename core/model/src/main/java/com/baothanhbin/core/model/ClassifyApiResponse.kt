@@ -8,7 +8,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ClassifyApiResponse(
     val success: Boolean,
-    val data: ClassifyData
+    val data: ClassifyData,
+    val historyId: String? = null
 )
 
 @Serializable
@@ -27,7 +28,9 @@ data class ClassifyData(
     val careTips: List<String>? = null,
     val commonDiseases: List<String>? = null,
     val possiblePlants: List<PossiblePlant>? = null,
-    val topPredictions: List<TopPrediction>? = null
+    val topPredictions: List<TopPrediction>? = null,
+    val resultType: String? = null,
+    val rejectedInput: Boolean = false
 )
 
 @Serializable

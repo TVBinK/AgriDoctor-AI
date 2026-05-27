@@ -162,6 +162,7 @@ class ForgotPasswordViewModel @Inject constructor(
                     confirmPassword = confirmPassword
                 )
             ).onSuccess { response ->
+                authRepository.logout()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isResetSuccessful = true,

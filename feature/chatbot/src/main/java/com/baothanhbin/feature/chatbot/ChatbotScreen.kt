@@ -1,9 +1,13 @@
 package com.baothanhbin.feature.chatbot
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,18 +16,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ThumbDown
@@ -51,7 +58,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.text.KeyboardActions
@@ -62,15 +71,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.baothanhbin.agridoctorai.resources.R
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.theme.White
+import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 @Composable
 fun ChatbotRoute(
@@ -100,6 +110,7 @@ fun ChatbotScreen(
     val listState = rememberLazyListState()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    var fullScreenImageUri by remember { mutableStateOf<String?>(null) }
 
     // Sync drawer state with ViewModel state
     LaunchedEffect(uiState.isDrawerOpen) {
@@ -181,19 +192,31 @@ fun ChatbotScreen(
                     ChatMessagesList(
                         messages = uiState.messages,
                         isLoading = uiState.isLoading,
-                        listState = listState
+                        listState = listState,
+                        onImageClick = { fullScreenImageUri = it }
                     )
                 }
 
                 // Input Bar
                 ChatInputBar(
                     text = uiState.inputText,
+                    selectedImageUri = uiState.selectedImageUri,
                     onTextChange = viewModel::onInputTextChanged,
+                    onImageSelected = viewModel::onImageSelected,
+                    onClearImage = viewModel::clearSelectedImage,
+                    onPreviewImage = { fullScreenImageUri = it.toString() },
                     onSendClick = {
-                        if (uiState.inputText.isNotBlank()) {
+                        if (uiState.inputText.isNotBlank() || uiState.selectedImageUri != null) {
                             viewModel.onMessageSent(uiState.inputText)
                         }
                     }
+                )
+            }
+
+            fullScreenImageUri?.let { imageUri ->
+                FullScreenImageDialog(
+                    imageUri = imageUri,
+                    onDismiss = { fullScreenImageUri = null }
                 )
             }
         }
@@ -223,7 +246,7 @@ private fun ChatbotTopBar(
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
-                    contentDescription = stringResource(R.string.settings),
+                    contentDescription = stringResource(R.string.menu),
                     tint = GreenSurface,
                     modifier = Modifier.size(24.dp)
                 )
@@ -236,7 +259,7 @@ private fun ChatbotTopBar(
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_new_chat),
-                contentDescription = stringResource(R.string.edit),
+                contentDescription = stringResource(R.string.new_chat),
                 tint = GreenSurface,
                 modifier = Modifier.size(50.dp)
             )
@@ -248,7 +271,8 @@ private fun ChatbotTopBar(
 private fun ChatMessagesList(
     messages: List<ChatMessage>,
     isLoading: Boolean,
-    listState: androidx.compose.foundation.lazy.LazyListState
+    listState: androidx.compose.foundation.lazy.LazyListState,
+    onImageClick: (String) -> Unit
 ) {
     Box(
         modifier = Modifier.fillMaxSize()
@@ -269,7 +293,10 @@ private fun ChatMessagesList(
                 items = messages,
                 key = { message -> message.id }
             ) { message ->
-                ChatMessageBubble(message = message)
+                ChatMessageBubble(
+                    message = message,
+                    onImageClick = onImageClick
+                )
             }
             
             if (isLoading) {
@@ -277,10 +304,11 @@ private fun ChatMessagesList(
                     ChatMessageBubble(
                         message = ChatMessage(
                             id = "loading",
-                            text = "Typing...",
+                            text = stringResource(R.string.typing),
                             isUser = false
                         ),
-                        isLoading = true
+                        isLoading = true,
+                        onImageClick = onImageClick
                     )
                 }
             }
@@ -331,7 +359,8 @@ private fun EmptyChatState() {
 @Composable
 private fun ChatMessageBubble(
     message: ChatMessage,
-    isLoading: Boolean = false
+    isLoading: Boolean = false,
+    onImageClick: (String) -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -365,11 +394,24 @@ private fun ChatMessageBubble(
                     )
                     .padding(12.dp)
             ) {
-                Text(
-                    text = message.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Black
-                )
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    message.imageUri?.let { imageUri ->
+                        ChatImageThumbnail(
+                            imageUri = imageUri,
+                            onClick = { onImageClick(imageUri) }
+                        )
+                    }
+
+                    if (message.text.isNotBlank()) {
+                        Text(
+                            text = message.text,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Black
+                        )
+                    }
+                }
             }
 
             if (!message.isUser) {
@@ -389,45 +431,45 @@ private fun ChatMessageBubble(
                     onClick = { },
                     modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copy",
-                        tint = Subtitle,
-                        modifier = Modifier.size(18.dp)
-                    )
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = stringResource(R.string.copy),
+                            tint = Subtitle,
+                            modifier = Modifier.size(18.dp)
+                        )
                 }
                 IconButton(
                     onClick = { },
                     modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.VolumeUp,
-                        contentDescription = "Speaker",
-                        tint = Subtitle,
-                        modifier = Modifier.size(18.dp)
-                    )
+                        Icon(
+                            imageVector = Icons.Default.VolumeUp,
+                            contentDescription = stringResource(R.string.speaker),
+                            tint = Subtitle,
+                            modifier = Modifier.size(18.dp)
+                        )
                 }
                 IconButton(
                     onClick = { },
                     modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ThumbUp,
-                        contentDescription = "Thumbs up",
-                        tint = Subtitle,
-                        modifier = Modifier.size(18.dp)
-                    )
+                        Icon(
+                            imageVector = Icons.Default.ThumbUp,
+                            contentDescription = stringResource(R.string.thumbs_up),
+                            tint = Subtitle,
+                            modifier = Modifier.size(18.dp)
+                        )
                 }
                 IconButton(
                     onClick = { },
                     modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ThumbDown,
-                        contentDescription = "Thumbs down",
-                        tint = Subtitle,
-                        modifier = Modifier.size(18.dp)
-                    )
+                        Icon(
+                            imageVector = Icons.Default.ThumbDown,
+                            contentDescription = stringResource(R.string.thumbs_down),
+                            tint = Subtitle,
+                            modifier = Modifier.size(18.dp)
+                        )
                 }
             }
         }
@@ -437,92 +479,155 @@ private fun ChatMessageBubble(
 @Composable
 private fun ChatInputBar(
     text: String,
+    selectedImageUri: android.net.Uri?,
     onTextChange: (String) -> Unit,
+    onImageSelected: (android.net.Uri?) -> Unit,
+    onClearImage: () -> Unit,
+    onPreviewImage: (android.net.Uri) -> Unit,
     onSendClick: () -> Unit
 ) {
-    Row(
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: android.net.Uri? ->
+        onImageSelected(uri)
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp).padding(bottom = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(bottom = 20.dp)
     ) {
-        // Camera Icon
-        IconButton(
-            onClick = { },
-            modifier = Modifier.size(40.dp)
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_camera),
-                contentDescription = "Camera",
-                tint = GreenSurface,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        // Text Input - Using local state to prevent reset issues
-        var localText by remember(text) { mutableStateOf(text) }
-        
-        LaunchedEffect(text) {
-            if (text.isEmpty()) {
-                // Only sync when text is cleared (after send)
-                localText = text
+        if (selectedImageUri != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 6.dp),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(88.dp)
+                ) {
+                    AsyncImage(
+                        model = selectedImageUri,
+                        contentDescription = stringResource(R.string.selected_image),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(16.dp))
+                            .border(
+                                width = 1.dp,
+                                color = GreenSurface.copy(alpha = 0.25f),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .clickable { onPreviewImage(selectedImageUri) },
+                        contentScale = ContentScale.Crop
+                    )
+                    IconButton(
+                        onClick = onClearImage,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 3.dp, y = (-3).dp)
+                            .size(30.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.clear_image),
+                            tint = Color.Black,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
         }
-        
-        OutlinedTextField(
-            value = localText,
-            onValueChange = { newValue ->
-                localText = newValue
-                onTextChange(newValue)
-            },
-            modifier = Modifier
-                .weight(1f)
-                .height(55 .dp),
-            textStyle = MaterialTheme.typography.bodyMedium.copy(
-                color = Color.Black
-            ),
-            placeholder = {
-                Text(
-                    text = stringResource(R.string.ask_anything),
-                    color = GreenSurface.copy(alpha = 0.6f),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            shape = RoundedCornerShape(24.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = GreenSurface,
-                unfocusedBorderColor = GreenSurface.copy(alpha = 0.5f),
-                focusedContainerColor = White,
-                unfocusedContainerColor = White,
-                focusedTextColor = Color.Black,
-                unfocusedTextColor = Color.Black,
-                cursorColor = GreenSurface
-            ),
-            singleLine = true,
-            enabled = true,
-            keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.Send
-            ),
-            keyboardActions = KeyboardActions(
-                onSend = {
-                    onSendClick()
-                }
-            )
-        )
 
-        // Send Button
-        IconButton(
-            onClick = onSendClick,
-            modifier = Modifier
-                .size(48.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_send),
-                contentDescription = "Send",
-                tint = Color.Unspecified,
-                modifier = Modifier.size(50.dp)
+            // Camera Icon
+            IconButton(
+                onClick = {
+                    imagePickerLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_camera),
+                    contentDescription = stringResource(R.string.camera),
+                    tint = GreenSurface,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            // Text Input - Using local state to prevent reset issues
+            var localText by remember(text) { mutableStateOf(text) }
+
+            LaunchedEffect(text) {
+                if (text.isEmpty()) {
+                    // Only sync when text is cleared (after send)
+                    localText = text
+                }
+            }
+
+            OutlinedTextField(
+                value = localText,
+                onValueChange = { newValue ->
+                    localText = newValue
+                    onTextChange(newValue)
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(55.dp),
+                textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    color = Color.Black
+                ),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.ask_anything),
+                        color = GreenSurface.copy(alpha = 0.6f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
+                shape = RoundedCornerShape(24.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = GreenSurface,
+                    unfocusedBorderColor = GreenSurface.copy(alpha = 0.5f),
+                    focusedContainerColor = White,
+                    unfocusedContainerColor = White,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    cursorColor = GreenSurface
+                ),
+                singleLine = true,
+                enabled = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Send
+                ),
+                keyboardActions = KeyboardActions(
+                    onSend = {
+                        onSendClick()
+                    }
+                )
             )
+
+            // Send Button
+            IconButton(
+                onClick = onSendClick,
+                modifier = Modifier
+                    .size(48.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_send),
+                    contentDescription = stringResource(R.string.send),
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(50.dp)
+                )
+            }
         }
     }
 }
@@ -565,7 +670,7 @@ private fun ChatHistoryDrawer(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_close),
-                        contentDescription = "Close",
+                        contentDescription = stringResource(R.string.close),
                         tint = GreenSurface
                     )
                 }
@@ -668,7 +773,7 @@ private fun ChatHistoryItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
+                    contentDescription = stringResource(R.string.delete),
                     tint = Subtitle,
                     modifier = Modifier.size(18.dp)
                 )
@@ -705,15 +810,115 @@ fun ChatbotChatScreenPreview() {
                     )
                 ),
                 isLoading = false,
-                listState = rememberLazyListState()
+                listState = rememberLazyListState(),
+                onImageClick = { }
             )
         }
         
         ChatInputBar(
             text = "",
+            selectedImageUri = null,
             onTextChange = { },
+            onImageSelected = { },
+            onClearImage = { },
+            onPreviewImage = { },
             onSendClick = { }
         )
+    }
+}
+
+@Composable
+private fun ChatImageThumbnail(
+    imageUri: String,
+    onClick: () -> Unit
+) {
+    AsyncImage(
+        model = imageUri,
+        contentDescription = stringResource(R.string.chat_image),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 120.dp, max = 220.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        contentScale = ContentScale.Crop
+    )
+}
+
+@Composable
+private fun FullScreenImageDialog(
+    imageUri: String,
+    onDismiss: () -> Unit
+) {
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.48f))
+                .clickable(onClick = onDismiss)
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 28.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .clickable(enabled = false) { }
+            ) {
+                AsyncImage(
+                    model = imageUri,
+                    contentDescription = stringResource(R.string.full_screen_image),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 560.dp)
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            translationX = offsetX
+                            translationY = offsetY
+                        }
+                        .pointerInput(imageUri) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                val nextScale = (scale * zoom).coerceIn(1f, 4f)
+                                if (nextScale == 1f) {
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                } else {
+                                    offsetX += pan.x
+                                    offsetY += pan.y
+                                }
+                                scale = nextScale
+                            }
+                        },
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .size(30.dp)
+                    .background(
+                        color = Color.White.copy(alpha = 0.16f),
+                        shape = RoundedCornerShape(15.dp)
+                    )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(R.string.close_image_preview),
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
     }
 }
 

@@ -15,7 +15,8 @@ data class LoginUiState(
     val isLoading: Boolean = false,
     val isOtpSent: Boolean = false,
     val error: String? = null,
-    val email: String = ""
+    val email: String = "",
+    val password: String = ""
 )
 
 @HiltViewModel
@@ -28,7 +29,12 @@ class LoginViewModel @Inject constructor(
 
     fun login(email: String, password: String?) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, email = email)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                email = email,
+                password = password.orEmpty()
+            )
             
             val request = LoginRequest(email = email, password = password)
             

@@ -2,16 +2,32 @@ package com.baothanhbin.core.database.model
 
 import android.net.Uri
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
 import com.baothanhbin.core.database.converter.StringListConverter
 import com.baothanhbin.core.model.ClassifyData
 import java.io.File
 
-@Entity(tableName = "plants")
+object PlantSourceType {
+    const val MANUAL = "manual"
+    const val RECOGNITION = "recognition"
+}
+
+@Entity(
+    tableName = "plants",
+    indices = [
+        Index(value = ["ownerUserId"]),
+        Index(value = ["sourceType"]),
+        Index(value = ["serverHistoryId"], unique = true)
+    ]
+)
 data class PlantEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    val ownerUserId: String = "",
+    val serverHistoryId: String? = null,
+    val sourceType: String = PlantSourceType.MANUAL,
     val plantName: String,
     val plantNameVN: String? = null,
     val confidence: Double? = null,
@@ -36,8 +52,15 @@ data class PlantEntity(
     val commonDiseases: List<String> = emptyList()
 )
 
-fun ClassifyData.toPlantEntity(imageUri: String? = null, location: String? = null): PlantEntity {
+fun ClassifyData.toPlantEntity(
+    imageUri: String? = null,
+    location: String? = null,
+    serverHistoryId: String? = null,
+    sourceType: String = PlantSourceType.RECOGNITION
+): PlantEntity {
     return PlantEntity(
+        serverHistoryId = serverHistoryId,
+        sourceType = sourceType,
         plantName = plantName,
         plantNameVN = plantNameVN,
         confidence = confidence,

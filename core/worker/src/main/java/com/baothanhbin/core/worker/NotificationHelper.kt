@@ -17,10 +17,10 @@ object NotificationHelper {
 
     fun showCareNotification(context: Context, plantName: String, actionName: String): Boolean {
         val channelId = "watering_reminder_channel"
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Care Reminders"
-            val descriptionText = "Nhắc nhở chăm sóc cây"
+            val name = context.getString(R.string.care_reminders_channel_name)
+            val descriptionText = context.getString(R.string.care_reminders_channel_description)
             val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel = NotificationChannel(channelId, name, importance).apply {
                 description = descriptionText
@@ -32,8 +32,8 @@ object NotificationHelper {
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.logo)
-            .setContentTitle("Đã đến giờ $actionName")
-            .setContentText("Hãy kiểm tra và $actionName cho $plantName nhé!")
+            .setContentTitle(context.getString(R.string.care_notification_title, actionName))
+            .setContentText(context.getString(R.string.care_notification_message, actionName, plantName))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
 
@@ -41,15 +41,22 @@ object NotificationHelper {
         if (intent != null) {
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             val pendingIntent: PendingIntent = PendingIntent.getActivity(
-                context, 0, intent,
+                context,
+                0,
+                intent,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
             builder.setContentIntent(pendingIntent)
         }
 
         with(NotificationManagerCompat.from(context)) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            if (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
                 return false
             }
             notify(plantName.hashCode(), builder.build())

@@ -9,6 +9,7 @@ import com.baothanhbin.core.model.ForgotPasswordRequest
 import com.baothanhbin.core.model.LoginRequest
 import com.baothanhbin.core.model.MessageResponse
 import com.baothanhbin.core.model.ResetPasswordRequest
+import com.baothanhbin.core.model.ResendOtpRequest
 import com.baothanhbin.core.model.SignupRequest
 import com.baothanhbin.core.model.UpdateProfileRequest
 import com.baothanhbin.core.model.UpdateProfileResponse
@@ -43,6 +44,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val errorJson = Json { ignoreUnknownKeys = true }
 
     override val isLoggedIn: Flow<Boolean> = authDataStore.isLoggedInFlow()
+    override val currentUserId: Flow<String?> = authDataStore.currentUserIdFlow()
 
     override suspend fun login(request: LoginRequest): Result<AuthResponse> = executeRequest {
         val response = NetworkClients.authClient.post("login") {
@@ -51,7 +53,7 @@ class AuthRepositoryImpl @Inject constructor(
         }.body<AuthResponse>()
 
         if (!response.token.isNullOrEmpty()) {
-            response.token?.let { saveToken(it) }
+            response.token?.let { saveSession(it, response.userId) }
         }
 
         response
@@ -71,10 +73,17 @@ class AuthRepositoryImpl @Inject constructor(
         }.body<AuthResponse>()
 
         if (!response.token.isNullOrEmpty()) {
-            response.token?.let { saveToken(it) }
+            response.token?.let { saveSession(it, response.userId) }
         }
 
         response
+    }
+
+    override suspend fun resendOtp(request: ResendOtpRequest): Result<MessageResponse> = executeRequest {
+        NetworkClients.authClient.post("resend-otp") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
     }
 
     override suspend fun getProfile(): Result<UserProfile> {
@@ -134,8 +143,20 @@ class AuthRepositoryImpl @Inject constructor(
         authDataStore.saveToken(token)
     }
 
+    override suspend fun saveSession(token: String, userId: String?) {
+        authDataStore.saveSession(token, userId)
+    }
+
+    override suspend fun saveUserId(userId: String) {
+        authDataStore.saveUserId(userId)
+    }
+
     override suspend fun getToken(): String? {
         return authDataStore.getToken()
+    }
+
+    override suspend fun getCurrentUserId(): String? {
+        return authDataStore.getUserId()
     }
 
     override fun isUserLoggedIn(): Boolean {

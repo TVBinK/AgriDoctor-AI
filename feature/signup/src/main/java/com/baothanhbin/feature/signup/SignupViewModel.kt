@@ -15,7 +15,9 @@ data class SignupUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isSignupSuccess: Boolean = false,
-    val identifier: String = ""
+    val identifier: String = "",
+    val name: String = "",
+    val password: String = ""
 )
 
 @HiltViewModel
@@ -28,7 +30,12 @@ class SignupViewModel @Inject constructor(
 
     fun signup(name: String, email: String, password: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                name = name,
+                password = password
+            )
             
             val request = SignupRequest(name = name, email = email, password = password)
             
@@ -45,7 +52,9 @@ class SignupViewModel @Inject constructor(
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             isSignupSuccess = true,
-                            identifier = email
+                            identifier = email,
+                            name = name,
+                            password = password
                         )
                     } else {
                         // Trường hợp khác coi là lỗi (hoặc message lỗi)

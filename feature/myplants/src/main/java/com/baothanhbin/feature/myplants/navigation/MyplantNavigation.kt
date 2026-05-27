@@ -2,6 +2,7 @@ package com.baothanhbin.feature.myplants.navigation
 
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
+import androidx.navigation.NavHostController
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.composable
 import com.baothanhbin.feature.myplants.MyplantRoute
@@ -16,9 +17,13 @@ fun NavController.navigateToMyplants(navOptions: NavOptions? = null) {
 }
 
 fun NavGraphBuilder.myplantScreen(
+    navController: NavHostController? = null,
     locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder
 ) {
     composable(route = MY_PLANTS_ROUTE) {
-        MyplantRoute(locationStateHolder = locationStateHolder)
+        MyplantRoute(
+            navController = navController,
+            locationStateHolder = locationStateHolder
+        )
     }
 }

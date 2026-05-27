@@ -1,5 +1,8 @@
 package com.baothanhbin.feature.chatbot
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,6 +13,7 @@ import com.baothanhbin.core.database.model.ChatEntity
 import com.baothanhbin.core.model.ChatbotHistoryMessage
 import com.baothanhbin.core.network.NetworkDataSource
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +26,8 @@ data class ChatMessage(
     val id: String,
     val text: String,
     val isUser: Boolean,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val imageUri: String? = null
 )
 
 fun ChatMessage.toChatMessageData(): ChatMessageData {
@@ -30,7 +35,8 @@ fun ChatMessage.toChatMessageData(): ChatMessageData {
         id = id,
         text = text,
         isUser = isUser,
-        timestamp = timestamp
+        timestamp = timestamp,
+        imageUri = imageUri
     )
 }
 
@@ -39,7 +45,8 @@ fun ChatMessageData.toChatMessage(): ChatMessage {
         id = id,
         text = text,
         isUser = isUser,
-        timestamp = timestamp
+        timestamp = timestamp,
+        imageUri = imageUri
     )
 }
 
@@ -57,13 +64,15 @@ data class ChatbotUiState(
     val showWelcomeScreen: Boolean = true,
     val currentChatId: Long? = null,
     val chatHistory: List<ChatHistoryItem> = emptyList(),
-    val isDrawerOpen: Boolean = false
+    val isDrawerOpen: Boolean = false,
+    val selectedImageUri: Uri? = null
 )
 
 @HiltViewModel
 class ChatbotViewModel @Inject constructor(
     private val database: AgriDoctorDatabase,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val chatDao get() = database.chatDao()
@@ -79,7 +88,8 @@ class ChatbotViewModel @Inject constructor(
 
     fun onMessageSent(message: String) {
         val trimmedMessage = message.trim()
-        if (trimmedMessage.isEmpty()) {
+        val selectedImageUri = _uiState.value.selectedImageUri
+        if (trimmedMessage.isEmpty() && selectedImageUri == null) {
             return
         }
 
@@ -88,24 +98,31 @@ class ChatbotViewModel @Inject constructor(
             val userMessage = ChatMessage(
                 id = "user_${System.currentTimeMillis()}",
                 text = trimmedMessage,
-                isUser = true
+                isUser = true,
+                imageUri = selectedImageUri?.toString()
             )
             val currentMessages = previousMessages + userMessage
 
             _uiState.value = _uiState.value.copy(
                 messages = currentMessages,
                 inputText = "",
+                selectedImageUri = null,
                 showWelcomeScreen = false,
                 isLoading = true
             )
 
             val chatHistory = previousMessages
                 .takeLast(10)
-                .map { item ->
+                .mapNotNull { item ->
+                    val historyText = item.toHistoryText()
+                    if (historyText.isBlank()) {
+                        null
+                    } else {
                     ChatbotHistoryMessage(
-                        text = item.text,
+                        text = historyText,
                         isUser = item.isUser
                     )
+                    }
                 }
 
             val botResponse = withContext(Dispatchers.IO) {
@@ -113,13 +130,21 @@ class ChatbotViewModel @Inject constructor(
                 if (token.isNullOrBlank()) {
                     "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục trò chuyện."
                 } else {
-                    NetworkDataSource.sendChatMessage(
-                        message = trimmedMessage,
-                        history = chatHistory,
-                        token = token
-                    ).getOrElse { error ->
-                        error.message
-                            ?: "Trợ lý cây trồng đang tạm gián đoạn. Vui lòng thử lại sau."
+                    val selectedImage = selectedImageUri?.let { readSelectedImage(it) }
+                    if (selectedImageUri != null && selectedImage == null) {
+                        "Không thể đọc ảnh đã chọn. Vui lòng chọn ảnh khác và thử lại."
+                    } else {
+                        NetworkDataSource.sendChatMessage(
+                            message = trimmedMessage,
+                            history = chatHistory,
+                            token = token,
+                            imageBytes = selectedImage?.bytes,
+                            imageFileName = selectedImage?.fileName ?: "chatbot_image.jpg",
+                            imageMimeType = selectedImage?.mimeType ?: "image/jpeg"
+                        ).getOrElse { error ->
+                            error.message
+                                ?: "Trợ lý cây trồng đang tạm gián đoạn. Vui lòng thử lại sau."
+                        }
                     }
                 }
             }
@@ -169,6 +194,23 @@ class ChatbotViewModel @Inject constructor(
 
     fun onInputTextChanged(text: String) {
         _uiState.value = _uiState.value.copy(inputText = text)
+    }
+
+    fun onImageSelected(uri: Uri?) {
+        if (uri == null) {
+            return
+        }
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+        _uiState.value = _uiState.value.copy(selectedImageUri = uri)
+    }
+
+    fun clearSelectedImage() {
+        _uiState.value = _uiState.value.copy(selectedImageUri = null)
     }
 
     fun processInitialMessageIfNeeded(message: String?): Boolean {
@@ -238,6 +280,7 @@ class ChatbotViewModel @Inject constructor(
                 messages = emptyList(),
                 currentChatId = null,
                 inputText = "",
+                selectedImageUri = null,
                 showWelcomeScreen = true,
                 isDrawerOpen = false
             )
@@ -276,5 +319,51 @@ class ChatbotViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun readSelectedImage(uri: Uri): SelectedChatImage? {
+        return try {
+            val bytes = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                inputStream.readBytes()
+            } ?: return null
+
+            SelectedChatImage(
+                bytes = bytes,
+                fileName = getDisplayName(uri) ?: "chatbot_image.jpg",
+                mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+            )
+        } catch (error: Exception) {
+            Log.e("ChatbotViewModel", "Failed to read selected image", error)
+            null
+        }
+    }
+
+    private fun getDisplayName(uri: Uri): String? {
+        return context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) {
+                cursor.getString(nameIndex)
+            } else {
+                null
+            }
+        }
+    }
+}
+
+private data class SelectedChatImage(
+    val bytes: ByteArray,
+    val fileName: String,
+    val mimeType: String
+)
+
+private fun ChatMessage.toHistoryText(): String {
+    if (text.isNotBlank()) {
+        return text
+    }
+
+    return if (imageUri != null) {
+        "Nguoi dung da gui mot anh."
+    } else {
+        ""
     }
 }

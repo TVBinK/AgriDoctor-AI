@@ -30,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -70,6 +71,10 @@ fun VerifycationOTPScreen(
     val uiState by viewModel.uiState.collectAsState()
     var pin by remember { mutableStateOf("") }
     val isPinComplete = pin.length == 6
+    val resendCooldownText = remember(uiState.resendCooldownSeconds) {
+        formatResendCountdown(uiState.resendCooldownSeconds)
+    }
+    val canResend = !uiState.isVerifying && !uiState.isResending && uiState.resendCooldownSeconds == 0
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
@@ -164,33 +169,43 @@ fun VerifycationOTPScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = if (uiState.isLoading) {
-                            stringResource(id = R.string.sending)
-                        } else {
-                            stringResource(id = R.string.resend_code)
-                        },
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = if (uiState.isLoading) Subtitle else GreenSurface,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        modifier = Modifier.clickable(enabled = !uiState.isLoading) {
+                    TextButton(
+                        onClick = {
                             viewModel.resendOtp()
-                        }
-                    )
+                        },
+                        enabled = canResend,
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                            horizontal = 12.dp,
+                            vertical = 4.dp
+                        )
+                    ) {
+                        Text(
+                            text = if (uiState.isResending) {
+                                stringResource(id = R.string.sending)
+                            } else {
+                                stringResource(id = R.string.resend_code)
+                            },
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = if (canResend) GreenSurface else Subtitle,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(id = R.string.resend_in_timer),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Disabled
-                    )
+                    if (uiState.resendCooldownSeconds > 0) {
+                        Text(
+                            text = stringResource(id = R.string.resend_in_timer, resendCooldownText),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Disabled
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Button(
                     onClick = { viewModel.verifyOtp(pin) },
-                    enabled = isPinComplete && !uiState.isLoading,
+                    enabled = isPinComplete && !uiState.isVerifying,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = GreenSurface,
                         disabledContainerColor = Color(0xFFE0E0E0),
@@ -203,7 +218,7 @@ fun VerifycationOTPScreen(
                     shape = RoundedCornerShape(12.dp),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
-                    if (uiState.isLoading) {
+                    if (uiState.isVerifying) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
                             color = White
@@ -222,8 +237,15 @@ fun VerifycationOTPScreen(
             }
         }
 
-        LoadingOverlay(isVisible = uiState.isLoading)
+        LoadingOverlay(isVisible = uiState.isVerifying)
     }
+}
+
+private fun formatResendCountdown(totalSeconds: Int): String {
+    val safeSeconds = totalSeconds.coerceAtLeast(0)
+    val minutes = safeSeconds / 60
+    val seconds = safeSeconds % 60
+    return "%02d:%02d".format(minutes, seconds)
 }
 
 @Composable

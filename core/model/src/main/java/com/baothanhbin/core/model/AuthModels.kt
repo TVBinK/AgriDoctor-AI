@@ -22,6 +22,12 @@ data class VerifyOtpRequest(
 )
 
 @Serializable
+data class ResendOtpRequest(
+    val email: String,
+    val purpose: String
+)
+
+@Serializable
 data class UserProfile(
     val userId: String,
     val name: String,

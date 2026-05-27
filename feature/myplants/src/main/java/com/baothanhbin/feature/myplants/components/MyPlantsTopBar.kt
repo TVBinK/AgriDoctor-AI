@@ -23,7 +23,8 @@ import com.baothanhbin.core.theme.Body1
 @Composable
 fun MyPlantsTopBar(
     currentAddress: String? = null,
-    onLocationClick: () -> Unit = {}
+    onLocationClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -57,8 +58,8 @@ fun MyPlantsTopBar(
                 maxLines = 2
             )
         }
-        Box(modifier = Modifier.clickable { }) {
-            IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {
+        Box {
+            IconButton(onClick = onSettingsClick, modifier = Modifier.size(40.dp)) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = stringResource(R.string.settings),

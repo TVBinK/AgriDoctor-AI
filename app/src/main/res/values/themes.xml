@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.AgriDoctorAI" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.AgriDoctorAI" parent="Theme.AppCompat.Light.NoActionBar">
         <!-- Add standard item overrides here if needed -->
     </style>
 </resources>

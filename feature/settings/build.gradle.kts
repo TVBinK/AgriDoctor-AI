@@ -13,6 +13,7 @@ dependencies {
     implementation(projects.resources)
     implementation(projects.core.ui)
     implementation(projects.resources)
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.compose.foundation)
 }

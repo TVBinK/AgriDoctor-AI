@@ -1,6 +1,7 @@
-package com.baothanhbin.feature.settings
+﻿package com.baothanhbin.feature.settings
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +43,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -63,6 +66,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -86,10 +90,12 @@ import com.baothanhbin.core.theme.Title
 import com.baothanhbin.core.theme.TitleLarge2
 import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
+import java.util.Locale
 
 @Composable
 fun SettingsRoute(
     onBackClick: () -> Unit,
+    onSessionExpired: () -> Unit = onBackClick,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -103,11 +109,20 @@ fun SettingsRoute(
         }
     }
 
+    LaunchedEffect(uiState.shouldLogout) {
+        if (uiState.shouldLogout) {
+            viewModel.consumeLogoutRequired()
+            onSessionExpired()
+        }
+    }
+
     SettingsScreen(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
         onBackClick = onBackClick,
         onRefresh = viewModel::loadProfile,
+        onChangeLanguage = viewModel::changeLanguage,
+        onClearCache = viewModel::clearCache,
         onUpdateProfile = viewModel::updateProfile,
         onChangePassword = viewModel::changePassword,
         onLogoutClick = viewModel::logout
@@ -121,13 +136,15 @@ fun SettingsScreen(
     snackbarHostState: SnackbarHostState,
     onBackClick: () -> Unit,
     onRefresh: () -> Unit,
+    onChangeLanguage: (String) -> Unit,
+    onClearCache: () -> Unit,
     onUpdateProfile: (String, String, String) -> Unit,
     onChangePassword: (String, String, String) -> Unit,
     onLogoutClick: () -> Unit
 ) {
     var showEditDialog by rememberSaveable { mutableStateOf(false) }
     var showChangePasswordDialog by rememberSaveable { mutableStateOf(false) }
-
+    var showLanguageDialog by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         containerColor = Green1,
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -158,14 +175,12 @@ fun SettingsScreen(
                         )
                     }
                     Text(
-                        text = "Cài đặt",
+                        text = stringResource(R.string.settings),
                         style = MaterialTheme.typography.TitleLarge3,
                         color = GreenSurface
                     )
                 }
-
                 PremiumBanner()
-
                 when {
                     uiState.isLoading -> {
                         SettingsGroupCard {
@@ -179,18 +194,16 @@ fun SettingsScreen(
                             }
                         }
                     }
-
                     uiState.profile == null -> {
                         SettingsGroupCard {
                             SettingRow(
                                 leadingIcon = Icons.Default.Person,
-                                title = "Không tải được thông tin tài khoản",
-                                value = "Nhấn để thử lại",
+                                title = stringResource(R.string.settings_account_load_failed),
+                                value = stringResource(R.string.settings_tap_to_retry),
                                 onClick = onRefresh
                             )
                         }
                     }
-
                     else -> {
                         AccountGroupCard(
                             profile = uiState.profile,
@@ -199,57 +212,58 @@ fun SettingsScreen(
                         )
                     }
                 }
-
                 SettingsGroupCard {
                     SettingRow(
                         leadingIcon = Icons.Default.Language,
-                        title = "Ngôn ngữ",
-                        value = "Tiếng Việt",
-                        onClick = {}
+                        title = stringResource(R.string.settings_language),
+                        value = if (uiState.currentLanguageTag == "en") {
+                            stringResource(R.string.settings_language_english)
+                        } else {
+                            stringResource(R.string.settings_language_vietnamese)
+                        },
+                        onClick = { showLanguageDialog = true }
                     )
                     DividerSpacer()
                     SettingRow(
                         leadingIcon = Icons.Default.Delete,
-                        title = "Xóa bộ nhớ đệm",
-                        value = "(0B)",
-                        onClick = {}
+                        title = stringResource(R.string.settings_clear_caches),
+                        value = formatCacheSize(uiState.cacheSizeBytes),
+                        onClick = onClearCache
                     )
                 }
-
                 SettingsGroupCard {
                     SettingRow(
                         leadingIcon = Icons.AutoMirrored.Filled.Message,
-                        title = "Góp ý",
+                        title = stringResource(R.string.settings_feedback),
                         value = null,
                         onClick = {}
                     )
                     DividerSpacer()
                     SettingRow(
                         leadingIcon = Icons.Default.PrivacyTip,
-                        title = "Chính sách quyền riêng tư",
+                        title = stringResource(R.string.settings_privacy_policy),
                         value = null,
                         onClick = {}
                     )
                     DividerSpacer()
                     SettingRow(
                         leadingIcon = Icons.Default.Settings,
-                        title = "Liên hệ",
+                        title = stringResource(R.string.settings_contact),
                         value = null,
                         onClick = {}
                     )
                     DividerSpacer()
                     SettingRow(
                         leadingIcon = Icons.Default.RateReview,
-                        title = "Đánh giá ứng dụng",
+                        title = stringResource(R.string.settings_rate_app),
                         value = null,
                         onClick = {}
                     )
                 }
-
                 SettingsGroupCard {
                     SettingRow(
                         leadingIcon = Icons.AutoMirrored.Filled.ExitToApp,
-                        title = "Đăng xuất",
+                        title = stringResource(R.string.settings_logout),
                         value = null,
                         onClick = onLogoutClick,
                         showChevron = false
@@ -258,7 +272,6 @@ fun SettingsScreen(
             }
         }
     }
-
     if (showEditDialog && uiState.profile != null) {
         EditProfileDialog(
             profile = uiState.profile,
@@ -270,7 +283,6 @@ fun SettingsScreen(
             }
         )
     }
-
     if (showChangePasswordDialog) {
         ChangePasswordDialog(
             isSubmitting = uiState.isSubmitting,
@@ -278,6 +290,16 @@ fun SettingsScreen(
             onSubmit = { currentPassword, newPassword, confirmPassword ->
                 onChangePassword(currentPassword, newPassword, confirmPassword)
                 showChangePasswordDialog = false
+            }
+        )
+    }
+    if (showLanguageDialog) {
+        LanguageSelectionDialog(
+            currentLanguageTag = uiState.currentLanguageTag,
+            onDismiss = { showLanguageDialog = false },
+            onSelectLanguage = { languageTag ->
+                onChangeLanguage(languageTag)
+                showLanguageDialog = false
             }
         )
     }
@@ -314,12 +336,12 @@ private fun PremiumBanner() {
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Khám phá thêm tiện ích!",
+                        text = stringResource(R.string.settings_premium_title),
                         style = MaterialTheme.typography.TitleLarge3,
                         color = Title
                     )
                     Text(
-                        text = "Mang đến trải nghiệm tốt hơn",
+                        text = stringResource(R.string.settings_premium_subtitle),
                         style = MaterialTheme.typography.Body4,
                         color = Subtitle,
                         modifier = Modifier.padding(top = 4.dp)
@@ -339,45 +361,156 @@ private fun AccountGroupCard(
     SettingsGroupCard {
         SettingRow(
             leadingIcon = Icons.Default.Person,
-            title = "Thông tin tài khoản",
+            title = stringResource(R.string.settings_account_information),
             value = profile.name,
-            onClick = {}
+            showChevron = false
         )
         DividerSpacer()
         SettingRow(
             leadingIcon = Icons.AutoMirrored.Filled.Message,
-            title = "Email",
+            title = stringResource(R.string.settings_email),
             value = profile.email,
-            onClick = {}
+            showChevron = false
         )
         DividerSpacer()
         SettingRow(
             leadingIcon = Icons.Default.Phone,
-            title = "Số điện thoại",
-            value = profile.phone.ifBlank { "Chưa cập nhật" },
-            onClick = {}
+            title = stringResource(R.string.settings_phone),
+            value = profile.phone.ifBlank { stringResource(R.string.settings_not_updated) },
+            showChevron = false
         )
         DividerSpacer()
         SettingRow(
             leadingIcon = Icons.Default.Home,
-            title = "Địa chỉ",
-            value = profile.address.ifBlank { "Chưa cập nhật" },
-            onClick = {}
+            title = stringResource(R.string.settings_address),
+            value = profile.address.ifBlank { stringResource(R.string.settings_not_updated) },
+            showChevron = false
         )
         DividerSpacer()
         SettingRow(
             leadingIcon = Icons.Default.Edit,
-            title = "Cập nhật thông tin",
-            value = "Chỉnh sửa hồ sơ cá nhân",
+            title = stringResource(R.string.settings_update_profile),
+            value = stringResource(R.string.settings_update_profile_description),
             onClick = onEditClick
         )
         DividerSpacer()
         SettingRow(
             leadingIcon = Icons.Default.Lock,
-            title = "Đổi mật khẩu",
-            value = "Thay đổi mật khẩu đăng nhập",
+            title = stringResource(R.string.settings_change_password),
+            value = stringResource(R.string.settings_change_password_description),
             onClick = onChangePasswordClick
         )
+    }
+}
+
+@Composable
+private fun LanguageSelectionDialog(
+    currentLanguageTag: String,
+    onDismiss: () -> Unit,
+    onSelectLanguage: (String) -> Unit
+) {
+    val languages = listOf(
+        "vi" to stringResource(R.string.settings_language_vietnamese),
+        "en" to stringResource(R.string.settings_language_english)
+    )
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(30.dp),
+            colors = CardDefaults.cardColors(containerColor = White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 22.dp, vertical = 22.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.settings_language_dialog_title),
+                            style = MaterialTheme.typography.TitleLarge2,
+                            color = Title
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_language_dialog_description),
+                            style = MaterialTheme.typography.Body3,
+                            color = Subtitle
+                        )
+                    }
+                    TextButton(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.textButtonColors(contentColor = Subtitle)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cancel),
+                            style = MaterialTheme.typography.Button1
+                        )
+                    }
+                }
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    languages.forEach { (tag, label) ->
+                        val isSelected = currentLanguageTag == tag
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onSelectLanguage(tag) },
+                            shape = RoundedCornerShape(22.dp),
+                            border = BorderStroke(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) {
+                                    GreenSurface.copy(alpha = 0.42f)
+                                } else {
+                                    GreenSurface.copy(alpha = 0.12f)
+                                }
+                            ),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) Green1 else White
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.Body2,
+                                        color = Title
+                                    )
+                                    Text(
+                                        text = tag.uppercase(),
+                                        style = MaterialTheme.typography.Label2,
+                                        color = if (isSelected) GreenSurface else Subtitle
+                                    )
+                                }
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { onSelectLanguage(tag) },
+                                    colors = RadioButtonDefaults.colors(
+                                        selectedColor = GreenSurface,
+                                        unselectedColor = Subtitle.copy(alpha = 0.6f)
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -469,18 +602,26 @@ private fun EditProfileDialog(
     var phone by rememberSaveable { mutableStateOf(profile.phone) }
     var address by rememberSaveable { mutableStateOf(profile.address) }
     var localError by rememberSaveable { mutableStateOf<String?>(null) }
+    val dialogTitle = stringResource(R.string.settings_edit_profile_dialog_title)
+    val dialogSubtitle = stringResource(R.string.settings_edit_profile_dialog_description)
+    val confirmText = stringResource(R.string.save)
+    val requiredNameError = stringResource(R.string.settings_name_required)
+    val invalidPhoneError = stringResource(R.string.settings_phone_invalid)
+    val nameLabel = stringResource(R.string.settings_field_name)
+    val phoneLabel = stringResource(R.string.settings_field_phone)
+    val addressLabel = stringResource(R.string.settings_field_address)
 
     SettingsFormDialog(
         onDismissRequest = onDismiss,
-        title = "Cập nhật thông tin",
-        subtitle = "Vui lòng điền thông tin mới của bạn bên dưới.",
+        title = dialogTitle,
+        subtitle = dialogSubtitle,
         isSubmitting = isSubmitting,
-        confirmText = "Lưu",
+        confirmText = confirmText,
         onConfirm = {
             when {
-                name.isBlank() -> localError = "Họ tên là trường bắt buộc."
+                name.isBlank() -> localError = requiredNameError
                 phone.isNotBlank() && !Regex("^[0-9+\\-\\s]{9,15}$").matches(phone.trim()) ->
-                    localError = "Số điện thoại không đúng định dạng."
+                    localError = invalidPhoneError
                 else -> {
                     localError = null
                     onSubmit(name.trim(), phone.trim(), address.trim())
@@ -489,7 +630,7 @@ private fun EditProfileDialog(
         }
     ) {
         DialogTextField(
-            label = "HỌ TÊN",
+            label = nameLabel,
             value = name,
             onValueChange = {
                 name = it
@@ -497,7 +638,7 @@ private fun EditProfileDialog(
             }
         )
         DialogTextField(
-            label = "SỐ ĐIỆN THOẠI",
+            label = phoneLabel,
             value = phone,
             onValueChange = {
                 phone = it
@@ -506,7 +647,7 @@ private fun EditProfileDialog(
             keyboardType = KeyboardType.Phone
         )
         DialogTextField(
-            label = "ĐỊA CHỈ",
+            label = addressLabel,
             value = address,
             onValueChange = {
                 address = it
@@ -534,19 +675,27 @@ private fun ChangePasswordDialog(
     var newPassword by rememberSaveable { mutableStateOf("") }
     var confirmPassword by rememberSaveable { mutableStateOf("") }
     var localError by rememberSaveable { mutableStateOf<String?>(null) }
+    val dialogTitle = stringResource(R.string.settings_change_password_dialog_title)
+    val dialogSubtitle = stringResource(R.string.settings_change_password_dialog_description)
+    val confirmText = stringResource(R.string.settings_confirm)
+    val requiredPasswordError = stringResource(R.string.settings_password_required)
+    val passwordMismatchError = stringResource(R.string.settings_password_mismatch)
+    val currentPasswordLabel = stringResource(R.string.settings_field_current_password)
+    val newPasswordLabel = stringResource(R.string.settings_field_new_password)
+    val confirmPasswordLabel = stringResource(R.string.settings_field_confirm_password)
 
     SettingsFormDialog(
         onDismissRequest = onDismiss,
-        title = "Đổi mật khẩu",
-        subtitle = "Vui lòng nhập đầy đủ thông tin để cập nhật mật khẩu mới.",
+        title = dialogTitle,
+        subtitle = dialogSubtitle,
         isSubmitting = isSubmitting,
-        confirmText = "Xác nhận",
+        confirmText = confirmText,
         onConfirm = {
             when {
                 currentPassword.isBlank() || newPassword.isBlank() || confirmPassword.isBlank() ->
-                    localError = "Vui lòng nhập đầy đủ thông tin."
+                    localError = requiredPasswordError
                 newPassword != confirmPassword ->
-                    localError = "Mật khẩu xác nhận không khớp."
+                    localError = passwordMismatchError
                 else -> {
                     localError = null
                     onSubmit(currentPassword, newPassword, confirmPassword)
@@ -555,7 +704,7 @@ private fun ChangePasswordDialog(
         }
     ) {
         DialogTextField(
-            label = "MẬT KHẨU CŨ",
+            label = currentPasswordLabel,
             value = currentPassword,
             onValueChange = {
                 currentPassword = it
@@ -564,7 +713,7 @@ private fun ChangePasswordDialog(
             visualTransformation = PasswordVisualTransformation()
         )
         DialogTextField(
-            label = "MẬT KHẨU MỚI",
+            label = newPasswordLabel,
             value = newPassword,
             onValueChange = {
                 newPassword = it
@@ -573,7 +722,7 @@ private fun ChangePasswordDialog(
             visualTransformation = PasswordVisualTransformation()
         )
         DialogTextField(
-            label = "XÁC NHẬN MẬT KHẨU",
+            label = confirmPasswordLabel,
             value = confirmPassword,
             onValueChange = {
                 confirmPassword = it
@@ -646,7 +795,7 @@ private fun SettingsFormDialog(
                         onClick = onDismissRequest
                     ) {
                         Text(
-                            text = "Hủy",
+                            text = stringResource(R.string.cancel),
                             style = MaterialTheme.typography.Button1,
                             color = Subtitle
                         )
@@ -723,19 +872,48 @@ fun SettingsScreenPreview() {
     SettingsScreen(
         uiState = SettingsUiState(
             isLoading = false,
+            currentLanguageTag = "vi",
             profile = UserProfile(
                 userId = "1",
-                name = "Trịnh Văn Bình",
+                name = "Trinh Van Binh",
                 email = "binh@example.com",
                 phone = "0912345678",
-                address = "Hà Nội"
+                address = "Ha Noi"
             )
         ),
         snackbarHostState = SnackbarHostState(),
         onBackClick = {},
         onRefresh = {},
+        onChangeLanguage = {},
+        onClearCache = {},
         onUpdateProfile = { _, _, _ -> },
         onChangePassword = { _, _, _ -> },
         onLogoutClick = {}
     )
 }
+
+@Composable
+private fun formatCacheSize(sizeBytes: Long): String {
+    if (sizeBytes <= 0L) {
+        return "0 ${stringResource(R.string.settings_cache_unit_b)}"
+    }
+    val units = listOf(
+        stringResource(R.string.settings_cache_unit_b),
+        stringResource(R.string.settings_cache_unit_kb),
+        stringResource(R.string.settings_cache_unit_mb),
+        stringResource(R.string.settings_cache_unit_gb)
+    )
+    var value = sizeBytes.toDouble()
+    var unitIndex = 0
+    while (value >= 1024 && unitIndex < units.lastIndex) {
+        value /= 1024
+        unitIndex++
+    }
+    return if (unitIndex == 0) {
+        "${value.toLong()} ${units[unitIndex]}"
+    } else {
+        String.format(Locale.getDefault(), "%.1f %s", value, units[unitIndex])
+    }
+}
+
+

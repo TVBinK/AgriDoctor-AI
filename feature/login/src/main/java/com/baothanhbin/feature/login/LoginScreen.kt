@@ -64,6 +64,7 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import com.baothanhbin.agridoctorai.resources.R
+import com.baothanhbin.core.model.OtpVerificationPurpose
 import com.baothanhbin.core.theme.BlueDefault
 import com.baothanhbin.core.theme.Body4
 import com.baothanhbin.core.theme.Subtitle
@@ -73,7 +74,7 @@ import com.baothanhbin.core.ui.feedback.LoadingOverlay
 @Composable
 fun LoginRoute(
     onNavigateToSignup: () -> Unit,
-    onNavigateToPin: (String) -> Unit,
+    onNavigateToPin: (String, OtpVerificationPurpose) -> Unit,
     onNavigateToForgotPassword: () -> Unit,
     viewModel: LoginViewModel = hiltViewModel()
 ) {
@@ -81,7 +82,7 @@ fun LoginRoute(
 
     LaunchedEffect(uiState.isOtpSent) {
         if (uiState.isOtpSent) {
-            onNavigateToPin(uiState.email)
+            onNavigateToPin(uiState.email, OtpVerificationPurpose.LOGIN)
             viewModel.resetState()
         }
     }

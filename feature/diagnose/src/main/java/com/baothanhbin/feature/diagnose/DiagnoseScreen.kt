@@ -82,6 +82,7 @@ import com.baothanhbin.core.theme.White
 import com.baothanhbin.core.ui.dialog.LocationDialog
 import com.baothanhbin.feature.camera.navigation.navigateToCamera
 import com.baothanhbin.feature.diagnoseresult.navigation.navigateToDiagnoseResult
+import com.baothanhbin.feature.settings.navigation.navigateToSettings
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -113,6 +114,7 @@ fun DiagnoseRoute(
     }
 
     DiagnoseScreen(
+        navController = navController,
         viewModel = viewModel,
         locationStateHolder = locationStateHolder
     )
@@ -120,6 +122,7 @@ fun DiagnoseRoute(
 
 @Composable
 fun DiagnoseScreen(
+    navController: NavHostController? = null,
     viewModel: DiagnoseViewModel = hiltViewModel(),
     locationStateHolder: com.baothanhbin.core.ui.util.LocationStateHolder
 ) {
@@ -158,13 +161,6 @@ fun DiagnoseScreen(
                 .wrapContentHeight(),
             contentScale = ContentScale.FillWidth
         )
-        DiagnoseTopBar(
-            currentAddress = locationStateHolder.currentAddress,
-            onLocationClick = {
-                viewModel.checkAndGetLocation(context, locationStateHolder)
-            }
-        )
-        Spacer(modifier = Modifier.height(12.dp))
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -179,6 +175,22 @@ fun DiagnoseScreen(
             Spacer(modifier = Modifier.height(24.dp))
             HistorySection(
                 viewModel = viewModel
+            )
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp)
+                .align(Alignment.TopStart)
+        ) {
+            DiagnoseTopBar(
+                currentAddress = locationStateHolder.currentAddress,
+                onLocationClick = {
+                    viewModel.checkAndGetLocation(context, locationStateHolder)
+                },
+                onSettingsClick = {
+                    navController?.navigateToSettings()
+                }
             )
         }
 
@@ -199,7 +211,8 @@ fun DiagnoseScreen(
 @Composable
 private fun DiagnoseTopBar(
     currentAddress: String? = null,
-    onLocationClick: () -> Unit = {}
+    onLocationClick: () -> Unit = {},
+    onSettingsClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier
@@ -212,6 +225,7 @@ private fun DiagnoseTopBar(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
+                .height(64.dp)
                 .weight(1f)
                 .clickable(
                     onClick = onLocationClick,
@@ -225,15 +239,15 @@ private fun DiagnoseTopBar(
                 tint = Color(0xFF4CAF50),
                 modifier = Modifier.size(50.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(15.dp))
             Text(
                 text = currentAddress ?: stringResource(R.string.allow_location_tracking),
                 style = MaterialTheme.typography.Body1,
                 maxLines = 2
             )
         }
-        Box(modifier = Modifier.clickable { }) {
-            IconButton(onClick = { }, modifier = Modifier.size(40.dp)) {
+        Box {
+            IconButton(onClick = onSettingsClick, modifier = Modifier.size(40.dp)) {
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = stringResource(R.string.settings),
@@ -372,8 +386,8 @@ private fun ProblemCard(problem: Problem) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = problem.title,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.bodyMedium
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }

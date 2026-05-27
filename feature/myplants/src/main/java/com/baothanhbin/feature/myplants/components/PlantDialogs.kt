@@ -257,7 +257,7 @@ fun SetReminderDialog(
     val context = LocalContext.current
     var selectedTimestamp by remember { mutableStateOf<Long?>(null) }
     var dateTimeText by remember { mutableStateOf("") }
-    var actionName by remember { mutableStateOf("Tưới nước") }
+    var actionName by remember { mutableStateOf(context.getString(R.string.reminder_action_watering)) }
     var expandedActionMenu by remember { mutableStateOf(false) }
     
     // Default to the initial plant name, except if it's "Tất cả cây" then we try to pick the first one
@@ -300,7 +300,7 @@ fun SetReminderDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         containerColor = Color.White,
-        title = { Text(stringResource(R.string.set_watering_reminder).replace("tưới nước", "chăm sóc")) },
+        title = { Text(stringResource(R.string.set_care_reminder)) },
         text = {
             Column {
                 if (availablePlants.isNotEmpty()) {
@@ -331,7 +331,7 @@ fun SetReminderDialog(
                 } else {
                     Text(
                         stringResource(
-                            R.string.setup_watering_reminder_for,
+                            R.string.setup_care_reminder_for,
                             selectedPlant?.displayName().orEmpty()
                         ),
                         color = Subtitle
@@ -343,7 +343,7 @@ fun SetReminderDialog(
                 androidx.compose.material3.OutlinedTextField(
                     value = actionName,
                     onValueChange = { actionName = it },
-                    label = { Text("Loại nhắc nhở (Tưới nước, Bón phân...)") },
+                    label = { Text(stringResource(R.string.reminder_type_label)) },
                     trailingIcon = {
                         androidx.compose.material3.IconButton(onClick = { expandedActionMenu = !expandedActionMenu }) {
                             androidx.compose.material3.Icon(
@@ -364,7 +364,13 @@ fun SetReminderDialog(
                     onDismissRequest = { expandedActionMenu = false },
                     modifier = Modifier.fillMaxWidth(0.7f).background(Color.White)
                 ) {
-                    listOf("Tưới nước", "Bón phân", "Tỉa cành", "Làm cỏ", "Phun thuốc").forEach { action ->
+                    listOf(
+                        stringResource(R.string.reminder_action_watering),
+                        stringResource(R.string.reminder_action_fertilizing),
+                        stringResource(R.string.reminder_action_pruning),
+                        stringResource(R.string.reminder_action_weeding),
+                        stringResource(R.string.reminder_action_spraying)
+                    ).forEach { action ->
                         androidx.compose.material3.DropdownMenuItem(
                             text = { Text(action, color = GreenSurface) },
                             onClick = {
@@ -401,7 +407,11 @@ fun SetReminderDialog(
                 onClick = {
                     selectedPlant?.let { plant ->
                         selectedTimestamp?.let { timestamp ->
-                            onSetReminder(plant, actionName.ifBlank { "Chăm sóc" }, timestamp)
+                            onSetReminder(
+                                plant,
+                                actionName.ifBlank { context.getString(R.string.care) },
+                                timestamp
+                            )
                         }
                     }
                 },

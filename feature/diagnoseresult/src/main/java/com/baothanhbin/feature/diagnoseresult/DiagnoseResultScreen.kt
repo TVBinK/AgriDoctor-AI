@@ -55,6 +55,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -93,6 +94,9 @@ import com.baothanhbin.core.theme.TitleLarge3
 import com.baothanhbin.core.theme.White
 import kotlinx.serialization.json.Json
 import android.util.Base64
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
+import java.util.Locale
 
 @Composable
 fun DiagnoseResultRoute(
@@ -132,7 +136,7 @@ fun DiagnoseResultRoute(
 
     // Get current location
     val context = LocalContext.current
-    val displayLocation = locationStateHolder.currentAddress ?: "Unknown Location"
+    val displayLocation = locationStateHolder.currentAddress ?: context.getString(R.string.no_location)
 
     DiagnoseResultScreen(
         imageUri = imageUri,
@@ -208,6 +212,7 @@ private fun HeaderImage(
 ) {
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     var sourceImageSize by remember { mutableStateOf(IntSize.Zero) }
+    val shouldRenderOverlay = detections.isNotEmpty() && !imageUri.isAnnotatedDiagnoseImage()
 
     Box(
         modifier = Modifier
@@ -243,7 +248,7 @@ private fun HeaderImage(
             )
 
             if (
-                detections.isNotEmpty() &&
+                shouldRenderOverlay &&
                 containerSize.width > 0 &&
                 containerSize.height > 0 &&
                 sourceImageSize.width > 0 &&
@@ -281,6 +286,16 @@ private fun DetectionOverlay(
         val scaledHeight = sourceImageSize.height * scale
         val offsetX = (size.width - scaledWidth) / 2f
         val offsetY = (size.height - scaledHeight) / 2f
+        val labelTextPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = 11.dp.toPx()
+            typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+            isAntiAlias = true
+        }
+        val labelBounds = android.graphics.Rect()
+        val labelHorizontalPadding = 6.dp.toPx()
+        val labelVerticalPadding = 3.dp.toPx()
+        val labelCornerRadius = 6.dp.toPx()
 
         detections.forEach { detection ->
             if (detection.box.size < 4) return@forEach
@@ -305,6 +320,39 @@ private fun DetectionOverlay(
                 size = androidx.compose.ui.geometry.Size(right - left, bottom - top),
                 style = Stroke(width = 4.dp.toPx())
             )
+
+            val confidenceLabel = formatDetectionConfidence(detection.confidence)
+            labelTextPaint.getTextBounds(confidenceLabel, 0, confidenceLabel.length, labelBounds)
+
+            val labelWidth = labelBounds.width() + (labelHorizontalPadding * 2f)
+            val labelHeight = labelBounds.height() + (labelVerticalPadding * 2f)
+            val maxLabelLeft = (size.width - labelWidth).coerceAtLeast(0f)
+            val maxLabelTop = (size.height - labelHeight).coerceAtLeast(0f)
+            val labelLeft = left.coerceIn(0f, maxLabelLeft)
+            val preferredLabelTop = top - labelHeight
+            val labelTop = if (preferredLabelTop >= 0f) {
+                preferredLabelTop.coerceAtMost(maxLabelTop)
+            } else {
+                top.coerceIn(0f, maxLabelTop)
+            }
+
+            drawRoundRect(
+                color = boxColor,
+                topLeft = androidx.compose.ui.geometry.Offset(labelLeft, labelTop),
+                size = androidx.compose.ui.geometry.Size(labelWidth, labelHeight),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(
+                    x = labelCornerRadius,
+                    y = labelCornerRadius
+                )
+            )
+
+            val baseline = labelTop + labelVerticalPadding - labelBounds.top
+            drawContext.canvas.nativeCanvas.drawText(
+                confidenceLabel,
+                labelLeft + labelHorizontalPadding,
+                baseline,
+                labelTextPaint
+            )
         }
     }
 }
@@ -324,6 +372,7 @@ private fun ContentSection(
     apiType: ApiType,
     onChatWithAi: (String) -> Unit
 ) {
+    val chatPromptTreatment = stringResource(R.string.chat_prompt_treatment, diseaseName)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -332,7 +381,7 @@ private fun ContentSection(
         // Header Image
         HeaderImage(
             imageUri = imageUri,
-            detections = emptyList(),
+            detections = detections,
             onBack = onBack
         )
         
@@ -482,7 +531,7 @@ private fun ContentSection(
                 background = Color.White,
                 animatedRaw = R.raw.ic_tinh_linh,
                 onChatNowClick = {
-                    onChatWithAi("Cách điều trị bệnh $diseaseName")
+                    onChatWithAi(chatPromptTreatment)
                 }
             )
         }
@@ -498,6 +547,7 @@ private fun ClassifyContentSection(
     onChatWithAi: (String) -> Unit
 ) {
     val plantName = classifyData.plantNameVN ?: classifyData.plantName
+    val chatPromptCare = stringResource(R.string.chat_prompt_care, plantName)
     val confidence = classifyData.confidence
     val description = classifyData.description
     val icon = classifyData.icon
@@ -707,7 +757,7 @@ private fun ClassifyContentSection(
                 background = Color.White,
                 animatedRaw = R.raw.ic_tinh_linh,
                 onChatNowClick = {
-                    onChatWithAi("Cách chăm sóc cây $plantName")
+                    onChatWithAi(chatPromptCare)
                 }
             )
         }
@@ -830,7 +880,7 @@ private fun TreatmentItemCard(item: TreatmentItem) {
             if (!linkText.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Recommended: $linkText",
+                    text = stringResource(R.string.recommended_link_text, linkText),
                     style = MaterialTheme.typography.labelMedium,
                     color = Color(0xFF1976D2),
                     fontStyle = FontStyle.Italic
@@ -1006,4 +1056,20 @@ fun DiagnoseResultScreenPreview() {
         ),
         location = "Ho Chi Minh City"
     )
+}
+
+private fun Uri?.isAnnotatedDiagnoseImage(): Boolean {
+    val normalizedPath = this?.path?.replace('\\', '/') ?: return false
+    return normalizedPath.contains("/diagnose_images/diagnose_")
+}
+
+private fun formatDetectionConfidence(confidence: Double): String {
+    val percent = confidence * 100
+    if (!percent.isFinite()) return "0%"
+
+    val formatter = DecimalFormat(
+        "0.##",
+        DecimalFormatSymbols(Locale.US)
+    )
+    return "${formatter.format(percent)}%"
 }

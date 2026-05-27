@@ -6,6 +6,9 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.Typeface
 import android.net.Uri
 import android.util.Log
 import androidx.exifinterface.media.ExifInterface
@@ -33,11 +36,13 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.net.URLConnection
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -56,6 +61,9 @@ sealed class ProcessImageNavigationEvent {
     data class NavigateToFailed(val imageUri: Uri?, val apiType: ApiType = ApiType.DETECT) : ProcessImageNavigationEvent()
     data object NavigateToLogin : ProcessImageNavigationEvent()
 }
+
+private const val DETECT_RESULT_DIAGNOSED = "diagnosed"
+private const val CLASSIFY_RESULT_CLASSIFIED = "classified"
 
 @HiltViewModel
 class ProcessImageViewModel @Inject constructor(
@@ -114,12 +122,12 @@ class ProcessImageViewModel @Inject constructor(
                     _uiState.value = ProcessImageUiState(step = 2) // processing done
                     delay(500) // Small delay to show processing state
 
-                    // Check if result is valid (success and not "No disease detected")
-                    val isValidResult = detectResult != null &&
+                    val detectResultType = detectResult?.data?.resultType
+                    val isDiagnosedResult = detectResult != null &&
                         detectResult.success &&
-                        detectResult.data.diseaseName != "No disease detected"
+                        detectResultType == DETECT_RESULT_DIAGNOSED
 
-                    if (isValidResult) {
+                    if (isDiagnosedResult) {
                     // Cache to Room database - must save before navigating
                     try {
                         // Render detections directly on the normalized bitmap before caching
@@ -140,7 +148,8 @@ class ProcessImageViewModel @Inject constructor(
                         val uriToSave = savedImageUri ?: imageUri
                         val entity = detectResult.data.toEntity(
                             imageUri = uriToSave.toString(),
-                            location = currentLocation
+                            location = currentLocation,
+                            serverHistoryId = detectResult.historyId
                         )
                         diagnoseResultRepository.insertDiagnoseResult(entity)
                         
@@ -155,7 +164,6 @@ class ProcessImageViewModel @Inject constructor(
                         _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToResult(imageUri, apiType))
                     }
                     } else {
-                        // Navigate to failed screen (fail case, null result, or no disease detected)
                         _navigationEvent.emit(ProcessImageNavigationEvent.NavigateToFailed(imageUri, apiType))
                     }
                 } else {
@@ -166,7 +174,12 @@ class ProcessImageViewModel @Inject constructor(
                     delay(500)
                     
                     // Check if classify result is valid
-                    if (classifyResult != null && classifyResult.success) {
+                    val isClassifiedResult = classifyResult != null &&
+                        classifyResult.success &&
+                        classifyResult.data.resultType == CLASSIFY_RESULT_CLASSIFIED &&
+                        !classifyResult.data.rejectedInput
+
+                    if (isClassifiedResult) {
                         val classifyData = classifyResult.data
                         // Navigate to result screen (DiagnoseResultScreen will handle displaying classify data)
                         try {
@@ -188,7 +201,8 @@ class ProcessImageViewModel @Inject constructor(
                             val uriToSave = savedImageUri ?: imageUri
                             val entity = classifyData.toPlantEntity(
                                 imageUri = uriToSave.toString(),
-                                location = currentLocation
+                                location = currentLocation,
+                                serverHistoryId = classifyResult.historyId
                             )
                             plantRepository.insertPlant(entity)
 
@@ -304,13 +318,31 @@ class ProcessImageViewModel @Inject constructor(
         val mutableBitmap = source.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(mutableBitmap)
         val strokeWidthPx = (mutableBitmap.width / 120f).coerceAtLeast(4f)
-        val textSizePx = (mutableBitmap.width / 24f).coerceAtLeast(28f)
+        val textSizePx = (mutableBitmap.width / 30f).coerceAtLeast(22f)
+        val labelHorizontalPaddingPx = textSizePx * 0.3f
+        val labelVerticalPaddingPx = textSizePx * 0.16f
+        val labelCornerRadiusPx = textSizePx * 0.24f
 
         val boxPaint = Paint().apply {
             style = Paint.Style.STROKE
             strokeWidth = strokeWidthPx
             isAntiAlias = true
         }
+
+        val labelBackgroundPaint = Paint().apply {
+            style = Paint.Style.FILL
+            isAntiAlias = true
+        }
+
+        val labelTextPaint = Paint().apply {
+            style = Paint.Style.FILL
+            color = android.graphics.Color.WHITE
+            textSize = textSizePx
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            isAntiAlias = true
+        }
+
+        val labelBounds = Rect()
 
         detections.forEach { detection ->
             if (detection.box.size < 4) return@forEach
@@ -330,9 +362,57 @@ class ProcessImageViewModel @Inject constructor(
 
             boxPaint.color = color
             canvas.drawRect(left, top, right, bottom, boxPaint)
+
+            val confidenceLabel = formatDetectionConfidence(detection.confidence)
+            labelTextPaint.getTextBounds(confidenceLabel, 0, confidenceLabel.length, labelBounds)
+
+            val labelWidth = labelBounds.width() + (labelHorizontalPaddingPx * 2f)
+            val labelHeight = labelBounds.height() + (labelVerticalPaddingPx * 2f)
+            val maxLabelLeft = (mutableBitmap.width - labelWidth).coerceAtLeast(0f)
+            val maxLabelTop = (mutableBitmap.height - labelHeight).coerceAtLeast(0f)
+            val labelLeft = left.coerceIn(0f, maxLabelLeft)
+            val preferredLabelTop = top - labelHeight
+            val labelTop = if (preferredLabelTop >= 0f) {
+                preferredLabelTop.coerceAtMost(maxLabelTop)
+            } else {
+                top.coerceIn(0f, maxLabelTop)
+            }
+
+            labelBackgroundPaint.color = color
+            val labelRect = RectF(
+                labelLeft,
+                labelTop,
+                labelLeft + labelWidth,
+                labelTop + labelHeight
+            )
+            canvas.drawRoundRect(
+                labelRect,
+                labelCornerRadiusPx,
+                labelCornerRadiusPx,
+                labelBackgroundPaint
+            )
+
+            val baseline = labelRect.top + labelVerticalPaddingPx - labelBounds.top
+            canvas.drawText(
+                confidenceLabel,
+                labelRect.left + labelHorizontalPaddingPx,
+                baseline,
+                labelTextPaint
+            )
         }
 
         return mutableBitmap
+    }
+
+    private fun formatDetectionConfidence(confidence: Double): String {
+        val percent = confidence * 100
+        if (!percent.isFinite()) return "0%"
+
+        val formatter = DecimalFormat(
+            "0.##",
+            DecimalFormatSymbols(Locale.US)
+        )
+        return "${formatter.format(percent)}%"
     }
 
     private fun saveBitmapToAppStorage(
@@ -423,18 +503,28 @@ class ProcessImageViewModel @Inject constructor(
     )
 
     private fun prepareImageUpload(context: Application, sourceUri: Uri): PreparedUploadImage? {
-        val bitmap = loadBitmapWithCorrectOrientation(context, sourceUri) ?: return null
+        val bytes = openInputStream(context, sourceUri)?.use { inputStream ->
+            inputStream.readBytes()
+        } ?: return null
 
-        return try {
-            val output = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, output)
-            PreparedUploadImage(
-                bytes = output.toByteArray(),
-                mimeType = "image/jpeg"
-            )
-        } finally {
-            bitmap.recycle()
-        }
+        return PreparedUploadImage(
+            bytes = bytes,
+            mimeType = resolveUploadMimeType(context, sourceUri)
+        )
+    }
+
+    private fun resolveUploadMimeType(context: Application, sourceUri: Uri): String {
+        context.contentResolver.getType(sourceUri)
+            ?.takeIf { it.startsWith("image/") }
+            ?.let { return it }
+
+        val fileName = resolveLocalFile(sourceUri)?.name
+            ?: sourceUri.lastPathSegment
+            ?: return "image/jpeg"
+
+        return URLConnection.guessContentTypeFromName(fileName)
+            ?.takeIf { it.startsWith("image/") }
+            ?: "image/jpeg"
     }
     
     /**

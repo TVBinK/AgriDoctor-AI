@@ -11,6 +11,7 @@ import com.baothanhbin.core.model.DiagnoseApiResponse
 import com.baothanhbin.core.model.DiagnoseData
 import com.baothanhbin.core.model.RecoveryCareData
 import com.baothanhbin.core.model.TreatmentData
+import com.baothanhbin.core.model.UserHistoryResponse
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.client.request.get
@@ -29,6 +30,7 @@ import java.net.SocketTimeoutException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 object NetworkDataSource {
@@ -89,18 +91,41 @@ object NetworkDataSource {
     suspend fun sendChatMessage(
         message: String,
         history: List<ChatbotHistoryMessage>,
-        token: String
+        token: String,
+        imageBytes: ByteArray? = null,
+        imageFileName: String = "chatbot_image.jpg",
+        imageMimeType: String = "image/jpeg"
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
-            val response = NetworkClients.chatbotClient.post("") {
-                header(HttpHeaders.Authorization, "Bearer $token")
-                contentType(ContentType.Application.Json)
-                setBody(
-                    ChatbotRequest(
-                        message = message,
-                        history = history
+            val response = if (imageBytes != null) {
+                val mimeType = ContentType.parse(imageMimeType)
+                NetworkClients.chatbotClient.submitFormWithBinaryData(
+                    formData = formData {
+                        append("message", message)
+                        append("history", networkJson.encodeToString(history))
+                        append(
+                            key = "image",
+                            value = imageBytes,
+                            headers = Headers.build {
+                                append(HttpHeaders.ContentType, mimeType.toString())
+                                append(HttpHeaders.ContentDisposition, "filename=\"${ensureFileName(imageFileName, mimeType)}\"")
+                            }
+                        )
+                    }
+                ) {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                }
+            } else {
+                NetworkClients.chatbotClient.post("") {
+                    header(HttpHeaders.Authorization, "Bearer $token")
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        ChatbotRequest(
+                            message = message,
+                            history = history
+                        )
                     )
-                )
+                }
             }
 
             if (response.status == HttpStatusCode.OK) {
@@ -179,6 +204,46 @@ object NetworkDataSource {
         }
     }
 
+    suspend fun getUserHistory(token: String): UserHistoryResponse? = withContext(Dispatchers.IO) {
+        try {
+            val response = NetworkClients.historyClient.get("") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+            }
+
+            if (response.status == HttpStatusCode.OK) {
+                response.body<UserHistoryResponse>()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("getUserHistory", "Failed to fetch user history", e)
+            null
+        }
+    }
+
+    suspend fun downloadHistoryImage(
+        historyId: String,
+        token: String
+    ): DownloadedHistoryImage? = withContext(Dispatchers.IO) {
+        try {
+            val response = NetworkClients.historyClient.get("$historyId/image") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+            }
+
+            if (response.status != HttpStatusCode.OK) {
+                return@withContext null
+            }
+
+            DownloadedHistoryImage(
+                bytes = response.body<ByteArray>(),
+                mimeType = response.headers[HttpHeaders.ContentType]
+            )
+        } catch (e: Exception) {
+            Log.e("downloadHistoryImage", "Failed to download history image", e)
+            null
+        }
+    }
+
     private fun parseDetectResponse(responseBody: String): DiagnoseApiResponse? {
         return try {
             networkJson.decodeFromString<DiagnoseApiResponse>(responseBody)
@@ -211,6 +276,11 @@ object NetworkDataSource {
         return "$fileName$extension"
     }
 }
+
+data class DownloadedHistoryImage(
+    val bytes: ByteArray,
+    val mimeType: String? = null
+)
 
 private fun parseApiError(responseBody: String): String {
     return runCatching {
@@ -255,22 +325,23 @@ private fun DetectFallbackResponse.toDiagnoseApiResponse(): DiagnoseApiResponse?
         addAll(debug_info)
     }.joinToString("\n")
 
-    return DiagnoseApiResponse(
-        success = true,
-        data = DiagnoseData(
-            diseaseName = primaryName,
-            possibleProblems = normalizedNames,
-            symptoms = debugSummary,
-            causes = "",
-            treatment = emptyList<TreatmentData>(),
-            recoveryCare = emptyList<RecoveryCareData>(),
-            detections = detections.map { detection ->
-                DetectionData(
-                    name = detection.name,
-                    confidence = detection.confidence ?: 0.0,
-                    box = detection.box
-                )
-            }
+        return DiagnoseApiResponse(
+            success = true,
+            data = DiagnoseData(
+                diseaseName = primaryName,
+                possibleProblems = normalizedNames,
+                symptoms = debugSummary,
+                causes = "",
+                treatment = emptyList<TreatmentData>(),
+                recoveryCare = emptyList<RecoveryCareData>(),
+                detections = detections.map { detection ->
+                    DetectionData(
+                        name = detection.name,
+                        confidence = detection.confidence ?: 0.0,
+                        box = detection.box
+                    )
+                },
+                resultType = "diagnosed"
+            )
         )
-    )
-}
+    }

@@ -7,7 +7,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navOptions
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.core.ui.util.rememberLocationStateHolder
-import com.baothanhbin.feature.chatbot.navigation.CHATBOT_ROUTE
+import com.baothanhbin.feature.chatbot.navigation.CHATBOT_ROUTE_BASE
 import com.baothanhbin.feature.chatbot.navigation.navigateToChatbot
 import com.baothanhbin.feature.diagnose.navigation.DIAGNOSE_ROUTE
 import com.baothanhbin.feature.diagnose.navigation.navigateToDiagnose
@@ -32,11 +32,11 @@ class AppState(
     val currentTopLevelDestination: TopLevelDestination?
         @Composable get() {
             val currentDestination = navController.currentBackStackEntryAsState().value?.destination
-            return when (currentDestination?.route) {
+            return when (currentDestination?.route?.substringBefore('?')?.substringBefore('/')) {
                 HOME_ROUTE -> TopLevelDestination.HOME
                 DIAGNOSE_ROUTE -> TopLevelDestination.DIAGNOSE
                 MY_PLANTS_ROUTE -> TopLevelDestination.MY_PLANTS
-                CHATBOT_ROUTE -> TopLevelDestination.CHATBOT
+                CHATBOT_ROUTE_BASE -> TopLevelDestination.CHATBOT
                 else -> null
             }
         }

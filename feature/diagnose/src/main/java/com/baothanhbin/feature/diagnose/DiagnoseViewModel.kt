@@ -8,11 +8,14 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.baothanhbin.core.data.repository.DiagnoseResultRepository
+import com.baothanhbin.core.data.repository.PlantRepository
 import com.baothanhbin.core.database.model.DiagnoseResultEntity
 import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.database.model.toClassifyData
+import com.baothanhbin.core.database.model.toDiagnoseData
 import com.baothanhbin.core.model.ApiType
 import com.baothanhbin.core.model.ClassifyData
+import com.baothanhbin.core.model.LatestDiagnoseResultCache
 import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,17 +23,16 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 sealed class DiagnoseNavigationEvent {
     data class NavigateToResult(
         val imageUri: Uri?,
-        val apiType: ApiType = ApiType.DETECT,
+        val apiType: ApiType,
         val classifyData: ClassifyData? = null
     ) : DiagnoseNavigationEvent()
 
@@ -41,14 +43,14 @@ sealed class DiagnoseNavigationEvent {
 class DiagnoseViewModel @Inject constructor(
     application: Application,
     private val diagnoseResultRepository: DiagnoseResultRepository,
-    private val plantRepository: com.baothanhbin.core.data.repository.PlantRepository
+    private val plantRepository: PlantRepository
 ) : AndroidViewModel(application) {
 
     private val _historyItems = MutableStateFlow<List<DiagnoseResultEntity>>(emptyList())
     val historyItems: StateFlow<List<DiagnoseResultEntity>> = _historyItems.asStateFlow()
 
-    val plantHistoryItems: StateFlow<List<PlantEntity>> = plantRepository.getAllPlants()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _plantHistoryItems = MutableStateFlow<List<PlantEntity>>(emptyList())
+    val plantHistoryItems: StateFlow<List<PlantEntity>> = _plantHistoryItems.asStateFlow()
 
     private val _navigationEvent = MutableSharedFlow<DiagnoseNavigationEvent>()
     val navigationEvent: SharedFlow<DiagnoseNavigationEvent> = _navigationEvent.asSharedFlow()
@@ -60,45 +62,61 @@ class DiagnoseViewModel @Inject constructor(
     val locationError: SharedFlow<String> = _locationError.asSharedFlow()
 
     init {
-        loadHistory()
+        observeDiagnoseHistory()
+        observePlantHistory()
     }
 
     fun loadHistory() {
+        // History is observed reactively from Room.
+    }
+
+    private fun observeDiagnoseHistory() {
         viewModelScope.launch {
-            val results = diagnoseResultRepository.getAllDiagnoseResults()
-            _historyItems.value = results
+            diagnoseResultRepository.observeAllDiagnoseResults().collect { diagnoseResults ->
+                _historyItems.value = diagnoseResults
+            }
         }
     }
 
-    fun deleteHistoryItem(entity: DiagnoseResultEntity) {
+    private fun observePlantHistory() {
         viewModelScope.launch {
-            diagnoseResultRepository.deleteDiagnoseResult(entity.id)
-            loadHistory()
+            plantRepository.getRecognizedPlants().collect { plants ->
+                _plantHistoryItems.value = plants
+            }
         }
     }
 
-    fun deletePlantHistoryItem(entity: PlantEntity) {
+    fun deleteHistoryItem(item: DiagnoseResultEntity) {
         viewModelScope.launch {
-            plantRepository.deletePlant(entity.id)
+            diagnoseResultRepository.deleteDiagnoseResult(item.id)
         }
     }
 
-    fun onHistoryItemClick(entity: DiagnoseResultEntity) {
+    fun deletePlantHistoryItem(item: PlantEntity) {
         viewModelScope.launch {
-            val uri = entity.imageUri?.let { Uri.parse(it) }
-            _navigationEvent.emit(DiagnoseNavigationEvent.NavigateToResult(uri))
+            plantRepository.deletePlant(item.id)
         }
     }
 
-    fun onPlantHistoryItemClick(entity: PlantEntity) {
+    fun onHistoryItemClick(item: DiagnoseResultEntity) {
         viewModelScope.launch {
-            val uri = entity.imageUri?.let { Uri.parse(it) }
-            val classifyData = entity.toClassifyData()
+            LatestDiagnoseResultCache.store(item.imageUri, item.toDiagnoseData())
             _navigationEvent.emit(
                 DiagnoseNavigationEvent.NavigateToResult(
-                    imageUri = uri,
+                    imageUri = item.imageUri?.let(Uri::parse),
+                    apiType = ApiType.DETECT
+                )
+            )
+        }
+    }
+
+    fun onPlantHistoryItemClick(item: PlantEntity) {
+        viewModelScope.launch {
+            _navigationEvent.emit(
+                DiagnoseNavigationEvent.NavigateToResult(
+                    imageUri = item.imageUri?.let(Uri::parse),
                     apiType = ApiType.CLASSIFY,
-                    classifyData = classifyData
+                    classifyData = item.toClassifyData()
                 )
             )
         }
@@ -134,9 +152,9 @@ class DiagnoseViewModel @Inject constructor(
                 }
             },
             onError = { exception ->
-                Log.e("DiagnoseViewModel", "Lỗi lấy vị trí: ${exception.message}", exception)
+                Log.e("DiagnoseViewModel", "Lá»—i láº¥y vá»‹ trÃ­: ${exception.message}", exception)
                 viewModelScope.launch {
-                    _locationError.emit(exception.message ?: "Không thể lấy vị trí")
+                    _locationError.emit(exception.message ?: "KhÃ´ng thá»ƒ láº¥y vá»‹ trÃ­")
                 }
             }
         )
