@@ -5,11 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.baothanhbin.core.data.repository.AuthRepository
 import com.baothanhbin.core.model.SignupRequest
 import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class SignupUiState(
     val isLoading: Boolean = false,
@@ -36,19 +36,28 @@ class SignupViewModel @Inject constructor(
                 name = name,
                 password = password
             )
-            
-            val request = SignupRequest(name = name, email = email, password = password)
-            
-            authRepository.signup(request)
+
+            val result = authRepository.signup(
+                SignupRequest(
+                    name = name,
+                    email = email,
+                    password = password
+                )
+            )
+
+            result
                 .onSuccess { authResponse ->
-                    // Kiểm tra response từ server
-                    // Nếu isRegister = true hoặc message chứa từ khóa "OTP" -> Thành công
-                    val isSuccess = authResponse.isRegister || 
-                                    (!authResponse.message.isNullOrEmpty() && 
-                                     (authResponse.message!!.contains("OTP", ignoreCase = true) || 
-                                      authResponse.message!!.contains("successfully", ignoreCase = true)))
+                    val isSuccess = authResponse.isRegister ||
+                        (
+                            !authResponse.message.isNullOrEmpty() &&
+                                (
+                                    authResponse.message!!.contains("OTP", ignoreCase = true) ||
+                                        authResponse.message!!.contains("successfully", ignoreCase = true)
+                                    )
+                            )
 
                     if (isSuccess) {
+                        authRepository.logout()
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
                             isSignupSuccess = true,
@@ -57,18 +66,16 @@ class SignupViewModel @Inject constructor(
                             password = password
                         )
                     } else {
-                        // Trường hợp khác coi là lỗi (hoặc message lỗi)
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
-                            error = authResponse.message ?: "Đăng ký thất bại"
+                            error = authResponse.message ?: "Dang ky that bai"
                         )
                     }
                 }
-                .onFailure { e ->
-                    // Network error hoặc exception khác
+                .onFailure { error ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = e.message ?: "Đăng ký thất bại"
+                        error = error.message ?: "Dang ky that bai"
                     )
                 }
         }

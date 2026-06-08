@@ -404,6 +404,14 @@ private fun ChatMessageBubble(
                         )
                     }
 
+                    if (message.imageUri == null && message.hasImage) {
+                        Text(
+                            text = "Da gui hinh anh.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Subtitle
+                        )
+                    }
+
                     if (message.text.isNotBlank()) {
                         Text(
                             text = message.text,

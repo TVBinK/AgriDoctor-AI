@@ -9,18 +9,16 @@ import com.baothanhbin.core.database.converter.StringListConverter
 import com.baothanhbin.core.database.converter.TreatmentDataListConverter
 import com.baothanhbin.core.database.dao.ChatDao
 import com.baothanhbin.core.database.dao.DiagnoseResultDao
-import com.baothanhbin.core.database.dao.DiseaseDao
 import com.baothanhbin.core.database.dao.PlantDao
 import com.baothanhbin.core.database.dao.ReminderDao
 import com.baothanhbin.core.database.model.ChatEntity
 import com.baothanhbin.core.database.model.DiagnoseResultEntity
-import com.baothanhbin.core.database.model.DiseaseListEntity
 import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.database.model.ReminderEntity
 
 @Database(
-    entities = [DiagnoseResultEntity::class, ChatEntity::class, DiseaseListEntity::class, PlantEntity::class, ReminderEntity::class],
-    version = 11,
+    entities = [DiagnoseResultEntity::class, ChatEntity::class, PlantEntity::class, ReminderEntity::class],
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(
@@ -32,7 +30,6 @@ import com.baothanhbin.core.database.model.ReminderEntity
 abstract class AgriDoctorDatabase : RoomDatabase() {
     abstract fun diagnoseResultDao(): DiagnoseResultDao
     abstract fun chatDao(): ChatDao
-    abstract fun diseaseDao(): DiseaseDao
     abstract fun plantDao(): PlantDao
     abstract fun reminderDao(): ReminderDao
 }

@@ -3,6 +3,7 @@ package com.baothanhbin.feature.verificationotp
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.baothanhbin.core.data.impl.ChatSyncRepository
 import com.baothanhbin.core.data.impl.HistorySyncRepository
 import com.baothanhbin.core.data.repository.AuthRepository
 import com.baothanhbin.core.model.OtpVerificationPurpose
@@ -35,6 +36,7 @@ data class VerificationUiState(
 class VerificationOTPViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val historySyncRepository: HistorySyncRepository,
+    private val chatSyncRepository: ChatSyncRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     private val waitSecondsRegex = Regex("(\\d+)\\s*giay", RegexOption.IGNORE_CASE)
@@ -60,7 +62,11 @@ class VerificationOTPViewModel @Inject constructor(
         if (otp.length < 6) return
 
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isVerifying = true, error = null)
+            _uiState.value = _uiState.value.copy(
+                isVerifying = true,
+                isSuccess = false,
+                error = null
+            )
 
             val request = VerifyOtpRequest(
                 email = _uiState.value.email,
@@ -68,16 +74,28 @@ class VerificationOTPViewModel @Inject constructor(
             )
 
             authRepository.verifyOtp(request)
-                .onSuccess {
-                    historySyncRepository.syncFromServer()
+                .onSuccess { authResponse ->
+                    if (authResponse.token.isNullOrBlank()) {
+                        _uiState.value = _uiState.value.copy(
+                            isVerifying = false,
+                            isSuccess = false,
+                            error = "Xac thuc that bai."
+                        )
+                        return@onSuccess
+                    }
+
+                    launch { historySyncRepository.syncFromServer() }
+                    launch { chatSyncRepository.syncFromServer() }
                     _uiState.value = _uiState.value.copy(
                         isVerifying = false,
+                        error = null,
                         isSuccess = true
                     )
                 }
                 .onFailure { error ->
                     _uiState.value = _uiState.value.copy(
                         isVerifying = false,
+                        isSuccess = false,
                         error = error.message ?: "Xac thuc that bai."
                     )
                 }

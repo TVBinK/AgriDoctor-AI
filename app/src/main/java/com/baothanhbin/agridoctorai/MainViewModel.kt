@@ -2,6 +2,7 @@ package com.baothanhbin.agridoctorai
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.baothanhbin.core.data.impl.ChatSyncRepository
 import com.baothanhbin.core.data.impl.HistorySyncRepository
 import com.baothanhbin.core.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -15,7 +16,8 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     authRepository: AuthRepository,
-    private val historySyncRepository: HistorySyncRepository
+    private val historySyncRepository: HistorySyncRepository,
+    private val chatSyncRepository: ChatSyncRepository
 ) : ViewModel() {
     val isLoggedIn: StateFlow<Boolean> = authRepository.isLoggedIn
         .stateIn(
@@ -28,7 +30,8 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             isLoggedIn.collectLatest { loggedIn ->
                 if (loggedIn) {
-                    historySyncRepository.syncFromServer()
+                    launch { historySyncRepository.syncFromServer() }
+                    launch { chatSyncRepository.syncFromServer() }
                 }
             }
         }

@@ -19,7 +19,6 @@ import com.baothanhbin.core.model.VerifyForgotOtpResponse
 import com.baothanhbin.core.model.VerifyOtpRequest
 import com.baothanhbin.core.network.NetworkClients
 import io.ktor.client.call.body
-import io.ktor.client.plugins.ResponseException
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -30,6 +29,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
+import io.ktor.http.isSuccess
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -46,51 +46,55 @@ class AuthRepositoryImpl @Inject constructor(
     override val isLoggedIn: Flow<Boolean> = authDataStore.isLoggedInFlow()
     override val currentUserId: Flow<String?> = authDataStore.currentUserIdFlow()
 
-    override suspend fun login(request: LoginRequest): Result<AuthResponse> = executeRequest {
-        val response = NetworkClients.authClient.post("login") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body<AuthResponse>()
-
-        if (!response.token.isNullOrEmpty()) {
-            response.token?.let { saveSession(it, response.userId) }
+    override suspend fun login(request: LoginRequest): Result<AuthResponse> {
+        return executeResponseRequest<AuthResponse> {
+            NetworkClients.authClient.post("login") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }.onSuccess { response ->
+            if (!response.token.isNullOrEmpty()) {
+                response.token?.let { saveSession(it, response.userId) }
+            }
         }
-
-        response
     }
 
-    override suspend fun signup(request: SignupRequest): Result<AuthResponse> = executeRequest {
-        NetworkClients.authClient.post("signup") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
-    }
-
-    override suspend fun verifyOtp(request: VerifyOtpRequest): Result<AuthResponse> = executeRequest {
-        val response = NetworkClients.authClient.post("verify-otp") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body<AuthResponse>()
-
-        if (!response.token.isNullOrEmpty()) {
-            response.token?.let { saveSession(it, response.userId) }
+    override suspend fun signup(request: SignupRequest): Result<AuthResponse> {
+        return executeResponseRequest {
+            NetworkClients.authClient.post("signup") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
         }
-
-        response
     }
 
-    override suspend fun resendOtp(request: ResendOtpRequest): Result<MessageResponse> = executeRequest {
-        NetworkClients.authClient.post("resend-otp") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
+    override suspend fun verifyOtp(request: VerifyOtpRequest): Result<AuthResponse> {
+        return executeResponseRequest<AuthResponse> {
+            NetworkClients.authClient.post("verify-otp") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }.onSuccess { response ->
+            if (!response.token.isNullOrEmpty()) {
+                response.token?.let { saveSession(it, response.userId) }
+            }
+        }
+    }
+
+    override suspend fun resendOtp(request: ResendOtpRequest): Result<MessageResponse> {
+        return executeResponseRequest {
+            NetworkClients.authClient.post("resend-otp") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
     }
 
     override suspend fun getProfile(): Result<UserProfile> {
         return runAuthorized { token ->
             NetworkClients.authClient.get("me") {
                 header(HttpHeaders.Authorization, "Bearer $token")
-            }.body()
+            }
         }
     }
 
@@ -100,7 +104,7 @@ class AuthRepositoryImpl @Inject constructor(
                 header(HttpHeaders.Authorization, "Bearer $token")
                 contentType(ContentType.Application.Json)
                 setBody(request)
-            }.body()
+            }
         }
     }
 
@@ -110,29 +114,35 @@ class AuthRepositoryImpl @Inject constructor(
                 header(HttpHeaders.Authorization, "Bearer $token")
                 contentType(ContentType.Application.Json)
                 setBody(request)
-            }.body()
+            }
         }
     }
 
-    override suspend fun forgotPassword(request: ForgotPasswordRequest): Result<MessageResponse> = executeRequest {
-        NetworkClients.authClient.post("forgot-password") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
+    override suspend fun forgotPassword(request: ForgotPasswordRequest): Result<MessageResponse> {
+        return executeResponseRequest {
+            NetworkClients.authClient.post("forgot-password") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
     }
 
-    override suspend fun verifyForgotOtp(request: VerifyForgotOtpRequest): Result<VerifyForgotOtpResponse> = executeRequest {
-        NetworkClients.authClient.post("verify-forgot-otp") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
+    override suspend fun verifyForgotOtp(request: VerifyForgotOtpRequest): Result<VerifyForgotOtpResponse> {
+        return executeResponseRequest {
+            NetworkClients.authClient.post("verify-forgot-otp") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
     }
 
-    override suspend fun resetPassword(request: ResetPasswordRequest): Result<MessageResponse> = executeRequest {
-        NetworkClients.authClient.post("reset-password") {
-            contentType(ContentType.Application.Json)
-            setBody(request)
-        }.body()
+    override suspend fun resetPassword(request: ResetPasswordRequest): Result<MessageResponse> {
+        return executeResponseRequest {
+            NetworkClients.authClient.post("reset-password") {
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
     }
 
     override suspend fun logout() {
@@ -167,15 +177,17 @@ class AuthRepositoryImpl @Inject constructor(
         }.getOrDefault(false)
     }
 
-    private suspend inline fun <reified T> executeRequest(
-        crossinline requestBlock: suspend () -> T
+    private suspend inline fun <reified T> executeResponseRequest(
+        crossinline requestBlock: suspend () -> HttpResponse
     ): Result<T> {
         return try {
-            Result.success(requestBlock())
-        } catch (error: ResponseException) {
-            Result.failure(IllegalStateException(extractApiError(error.response)))
+            val response = requestBlock()
+            if (!response.status.isSuccess()) {
+                return Result.failure(IllegalStateException(extractApiError(response)))
+            }
+            Result.success(response.body())
         } catch (error: IOException) {
-            Result.failure(IllegalStateException("Không thể kết nối đến máy chủ."))
+            Result.failure(IllegalStateException("Khong the ket noi den may chu."))
         } catch (error: Exception) {
             Result.failure(error)
         }
@@ -185,17 +197,17 @@ class AuthRepositoryImpl @Inject constructor(
         return runCatching {
             val bodyText = response.bodyAsText()
             val parsed = errorJson.decodeFromString<ApiErrorResponse>(bodyText)
-            parsed.message ?: parsed.error ?: "Yêu cầu không thành công."
-        }.getOrDefault("Yêu cầu không thành công.")
+            parsed.message ?: parsed.error ?: "Yeu cau khong thanh cong."
+        }.getOrDefault("Yeu cau khong thanh cong.")
     }
 
     private suspend inline fun <reified T> runAuthorized(
-        crossinline block: suspend (String) -> T
+        crossinline block: suspend (String) -> HttpResponse
     ): Result<T> {
         val token = authDataStore.getToken()
-            ?: return Result.failure(IllegalStateException("Phiên đăng nhập không hợp lệ."))
+            ?: return Result.failure(IllegalStateException("Phien dang nhap khong hop le."))
 
-        return executeRequest {
+        return executeResponseRequest {
             block(token)
         }
     }

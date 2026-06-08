@@ -6,8 +6,8 @@ import android.provider.OpenableColumns
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.baothanhbin.core.data.impl.ChatSyncRepository
 import com.baothanhbin.core.data.repository.AuthRepository
-import com.baothanhbin.core.database.AgriDoctorDatabase
 import com.baothanhbin.core.database.converter.ChatMessageData
 import com.baothanhbin.core.database.model.ChatEntity
 import com.baothanhbin.core.model.ChatbotHistoryMessage
@@ -27,7 +27,8 @@ data class ChatMessage(
     val text: String,
     val isUser: Boolean,
     val timestamp: Long = System.currentTimeMillis(),
-    val imageUri: String? = null
+    val imageUri: String? = null,
+    val hasImage: Boolean = false
 )
 
 fun ChatMessage.toChatMessageData(): ChatMessageData {
@@ -36,7 +37,8 @@ fun ChatMessage.toChatMessageData(): ChatMessageData {
         text = text,
         isUser = isUser,
         timestamp = timestamp,
-        imageUri = imageUri
+        imageUri = imageUri,
+        hasImage = hasImage || imageUri != null
     )
 }
 
@@ -46,7 +48,8 @@ fun ChatMessageData.toChatMessage(): ChatMessage {
         text = text,
         isUser = isUser,
         timestamp = timestamp,
-        imageUri = imageUri
+        imageUri = imageUri,
+        hasImage = hasImage || imageUri != null
     )
 }
 
@@ -70,12 +73,10 @@ data class ChatbotUiState(
 
 @HiltViewModel
 class ChatbotViewModel @Inject constructor(
-    private val database: AgriDoctorDatabase,
+    private val chatSyncRepository: ChatSyncRepository,
     private val authRepository: AuthRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
-
-    private val chatDao get() = database.chatDao()
 
     private val _uiState = MutableStateFlow(ChatbotUiState())
     val uiState: StateFlow<ChatbotUiState> = _uiState.asStateFlow()
@@ -99,7 +100,8 @@ class ChatbotViewModel @Inject constructor(
                 id = "user_${System.currentTimeMillis()}",
                 text = trimmedMessage,
                 isUser = true,
-                imageUri = selectedImageUri?.toString()
+                imageUri = selectedImageUri?.toString(),
+                hasImage = selectedImageUri != null
             )
             val currentMessages = previousMessages + userMessage
 
@@ -118,21 +120,21 @@ class ChatbotViewModel @Inject constructor(
                     if (historyText.isBlank()) {
                         null
                     } else {
-                    ChatbotHistoryMessage(
-                        text = historyText,
-                        isUser = item.isUser
-                    )
+                        ChatbotHistoryMessage(
+                            text = historyText,
+                            isUser = item.isUser
+                        )
                     }
                 }
 
             val botResponse = withContext(Dispatchers.IO) {
                 val token = authRepository.getToken()
                 if (token.isNullOrBlank()) {
-                    "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục trò chuyện."
+                    "Phien dang nhap da het han. Vui long dang nhap lai de tiep tuc tro chuyen."
                 } else {
                     val selectedImage = selectedImageUri?.let { readSelectedImage(it) }
                     if (selectedImageUri != null && selectedImage == null) {
-                        "Không thể đọc ảnh đã chọn. Vui lòng chọn ảnh khác và thử lại."
+                        "Khong the doc anh da chon. Vui long chon anh khac va thu lai."
                     } else {
                         NetworkDataSource.sendChatMessage(
                             message = trimmedMessage,
@@ -143,7 +145,7 @@ class ChatbotViewModel @Inject constructor(
                             imageMimeType = selectedImage?.mimeType ?: "image/jpeg"
                         ).getOrElse { error ->
                             error.message
-                                ?: "Trợ lý cây trồng đang tạm gián đoạn. Vui lòng thử lại sau."
+                                ?: "Tro ly cay trong dang tam gian doan. Vui long thu lai sau."
                         }
                     }
                 }
@@ -165,30 +167,25 @@ class ChatbotViewModel @Inject constructor(
     }
 
     private suspend fun saveCurrentChatToDatabase(messages: List<ChatMessage>) {
-        withContext(Dispatchers.IO) {
-            try {
-                val currentChatId = _uiState.value.currentChatId
-                val title = messages.firstOrNull()?.text?.take(50)?.ifEmpty { "New Chat" } ?: "New Chat"
+        try {
+            val currentChatId = _uiState.value.currentChatId
+            val title = messages.firstOrNull()?.text?.take(50)?.ifBlank { "New Chat" } ?: "New Chat"
 
-                val chatEntity = ChatEntity(
-                    id = currentChatId ?: 0,
-                    title = title,
-                    messages = messages.map { it.toChatMessageData() },
-                    updatedAt = System.currentTimeMillis()
+            val savedChat = withContext(Dispatchers.IO) {
+                chatSyncRepository.saveChat(
+                    ChatEntity(
+                        id = currentChatId ?: 0L,
+                        title = title,
+                        messages = messages.map { it.toChatMessageData() },
+                        updatedAt = System.currentTimeMillis()
+                    )
                 )
-
-                val savedId = if (currentChatId != null) {
-                    chatDao.updateChat(chatEntity)
-                    currentChatId
-                } else {
-                    chatDao.insertChat(chatEntity)
-                }
-
-                _uiState.value = _uiState.value.copy(currentChatId = savedId)
-                loadChatHistory()
-            } catch (error: Exception) {
-                Log.e("ChatbotViewModel", "Failed to save chat", error)
             }
+
+            _uiState.value = _uiState.value.copy(currentChatId = savedChat.id)
+            loadChatHistory()
+        } catch (error: Exception) {
+            Log.e("ChatbotViewModel", "Failed to save chat", error)
         }
     }
 
@@ -229,10 +226,9 @@ class ChatbotViewModel @Inject constructor(
 
     fun loadChatHistory() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    val chats = chatDao.getAllChats()
-                    val historyItems = chats.map { chat ->
+            try {
+                val historyItems = withContext(Dispatchers.IO) {
+                    chatSyncRepository.getAllChats().map { chat ->
                         ChatHistoryItem(
                             id = chat.id,
                             title = chat.title,
@@ -240,31 +236,31 @@ class ChatbotViewModel @Inject constructor(
                             updatedAt = chat.updatedAt
                         )
                     }
-                    _uiState.value = _uiState.value.copy(chatHistory = historyItems)
-                } catch (error: Exception) {
-                    Log.e("ChatbotViewModel", "Failed to load chat history", error)
                 }
+                _uiState.value = _uiState.value.copy(chatHistory = historyItems)
+            } catch (error: Exception) {
+                Log.e("ChatbotViewModel", "Failed to load chat history", error)
             }
         }
     }
 
     fun loadChat(chatId: Long) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    val chat = chatDao.getChatById(chatId)
-                    if (chat != null) {
-                        processedInitialMessages.clear()
-                        _uiState.value = _uiState.value.copy(
-                            messages = chat.messages.map { it.toChatMessage() },
-                            currentChatId = chat.id,
-                            showWelcomeScreen = false,
-                            isDrawerOpen = false
-                        )
-                    }
-                } catch (error: Exception) {
-                    Log.e("ChatbotViewModel", "Failed to load chat", error)
+            try {
+                val chat = withContext(Dispatchers.IO) {
+                    chatSyncRepository.getChatById(chatId)
                 }
+                if (chat != null) {
+                    processedInitialMessages.clear()
+                    _uiState.value = _uiState.value.copy(
+                        messages = chat.messages.map { it.toChatMessage() },
+                        currentChatId = chat.id,
+                        showWelcomeScreen = false,
+                        isDrawerOpen = false
+                    )
+                }
+            } catch (error: Exception) {
+                Log.e("ChatbotViewModel", "Failed to load chat", error)
             }
         }
     }
@@ -303,9 +299,11 @@ class ChatbotViewModel @Inject constructor(
 
     fun deleteChat(chatId: Long) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                try {
-                    chatDao.deleteChat(chatId)
+            try {
+                val deleteResult = withContext(Dispatchers.IO) {
+                    chatSyncRepository.deleteChat(chatId)
+                }
+                deleteResult.onSuccess {
                     if (_uiState.value.currentChatId == chatId) {
                         _uiState.value = _uiState.value.copy(
                             messages = emptyList(),
@@ -314,9 +312,11 @@ class ChatbotViewModel @Inject constructor(
                         )
                     }
                     loadChatHistory()
-                } catch (error: Exception) {
+                }.onFailure { error ->
                     Log.e("ChatbotViewModel", "Failed to delete chat", error)
                 }
+            } catch (error: Exception) {
+                Log.e("ChatbotViewModel", "Failed to delete chat", error)
             }
         }
     }
@@ -361,7 +361,7 @@ private fun ChatMessage.toHistoryText(): String {
         return text
     }
 
-    return if (imageUri != null) {
+    return if (hasImage || imageUri != null) {
         "Nguoi dung da gui mot anh."
     } else {
         ""

@@ -2,6 +2,11 @@ package com.baothanhbin.core.network
 
 import android.util.Log
 import com.baothanhbin.core.model.ApiErrorResponse
+import com.baothanhbin.core.model.ChatConversationPayload
+import com.baothanhbin.core.model.ChatHistoryItemResponse
+import com.baothanhbin.core.model.ChatHistoryListResponse
+import com.baothanhbin.core.model.ChatHistoryMessagePayload
+import com.baothanhbin.core.model.ChatHistoryUpsertRequest
 import com.baothanhbin.core.model.ChatbotHistoryMessage
 import com.baothanhbin.core.model.ChatbotRequest
 import com.baothanhbin.core.model.ChatbotResponse
@@ -20,6 +25,7 @@ import io.ktor.client.request.header
 import io.ktor.client.request.forms.formData
 import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -219,6 +225,116 @@ object NetworkDataSource {
         } catch (e: Exception) {
             Log.e("getUserHistory", "Failed to fetch user history", e)
             null
+        }
+    }
+
+    suspend fun getChatHistory(token: String): ChatHistoryListResponse? = withContext(Dispatchers.IO) {
+        try {
+            val response = NetworkClients.chatHistoryClient.get("") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+            }
+
+            if (response.status == HttpStatusCode.OK) {
+                response.body<ChatHistoryListResponse>()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("getChatHistory", "Failed to fetch chat history", e)
+            null
+        }
+    }
+
+    suspend fun createChatHistory(
+        title: String,
+        messages: List<ChatHistoryMessagePayload>,
+        token: String
+    ): Result<ChatConversationPayload> = withContext(Dispatchers.IO) {
+        try {
+            val response = NetworkClients.chatHistoryClient.post("") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                contentType(ContentType.Application.Json)
+                setBody(
+                    ChatHistoryUpsertRequest(
+                        title = title,
+                        messages = messages
+                    )
+                )
+            }
+
+            if (response.status == HttpStatusCode.Created || response.status == HttpStatusCode.OK) {
+                val payload = response.body<ChatHistoryItemResponse>()
+                val data = payload.data
+                if (payload.success && data != null) {
+                    Result.success(data)
+                } else {
+                    Result.failure(IllegalStateException("Khong the tao lich su tro chuyen."))
+                }
+            } else {
+                Result.failure(IllegalStateException(parseApiError(response.bodyAsText())))
+            }
+        } catch (e: Exception) {
+            Log.e("createChatHistory", "Failed to create chat history", e)
+            Result.failure(IllegalStateException("Khong the luu lich su tro chuyen len may chu."))
+        }
+    }
+
+    suspend fun updateChatHistory(
+        chatId: String,
+        title: String,
+        messages: List<ChatHistoryMessagePayload>,
+        token: String
+    ): Result<ChatConversationPayload> = withContext(Dispatchers.IO) {
+        try {
+            val response = NetworkClients.chatHistoryClient.put(chatId) {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                contentType(ContentType.Application.Json)
+                setBody(
+                    ChatHistoryUpsertRequest(
+                        title = title,
+                        messages = messages
+                    )
+                )
+            }
+
+            if (response.status == HttpStatusCode.OK) {
+                val payload = response.body<ChatHistoryItemResponse>()
+                val data = payload.data
+                if (payload.success && data != null) {
+                    Result.success(data)
+                } else {
+                    Result.failure(IllegalStateException("Khong the cap nhat lich su tro chuyen."))
+                }
+            } else {
+                Result.failure(IllegalStateException(parseApiError(response.bodyAsText())))
+            }
+        } catch (e: Exception) {
+            Log.e("updateChatHistory", "Failed to update chat history", e)
+            Result.failure(IllegalStateException("Khong the dong bo lich su tro chuyen."))
+        }
+    }
+
+    suspend fun deleteChatHistory(
+        chatId: String,
+        token: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val response = NetworkClients.chatHistoryClient.delete(chatId) {
+                header(HttpHeaders.Authorization, "Bearer $token")
+            }
+
+            when (response.status) {
+                HttpStatusCode.OK,
+                HttpStatusCode.NoContent,
+                HttpStatusCode.NotFound -> Result.success(Unit)
+
+                else -> Result.failure(
+                    IllegalStateException(parseApiError(response.bodyAsText()))
+                )
+            }
+        } catch (e: Exception) {
+            Log.e("deleteChatHistory", "Failed to delete chat history", e)
+            Result.failure(IllegalStateException("Khong the xoa lich su tro chuyen tren may chu."))
         }
     }
 

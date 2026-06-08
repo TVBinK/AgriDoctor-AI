@@ -13,7 +13,8 @@ data class ChatMessageData(
     val text: String,
     val isUser: Boolean,
     val timestamp: Long,
-    val imageUri: String? = null
+    val imageUri: String? = null,
+    val hasImage: Boolean = false
 )
 
 class ChatMessageListConverter {
