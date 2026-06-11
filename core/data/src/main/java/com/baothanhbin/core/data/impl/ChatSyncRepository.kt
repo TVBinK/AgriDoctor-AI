@@ -7,6 +7,7 @@ import com.baothanhbin.core.database.converter.ChatMessageData
 import com.baothanhbin.core.database.model.ChatEntity
 import com.baothanhbin.core.model.ChatConversationPayload
 import com.baothanhbin.core.model.ChatHistoryMessagePayload
+import com.baothanhbin.core.network.AuthTokenException
 import com.baothanhbin.core.network.NetworkDataSource
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -137,7 +138,7 @@ class ChatSyncRepository @Inject constructor(
         token: String
     ) {
         val pendingChats = chatDao.getChatsNeedingSync(ownerUserId)
-        pendingChats.forEach { localChat ->
+        for (localChat in pendingChats) {
             val messages = localChat.messages.map { it.toPayload() }
             val serverChatId = localChat.serverChatId
             val syncResult = if (serverChatId.isNullOrBlank()) {
@@ -162,6 +163,11 @@ class ChatSyncRepository @Inject constructor(
                     preferredLocalId = localChat.id
                 )
             }.onFailure { error ->
+                if (error is AuthTokenException) {
+                    Log.w(TAG, "Chat sync stopped because the saved token is invalid.", error)
+                    authRepository.logout()
+                    return
+                }
                 Log.w(TAG, "Failed to sync chat ${localChat.id}", error)
             }
         }

@@ -144,7 +144,7 @@ object NetworkDataSource {
                     Result.failure(IllegalStateException("Dịch vụ chatbot tạm thời không khả dụng."))
                 }
             } else {
-                Result.failure(IllegalStateException(parseApiError(response.bodyAsText())))
+                Result.failure(response.toApiException())
             }
         } catch (e: Exception) {
             Log.e("sendChatMessage", "Chatbot request failed", e)
@@ -271,7 +271,7 @@ object NetworkDataSource {
                     Result.failure(IllegalStateException("Khong the tao lich su tro chuyen."))
                 }
             } else {
-                Result.failure(IllegalStateException(parseApiError(response.bodyAsText())))
+                Result.failure(response.toApiException())
             }
         } catch (e: Exception) {
             Log.e("createChatHistory", "Failed to create chat history", e)
@@ -306,7 +306,7 @@ object NetworkDataSource {
                     Result.failure(IllegalStateException("Khong the cap nhat lich su tro chuyen."))
                 }
             } else {
-                Result.failure(IllegalStateException(parseApiError(response.bodyAsText())))
+                Result.failure(response.toApiException())
             }
         } catch (e: Exception) {
             Log.e("updateChatHistory", "Failed to update chat history", e)
@@ -329,7 +329,7 @@ object NetworkDataSource {
                 HttpStatusCode.NotFound -> Result.success(Unit)
 
                 else -> Result.failure(
-                    IllegalStateException(parseApiError(response.bodyAsText()))
+                    response.toApiException()
                 )
             }
         } catch (e: Exception) {
@@ -376,7 +376,7 @@ object NetworkDataSource {
                 HttpStatusCode.NotFound -> Result.success(Unit)
 
                 else -> Result.failure(
-                    IllegalStateException(parseApiError(response.bodyAsText()))
+                    response.toApiException()
                 )
             }
         } catch (e: Exception) {
@@ -422,6 +422,17 @@ data class DownloadedHistoryImage(
     val bytes: ByteArray,
     val mimeType: String? = null
 )
+
+class AuthTokenException(message: String) : IllegalStateException(message)
+
+private suspend fun io.ktor.client.statement.HttpResponse.toApiException(): IllegalStateException {
+    val message = parseApiError(bodyAsText())
+    return if (status == HttpStatusCode.Unauthorized || status == HttpStatusCode.Forbidden) {
+        AuthTokenException(message)
+    } else {
+        IllegalStateException(message)
+    }
+}
 
 private fun parseApiError(responseBody: String): String {
     return runCatching {
