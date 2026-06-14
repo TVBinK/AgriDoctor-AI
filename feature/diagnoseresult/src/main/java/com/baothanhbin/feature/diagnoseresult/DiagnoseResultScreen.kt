@@ -98,6 +98,8 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.Locale
 
+private const val MIN_DETECTION_CONFIDENCE_TO_DRAW = 0.5
+
 @Composable
 fun DiagnoseResultRoute(
     navController: NavHostController? = null,
@@ -212,7 +214,10 @@ private fun HeaderImage(
 ) {
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     var sourceImageSize by remember { mutableStateOf(IntSize.Zero) }
-    val shouldRenderOverlay = detections.isNotEmpty() && !imageUri.isAnnotatedDiagnoseImage()
+    val drawableDetections = remember(detections) {
+        detections.filter { it.confidence > MIN_DETECTION_CONFIDENCE_TO_DRAW }
+    }
+    val shouldRenderOverlay = drawableDetections.isNotEmpty() && !imageUri.isAnnotatedDiagnoseImage()
 
     Box(
         modifier = Modifier
@@ -255,7 +260,7 @@ private fun HeaderImage(
                 sourceImageSize.height > 0
             ) {
                 DetectionOverlay(
-                    detections = detections,
+                    detections = drawableDetections,
                     sourceImageSize = sourceImageSize,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -298,6 +303,7 @@ private fun DetectionOverlay(
         val labelCornerRadius = 6.dp.toPx()
 
         detections.forEach { detection ->
+            if (detection.confidence <= MIN_DETECTION_CONFIDENCE_TO_DRAW) return@forEach
             if (detection.box.size < 4) return@forEach
 
             val boxColor = if (

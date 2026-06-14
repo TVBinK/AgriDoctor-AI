@@ -64,6 +64,7 @@ sealed class ProcessImageNavigationEvent {
 
 private const val DETECT_RESULT_DIAGNOSED = "diagnosed"
 private const val CLASSIFY_RESULT_CLASSIFIED = "classified"
+private const val MIN_DETECTION_CONFIDENCE_TO_DRAW = 0.5
 
 @HiltViewModel
 class ProcessImageViewModel @Inject constructor(
@@ -284,13 +285,15 @@ class ProcessImageViewModel @Inject constructor(
         detections: List<DetectionData>
     ): Uri? = withContext(Dispatchers.IO) {
         try {
-            if (isAlreadyInAppStorage(context, sourceUri) && detections.isEmpty()) {
+            val drawableDetections = detections.filter { it.confidence > MIN_DETECTION_CONFIDENCE_TO_DRAW }
+
+            if (isAlreadyInAppStorage(context, sourceUri) && drawableDetections.isEmpty()) {
                 return@withContext sourceUri
             }
 
             val bitmap = loadBitmapWithCorrectOrientation(context, sourceUri) ?: return@withContext null
-            val annotatedBitmap = if (detections.isNotEmpty()) {
-                drawDetectionsOnBitmap(bitmap, detections)
+            val annotatedBitmap = if (drawableDetections.isNotEmpty()) {
+                drawDetectionsOnBitmap(bitmap, drawableDetections)
             } else {
                 bitmap
             }
@@ -345,6 +348,7 @@ class ProcessImageViewModel @Inject constructor(
         val labelBounds = Rect()
 
         detections.forEach { detection ->
+            if (detection.confidence <= MIN_DETECTION_CONFIDENCE_TO_DRAW) return@forEach
             if (detection.box.size < 4) return@forEach
 
             val isHealthy = detection.name.contains("khoe", ignoreCase = true) ||
