@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Room-Database-4285F4?style=flat" alt="Room Database"/>
 </p>
 
-Ứng dụng Android giúp **chẩn đoán bệnh cây bằng AI, tư vấn chăm sóc và quản lý cây trồng** cho nông dân ngay trên điện thoại. Xây dựng bằng Jetpack Compose, kiến trúc đa module với Hilt, Room, WorkManager và tích hợp Gemini cho trợ lý hội thoại.
+Ứng dụng Android giúp **chẩn đoán bệnh cây bằng AI, tư vấn chăm sóc và quản lý cây trồng** cho nông dân ngay trên điện thoại. Xây dựng bằng Jetpack Compose, kiến trúc đa module với Hilt, Room, AlarmManager và tích hợp Gemini cho trợ lý hội thoại.
 
 <p align="center">
   <img src="resources/src/main/res/drawable/banner_readme.png" alt="AgriDoctorAI Banner" width="70%"/>
@@ -34,7 +34,7 @@
 | **DI**       | Hilt                                                           |
 | **Database** | Room                                                           |
 | **AI**       | Gemini API (chatbot, hỗ trợ chẩn đoán)                        |
-| **Background** | WorkManager (xử lý nền, tác vụ lâu)                         |
+| **Reminder** | AlarmManager (hẹn giờ nhắc chăm sóc chính xác)              |
 
 ---
 
@@ -99,7 +99,7 @@
 **Cách hoạt động:**
 - Module `feature/lightmeter` đọc cảm biến ánh sáng / camera (tùy cấu hình).
 - Giá trị đo được chuẩn hóa, so với cấu hình khuyến nghị trong `core/model`.
-- WorkManager có thể được dùng để đặt lịch nhắc tưới hoặc kiểm tra định kỳ.
+- AlarmManager được dùng để đặt lịch nhắc tưới và chăm sóc cây.
 
 ---
 
@@ -151,7 +151,7 @@
 ## 🚀 Công nghệ sử dụng
 
 - **Kotlin** · **Jetpack Compose** · **MVVM** · **Clean Architecture**
-- **Hilt** · **Room** · **WorkManager**
+- **Hilt** · **Room** · **AlarmManager**
 - **Ktor** · **Coroutines/Flow** · **Navigation Compose** · **Coil**
 - **DataStore** · 
 

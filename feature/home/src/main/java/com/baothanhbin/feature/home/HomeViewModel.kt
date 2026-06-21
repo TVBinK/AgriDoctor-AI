@@ -6,13 +6,12 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.WorkManager
 import com.baothanhbin.core.data.repository.PlantRepository
 import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.database.model.ReminderEntity
 import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.core.ui.util.LocationStateHolder
-import com.baothanhbin.core.worker.ReminderWorker
+import com.baothanhbin.core.alarm.ReminderAlarmScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -47,9 +46,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             plantRepository.updateReminderStatus(id, isCompleted)
             if (isCompleted) {
-                WorkManager.getInstance(getApplication()).cancelUniqueWork(
-                    ReminderWorker.uniqueWorkName(id)
-                )
+                ReminderAlarmScheduler.cancel(getApplication(), id)
             }
         }
     }

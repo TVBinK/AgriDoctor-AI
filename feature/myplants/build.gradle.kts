@@ -14,9 +14,7 @@ dependencies {
     implementation(projects.core.ui)
     implementation(projects.core.data)
     implementation(projects.core.database)
-    implementation(projects.core.worker)
+    implementation(projects.core.alarm)
     implementation(projects.feature.settings)
     implementation(libs.coil.compose)
-    implementation(libs.androidx.work.runtime.ktx)
-    implementation(libs.androidx.hilt.work)
 }

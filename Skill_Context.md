@@ -10,7 +10,7 @@ Project này là một **Android multi-module monolith theo feature modules**, k
 
 - `app` làm application shell và navigation root
 - `feature/*` chứa UI, screen logic, navigation cho từng tính năng
-- `core/*` chứa shared model, data access, persistence, networking, theme, UI utility, background worker
+- `core/*` chứa shared model, data access, persistence, networking, theme, UI utility và alarm reminder
 
 Module boundary mang tính **pragmatic** hơn là strict:
 
@@ -39,20 +39,20 @@ Mô hình thực tế gần nhất là:
 - Local persistence: Room trong `core:database`
 - Key/token persistence: Proto DataStore trong `core:datastore`
 - Remote access: Ktor clients + `NetworkDataSource` trong `core:network`
-- Background tasks: WorkManager + Hilt worker trong `core:worker`
+- Care reminders: AlarmManager + Hilt BroadcastReceiver trong `core:alarm`
 
 ## Coding Standards
 
 ### Mandatory rules
 - Giữ nguyên **feature-first modular structure**. Tính năng mới đi vào `feature:<name>`, không nhét thẳng vào `app`.
 - Ưu tiên phụ thuộc qua `core/*`; repo hiện có một số dependency `feature -> feature` để ghép flow, nhưng không nên mở rộng kiểu phụ thuộc này nếu chưa thực sự cần.
-- Mọi dependency app-wide phải đi qua **Hilt**. Phần lớn repository ở `core:data` dùng interface + binding; một số service-style repository như `ApiKeyRepository` là concrete class được provide trực tiếp bằng `@Provides`.
+- Mọi dependency app-wide phải đi qua **Hilt**. Phần lớn repository ở `core:data` dùng interface + binding; các concrete sync repository như `ChatSyncRepository` và `HistorySyncRepository` dùng constructor injection trực tiếp.
 - UI phải viết bằng **Jetpack Compose**.
 - State màn hình phải đi qua **`ViewModel` + Flow/StateFlow**, không giữ business state phân tán trong Composable nếu state đó ảnh hưởng luồng xử lý.
 - Navigation phải khai báo trong file riêng `navigation/<Feature>Navigation.kt`.
 - Model API phải ở `core:model`.
 - Cache/local DB phải qua `core:database`.
-- Token/API key phải qua `core:datastore`, không hardcode trong feature.
+- JWT token và user ID phải qua `core:datastore`, không hardcode trong feature.
 - Async phải chạy bằng coroutine trong `viewModelScope` hoặc `withContext(Dispatchers.IO)`.
 - Nếu một feature cần `Application` context, theo pattern hiện tại có thể dùng `AndroidViewModel`; nếu không cần thì dùng `ViewModel`.
 - Nếu đang sửa code cũ, ưu tiên giữ pattern cục bộ của module hơn là ép toàn repo về một style mới.
@@ -72,6 +72,11 @@ Mô hình thực tế gần nhất là:
 - Screen file: `<Feature>Screen.kt`
 - ViewModel: `<Feature>ViewModel.kt`
 - Navigation file: `<Feature>Navigation.kt`
+- Reusable UI component: `component/<ComponentName>.kt`
+- Dialog composable: `dialog/<DialogName>.kt`
+- Bottom sheet composable: `sheet/<SheetName>.kt`
+- Dùng `component` số ít, không tạo package `components`.
+- Mỗi component/dialog/sheet nằm trong một file riêng và tên file trùng tên composable chính.
 - UI state: `<Feature>UiState`
 - Navigation event sealed class: `<Feature>NavigationEvent`
 - Repository interface: `<Thing>Repository`
@@ -115,17 +120,16 @@ core/model/           Shared API models, enums, DTOs
 core/network/         Ktor clients và network datasource
 core/data/            Repository interfaces, implementations, DI bindings
 core/database/        Room database, entities, dao, converters, DI
-core/datastore/       Proto DataStore cho auth token và API key
+core/datastore/       Proto DataStore cho JWT token, timestamp và user ID
 core/theme/           Colors, fonts, typography extensions, app theme
 core/ui/              Shared UI helpers/dialog/location utilities
-core/worker/          WorkManager workers + notification helper
-feature/*/            Feature UI modules: screen, viewmodel, navigation, đôi khi components/; một số module phụ thuộc feature khác để nối flow
+core/alarm/           AlarmManager scheduler, receivers + notification helper
+feature/*/            Feature UI modules: screen, viewmodel, navigation, component, dialog, sheet
 resources/            Shared drawables, strings, raw assets
 ```
 
 ### `app` module responsibilities
 - Khởi tạo Hilt app (`App.kt`)
-- Cung cấp WorkManager config với `HiltWorkerFactory`
 - Xác định start destination dựa trên auth state (`MainActivity`, `MainViewModel`)
 - Nắm `NavHostController`, bottom navigation, shared `LocationStateHolder`
 
@@ -139,7 +143,8 @@ resources/            Shared drawables, strings, raw assets
 - Chứa Ktor `HttpClient` singleton theo từng endpoint group trong `NetworkClients`
 - `NetworkDataSource` là facade gọi HTTP thực tế
 - Pattern hiện tại: object singleton, không DI bằng interface
-- Runtime hiện tại đang hardcode một `API_BASE_URL` dạng HTTP trong `NetworkClients`; app cho phép cleartext qua `network_security_config`
+- `API_BASE_URL` được tạo qua `BuildConfig`: ưu tiên Gradle property `api.baseUrl`, sau đó environment variable `API_BASE_URL`, cuối cùng fallback `https://api.example.com`.
+- App chặn cleartext traffic bằng manifest và `network_security_config`; endpoint runtime phải dùng HTTPS.
 
 #### `core:data`
 - Chứa contracts truy cập dữ liệu
@@ -147,7 +152,7 @@ resources/            Shared drawables, strings, raw assets
 - `impl/`: implementation
 - `di/`: Hilt bindings/provides
 - Đây là cầu nối giữa feature với DB/DataStore/network
-- Ngoại lệ đáng chú ý: `ApiKeyRepository` đang là concrete class nằm trong `repository/` và được provide trực tiếp, không có `impl/` riêng
+- `ChatSyncRepository` và `HistorySyncRepository` là concrete service-style repository trong `impl/`, được inject trực tiếp thay vì có interface riêng.
 
 #### `core:database`
 - `AgriDoctorDatabase`
@@ -158,7 +163,7 @@ resources/            Shared drawables, strings, raw assets
 - Runtime hiện tại dùng `fallbackToDestructiveMigration()`, nên không được giả định migration dữ liệu luôn an toàn
 
 #### `core:datastore`
-- Proto DataStore cho auth/api key
+- Proto DataStore cho JWT token, timestamp và user ID
 - Serializer custom + wrapper class
 - Không expose trực tiếp cho feature; đi qua repository hoặc module provider
 
@@ -166,9 +171,9 @@ resources/            Shared drawables, strings, raw assets
 - Shared utility có tính cross-feature
 - Hiện tại tập trung vào location: `LocationHelper`, `LocationStateHolder`, `LocationDialog`
 
-#### `core:worker`
-- Background care reminder bằng WorkManager
-- Worker dùng `@HiltWorker`
+#### `core:alarm`
+- Care reminder bằng AlarmManager: exact khi có quyền, fallback inexact khi chưa có quyền
+- Receiver dùng `@AndroidEntryPoint`
 
 ### `feature` module structure
 Feature đơn giản thường có:
@@ -179,20 +184,30 @@ feature/<name>/
   src/main/java/com/baothanhbin/feature/<name>/
     <Feature>Screen.kt
     <Feature>ViewModel.kt
+    component/
+      <ComponentName>.kt
     navigation/
       <Feature>Navigation.kt
 ```
 
-Feature lớn hơn có thể thêm:
+Feature chỉ tạo thêm package modal khi thực sự có loại UI tương ứng:
 
 ```text
-components/
+dialog/
+  <DialogName>.kt
+sheet/
+  <SheetName>.kt
 ```
 
-Ví dụ:
-- `feature:myplants` có `components/`
-- `feature:chatbot` vẫn giữ file screen/viewmodel ở root package feature
-- một số feature import trực tiếp feature khác để reuse navigation/screen trong cùng flow
+Quy tắc tổ chức UI:
+- Dùng `component/`, không dùng `components/`.
+- Một file chỉ chứa một component/dialog/sheet cấp cao nhất.
+- `Screen.kt` giữ `Route`, screen-level composition, state và callback wiring; không nhét các card, row, top bar hoặc modal dài vào đây.
+- Card, row, top bar, empty state, list item và section độc lập đặt trong `component/`.
+- Dialog đặt trong `dialog/`; modal bottom sheet đặt trong `sheet/`.
+- `navigation/` chỉ chứa route, navigation arguments và các extension điều hướng.
+- Không tạo package `dialog/` hoặc `sheet/` rỗng.
+- Một số feature vẫn import trực tiếp feature khác để reuse navigation/screen trong cùng flow; không tạo dependency vòng.
 
 ## Data and Logic Flow
 
@@ -207,7 +222,7 @@ Luồng điển hình trong project:
 3. Destination gọi `<Feature>Route(...)`.
 4. Thường `<Feature>Route(...)` lấy `ViewModel` bằng `hiltViewModel()`, collect state, xử lý `LaunchedEffect`, rồi truyền data xuống `<Feature>Screen(...)`.
 5. Ở một số module cũ, `Route(...)` chỉ forward tham số còn `Screen(...)` tự `hiltViewModel()` và collect state.
-6. `<Feature>Screen(...)` chủ yếu render UI + callback.
+6. `<Feature>Screen(...)` ghép các composable trong `component/`, `dialog/`, `sheet/` và truyền UI-ready state + callback xuống.
 7. Callback gọi `ViewModel`.
 8. `ViewModel` dùng repository hoặc data source để load/save/process dữ liệu.
 9. Repository hoặc object datasource gọi Room/DataStore/network.
@@ -244,16 +259,16 @@ Luồng điển hình trong project:
 
 #### Chatbot flow
 - `ChatbotViewModel` tự init:
-  - load chat history từ Room
-  - lấy API key qua `ApiKeyRepository`
-  - warm up disease cache từ `/api/diseases`
+  - load và đồng bộ chat history qua `ChatSyncRepository`
 - Khi user gửi message:
   - cập nhật `messages`
-  - build prompt + optional disease summary
-  - gọi Gemini SDK
+  - lấy JWT qua `AuthRepository`
+  - map tối đa 10 message gần nhất sang `ChatbotHistoryMessage`
+  - đọc optional image bytes từ `Uri`
+  - gọi backend qua `NetworkDataSource.sendChatMessage(...)`
   - append bot message
-  - lưu toàn bộ conversation vào `ChatEntity`
-- Đây là feature có mức coupling cao hơn phần còn lại: dùng trực tiếp `AgriDoctorDatabase`, `ApiKeyRepository`, và `NetworkDataSource.getDiseasesJson()`
+  - lưu và đồng bộ conversation qua `ChatSyncRepository`
+- `ChatSyncRepository` quản lý Room, create/update/delete chat history trên server và đồng bộ pending chats theo user.
 
 ### State management
 - Chuẩn chính: `MutableStateFlow` + public `StateFlow`
@@ -270,7 +285,7 @@ Luồng điển hình trong project:
 - Phần lớn repository bind qua `@Binds` trong `core:data:di/DataModule.kt`
 - Một số concrete service/repository và DataStore wrapper được cung cấp bằng `@Provides`
 - `NetworkDataSource` và `NetworkClients` hiện là object singleton, không có abstraction DI riêng
-- Worker dùng `@HiltWorker` + `HiltWorkerFactory`
+- Alarm receiver dùng `@AndroidEntryPoint`
 
 ### Async handling
 - Main pattern:
@@ -298,13 +313,13 @@ Không có abstract base class kiểu framework nội bộ. Các contract quan t
 
 - **Jetpack Compose**: toàn bộ UI screen
 - **Navigation Compose**: feature navigation registration và route args
-- **Hilt**: DI cho app, ViewModel, repository, worker
+- **Hilt**: DI cho app, ViewModel, repository và alarm receiver
 - **Room**: local caching cho diagnose results, plants, reminders, chats, diseases cache
-- **Proto DataStore**: lưu JWT token và Gemini API key
+- **Proto DataStore**: lưu JWT token, timestamp và user ID
 - **Ktor Client + OkHttp engine**: HTTP cho backend APIs
 - **kotlinx.serialization**: serialize/deserialize JSON request/response
-- **WorkManager**: care reminder scheduling
-- **Google Generative AI SDK**: chatbot Gemini integration
+- **AlarmManager**: exact reminder khi được cấp quyền; fallback inexact reminder khi chưa có quyền
+- **Backend chatbot API**: xử lý hội thoại qua `NetworkDataSource.sendChatMessage(...)`
 - **Coil**: ảnh/GIF trong Compose
 - **CameraX**: camera preview và image capture
 - **Play Services Location**: lấy vị trí hiện tại
@@ -361,8 +376,20 @@ Khi thêm một feature chuẩn dạng screen + viewmodel + navigation:
 feature/newfeature/src/main/java/com/baothanhbin/feature/newfeature/
   NewFeatureScreen.kt
   NewFeatureViewModel.kt
+  component/
+    NewFeatureContent.kt
+    NewFeatureTopBar.kt
   navigation/NewFeatureNavigation.kt
 ```
+
+Nếu feature có modal, thêm từng package khi cần:
+
+```text
+  dialog/ConfirmActionDialog.kt
+  sheet/EditItemSheet.kt
+```
+
+Không tạo `components/`. Mỗi composable cấp component phải có file riêng.
 
 #### 3. ViewModel template
 ```kotlin
@@ -416,6 +443,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.baothanhbin.feature.newfeature.component.NewFeatureContent
 
 @Composable
 fun NewFeatureRoute(
@@ -441,11 +469,31 @@ fun NewFeatureScreen(
     error: String?,
     onBackClick: () -> Unit
 ) {
-    // Compose UI only
+    NewFeatureContent(
+        isLoading = isLoading,
+        error = error,
+        onBackClick = onBackClick
+    )
 }
 ```
 
-#### 5. Navigation template
+#### 5. Component template
+```kotlin
+package com.baothanhbin.feature.newfeature.component
+
+import androidx.compose.runtime.Composable
+
+@Composable
+internal fun NewFeatureContent(
+    isLoading: Boolean,
+    error: String?,
+    onBackClick: () -> Unit
+) {
+    // Render one cohesive UI section only.
+}
+```
+
+#### 6. Navigation template
 ```kotlin
 package com.baothanhbin.feature.newfeature.navigation
 
@@ -470,7 +518,7 @@ fun NavGraphBuilder.newFeatureScreen(
 }
 ```
 
-#### 6. Register in app shell
+#### 7. Register in app shell
 - Import `newFeatureScreen(...)` vào `app/navigation/MainNavHost.kt`
 - Gọi registration trong `NavHost`
 - Nếu là top-level tab thì cập nhật thêm:
@@ -560,7 +608,7 @@ abstract fun bindNewThingRepository(
 ): NewThingRepository
 ```
 
-Nếu repository đó chưa cần abstraction ngay, repo hiện tại cũng có precedent provide concrete class trực tiếp bằng `@Provides` như `ApiKeyRepository`.
+Nếu repository đó chưa cần abstraction ngay, repo hiện tại cũng có precedent dùng concrete class với constructor injection như `ChatSyncRepository` và `HistorySyncRepository`.
 
 ### Additional base templates
 
@@ -705,39 +753,12 @@ fun provideFeatureSettingDataStore(
 }
 ```
 
-#### Boilerplate for a new Worker-backed reminder/background task
-Pattern hiện tại là: lưu metadata vào Room trước, sau đó schedule `WorkManager`.
+#### Boilerplate for a new AlarmManager-backed reminder
+Pattern hiện tại là: lưu metadata vào Room trước, sau đó schedule `ReminderAlarmScheduler`.
 
-##### Worker
-```kotlin
-@HiltWorker
-class CareReminderWorker @AssistedInject constructor(
-    @Assisted private val context: Context,
-    @Assisted workerParams: WorkerParameters,
-    private val repository: CareTaskRepository
-) : CoroutineWorker(context, workerParams) {
-
-    override suspend fun doWork(): Result {
-        val taskId = inputData.getLong(KEY_TASK_ID, -1L)
-        val title = inputData.getString(KEY_TITLE) ?: "Nhắc chăm sóc"
-
-        NotificationHelper.showCareNotification(context, "Cây của bạn", title)
-
-        if (taskId != -1L) {
-            repository.updateTaskStatus(taskId, true)
-        }
-
-        return Result.success()
-    }
-
-    companion object {
-        const val KEY_TASK_ID = "taskId"
-        const val KEY_TITLE = "title"
-
-        fun uniqueWorkName(taskId: Long): String = "CareReminder_$taskId"
-    }
-}
-```
+- Android trước API 31 hoặc khi đã có exact-alarm access: dùng `setExactAndAllowWhileIdle(...)`.
+- Khi chưa có quyền exact alarm: fallback `setAndAllowWhileIdle(...)`, sau đó mở trang `ACTION_REQUEST_SCHEDULE_EXACT_ALARM`.
+- Khi quyền exact alarm được cấp hoặc thiết bị reboot, `ReminderBootReceiver` đặt lại các reminder chưa hoàn thành còn trong tương lai.
 
 ##### Schedule from ViewModel or feature layer
 ```kotlin
@@ -747,8 +768,7 @@ fun scheduleReminder(
     title: String,
     targetTimestamp: Long
 ) {
-    val delay = targetTimestamp - System.currentTimeMillis()
-    if (delay <= 0) return
+    if (targetTimestamp <= System.currentTimeMillis()) return
 
     viewModelScope.launch {
         val entity = CareTaskEntity(
@@ -758,20 +778,12 @@ fun scheduleReminder(
         )
         val taskId = repository.insertTask(entity)
 
-        val inputData = Data.Builder()
-            .putLong(CareReminderWorker.KEY_TASK_ID, taskId)
-            .putString(CareReminderWorker.KEY_TITLE, title)
-            .build()
-
-        val workRequest = OneTimeWorkRequestBuilder<CareReminderWorker>()
-            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-            .setInputData(inputData)
-            .build()
-
-        WorkManager.getInstance(context).enqueueUniqueWork(
-            CareReminderWorker.uniqueWorkName(taskId),
-            ExistingWorkPolicy.REPLACE,
-            workRequest
+        ReminderAlarmScheduler.schedule(
+            context = context.applicationContext,
+            reminderId = taskId,
+            plantName = "Cây của bạn",
+            actionName = title,
+            targetTimestamp = targetTimestamp
         )
     }
 }
@@ -783,9 +795,7 @@ fun toggleTask(id: Long, isCompleted: Boolean) {
     viewModelScope.launch {
         repository.updateTaskStatus(id, isCompleted)
         if (isCompleted) {
-            WorkManager.getInstance(getApplication()).cancelUniqueWork(
-                CareReminderWorker.uniqueWorkName(id)
-            )
+            ReminderAlarmScheduler.cancel(getApplication(), id)
         }
     }
 }
@@ -978,6 +988,9 @@ fun onSettingsClick(navController: NavController) {
 - Ưu tiên giữ `Route` làm lớp nối giữa `ViewModel` và `Screen`
 - Nhưng nếu module hiện hữu đang để `Screen` tự `hiltViewModel()` thì đừng refactor chỉ để đồng nhất hình thức
 - `Screen` nên nhận primitive/UI-ready state + callbacks, tránh tự fetch data
+- `Screen` chỉ ghép UI cấp màn hình; tách top bar, section, card, row, item và empty state vào `component/`.
+- Mỗi composable được tách có một file riêng; không tạo file gom kiểu `HomeComponents.kt`.
+- Tách dialog sang `dialog/` và bottom sheet sang `sheet/`.
 - Ưu tiên điều hướng một lần qua `SharedFlow` + `LaunchedEffect`
 - Tuy nhiên auth/onboarding hiện có nhiều flow dùng boolean flag trong `UiState` + `LaunchedEffect` + reset/consume
 - Nếu cần xử lý khi vào màn hình, dùng `LaunchedEffect(Unit)` hoặc key theo arg
@@ -997,16 +1010,18 @@ fun onSettingsClick(navController: NavController) {
   - wrapper class
 - Expose API dạng `saveX()`, `getX()`, `clearX()`, và `Flow` nếu state cần observe
 
-### Pattern notes for workers
-- Worker ở `core:worker`
-- Dùng `@HiltWorker` + `@AssistedInject`
-- Schedule từ feature qua `WorkManager`
+### Pattern notes for alarms
+- Alarm scheduler và receiver ở `core:alarm`
+- Receiver dùng `@AndroidEntryPoint`
+- Schedule từ feature qua `ReminderAlarmScheduler`
+- Exact timing chỉ được đảm bảo khi hệ thống cho phép schedule exact alarm; nếu không, scheduler fallback sang alarm không chính xác tuyệt đối.
+- `ReminderBootReceiver` khôi phục reminder tương lai sau reboot và sau khi quyền exact alarm thay đổi.
 - Nếu feature cần lưu lịch, lưu cả metadata vào Room như `ReminderEntity`
 
 ## Important Existing Patterns and Exceptions
 
 ### Strong existing patterns to preserve
-- Feature module thường có `Screen + ViewModel + navigation`, đôi khi `Screen` tự lấy `ViewModel`
+- Feature module có `Screen + ViewModel + navigation + component`; thêm `dialog`/`sheet` khi cần
 - Phần lớn data access đi theo `Repository interface + implementation`
 - `MutableStateFlow` state holder
 - Hilt constructor injection
@@ -1015,9 +1030,8 @@ fun onSettingsClick(navController: NavController) {
 - Cross-feature dependency hiện có nhưng chủ yếu theo flow một chiều; tránh tạo vòng phụ thuộc mới
 
 ### Existing inconsistencies you should be aware of
-- Không phải mọi remote call đều đi qua repository; `ProcessImageViewModel` gọi `NetworkDataSource` trực tiếp
-- Không phải mọi DB access đều đi qua repository; `ChatbotViewModel` dùng `AgriDoctorDatabase` trực tiếp
-- Không phải mọi data service đều có `interface + impl`; `ApiKeyRepository` là concrete class
+- Không phải mọi remote call đều đi qua repository; `ProcessImageViewModel` và `ChatbotViewModel` vẫn gọi `NetworkDataSource` trực tiếp cho tác vụ chính.
+- Không phải mọi data service đều có `interface + impl`; `ChatSyncRepository` và `HistorySyncRepository` là concrete class dùng constructor injection.
 - Không phải mọi feature đều độc lập; có các dependency `feature -> feature` ở `home`, `camera`, `diagnose`, `processimage`
 - Ownership giữa `Route` và `Screen` không thống nhất hoàn toàn giữa các module
 - One-off event pattern đang bị trộn giữa `SharedFlow` và boolean flag trong `UiState`
@@ -1033,13 +1047,15 @@ Khi viết code mới, **ưu tiên pattern tốt hơn nhưng vẫn tương thíc
 ## Fast Mental Model for New Agents
 - Nếu sửa app shell, vào `app/`
 - Nếu thêm màn hình mới, vào `feature/<name>/`
+- Nếu thêm thành phần UI của một feature, tạo file riêng trong `feature/<name>/component/`
+- Nếu thêm dialog hoặc bottom sheet, dùng lần lượt `dialog/` hoặc `sheet/`
 - Nếu cần model cho API, vào `core:model`
 - Nếu cần HTTP/backend, vào `core:network`
 - Nếu cần contract dữ liệu, vào `core:data`
 - Nếu cần cache/local DB, vào `core:database`
 - Nếu cần token/key persistence, vào `core:datastore`
 - Nếu cần shared helper UI/location/dialog, vào `core:ui`
-- Nếu cần background reminder/notification, vào `core:worker`
+- Nếu cần alarm reminder/notification, vào `core:alarm`
 
 ## Recommended Workflow for Any New Change
 1. Xác định feature module chịu trách nhiệm UI.
@@ -1047,7 +1063,7 @@ Khi viết code mới, **ưu tiên pattern tốt hơn nhưng vẫn tương thíc
 3. Nếu chưa có, thêm model + network + repository/service + DI binding/provide.
 4. Tạo hoặc cập nhật `ViewModel` với `UiState`.
 5. Ưu tiên để `Route` lo collect state và side effects; nếu module hiện hữu đang để `Screen` tự lấy `ViewModel` thì follow local pattern.
-6. Giữ `Screen` tập trung vào Compose UI.
+6. Giữ `Screen` tập trung vào screen-level composition; tách từng khối UI sang một file trong `component/`, `dialog/` hoặc `sheet/`.
 7. Đăng ký navigation trong file `navigation/*`; nếu flow đã reuse feature khác thì dùng lại extension/navigation có sẵn thay vì copy.
 8. Nếu dữ liệu cần tồn tại sau process death hoặc dùng lại, lưu vào Room/DataStore.
 
@@ -1063,10 +1079,12 @@ Khi viết code mới, **ưu tiên pattern tốt hơn nhưng vẫn tương thíc
 - `core/database/src/main/java/com/baothanhbin/core/database/dao/ReminderDao.kt`
 - `core/datastore/src/main/java/com/baothanhbin/core/datastore/AuthDataStore.kt`
 - `core/datastore/src/main/proto/auth.proto`
-- `core/worker/src/main/java/com/baothanhbin/core/worker/ReminderWorker.kt`
+- `core/alarm/src/main/java/com/baothanhbin/core/alarm/ReminderAlarmScheduler.kt`
 - `feature/login/src/main/java/com/baothanhbin/feature/login/LoginScreen.kt`
 - `feature/home/src/main/java/com/baothanhbin/feature/home/HomeScreen.kt`
+- `feature/home/src/main/java/com/baothanhbin/feature/home/component/HomeTopBar.kt`
 - `feature/myplants/src/main/java/com/baothanhbin/feature/myplants/MyPlantsScreen.kt`
+- `feature/myplants/src/main/java/com/baothanhbin/feature/myplants/sheet/AddPlantBottomSheet.kt`
 - `feature/myplants/src/main/java/com/baothanhbin/feature/myplants/MyPlantsViewModel.kt`
 - `feature/verificationotp/src/main/java/com/baothanhbin/feature/verificationotp/VerificationOTPViewModel.kt`
 - `feature/processimage/src/main/java/com/baothanhbin/feature/processimage/ProcessImageViewModel.kt`

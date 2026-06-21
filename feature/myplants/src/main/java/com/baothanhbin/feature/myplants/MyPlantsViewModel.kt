@@ -6,19 +6,14 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
 import com.baothanhbin.core.data.repository.PlantRepository
 import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.database.model.ReminderEntity
 import com.baothanhbin.core.database.model.displayName
 import com.baothanhbin.core.ui.util.LocationHelper
 import com.baothanhbin.core.ui.util.LocationStateHolder
-import com.baothanhbin.core.worker.ReminderWorker
+import com.baothanhbin.core.alarm.ReminderAlarmScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,16 +65,14 @@ class MyPlantsViewModel @Inject constructor(
         val plantName = plant.displayName()
         val delay = targetTimestamp - System.currentTimeMillis()
         if (delay <= 0) {
-            Log.e("ReminderWorker", "Loi: Thoi gian hen ($targetTimestamp) phai lon hon hien tai (${System.currentTimeMillis()})")
+            Log.e("ReminderAlarm", "Loi: Thoi gian hen ($targetTimestamp) phai lon hon hien tai (${System.currentTimeMillis()})")
             viewModelScope.launch {
                 _locationError.emit("Thời gian hẹn phải lớn hơn thời gian hiện tại")
             }
             return
         }
 
-        val minutes = TimeUnit.MILLISECONDS.toMinutes(delay)
-        val seconds = TimeUnit.MILLISECONDS.toSeconds(delay) % 60
-        Log.d("ReminderWorker", "Dang len lich nhac nho cho '$plantName' sau: $minutes phut $seconds giay (Tong: $delay ms)")
+        Log.d("ReminderAlarm", "Dang len lich nhac nho cho '$plantName' tai $targetTimestamp")
 
         viewModelScope.launch {
             val reminder = ReminderEntity(
@@ -90,23 +83,17 @@ class MyPlantsViewModel @Inject constructor(
                 isCompleted = false
             )
             val reminderId = plantRepository.insertReminder(reminder)
-            val workerInputData = Data.Builder()
-                .putString(ReminderWorker.KEY_PLANT_NAME, plantName)
-                .putString(ReminderWorker.KEY_ACTION_NAME, actionName)
-                .putLong(ReminderWorker.KEY_REMINDER_ID, reminderId)
-                .build()
-            val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
-                .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-                .setInputData(workerInputData)
-                .build()
-
-            WorkManager.getInstance(context).enqueueUniqueWork(
-                ReminderWorker.uniqueWorkName(reminderId),
-                ExistingWorkPolicy.REPLACE,
-                workRequest
+            val isExact = ReminderAlarmScheduler.schedule(
+                context = context.applicationContext,
+                reminderId = reminderId,
+                plantName = plantName,
+                actionName = actionName,
+                targetTimestamp = targetTimestamp
             )
-
-            Log.d("ReminderWorker", "enqueueUniqueWork thanh cong cho reminderId=$reminderId")
+            if (!isExact) {
+                ReminderAlarmScheduler.requestExactAlarmAccess(context.applicationContext)
+            }
+            Log.d("ReminderAlarm", "Da len lich reminderId=$reminderId, exact=$isExact")
         }
     }
 
@@ -114,9 +101,7 @@ class MyPlantsViewModel @Inject constructor(
         viewModelScope.launch {
             plantRepository.updateReminderStatus(id, isCompleted)
             if (isCompleted) {
-                WorkManager.getInstance(getApplication()).cancelUniqueWork(
-                    ReminderWorker.uniqueWorkName(id)
-                )
+                ReminderAlarmScheduler.cancel(getApplication(), id)
             }
         }
     }

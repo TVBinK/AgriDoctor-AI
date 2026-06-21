@@ -51,12 +51,12 @@ import com.baothanhbin.core.database.model.PlantEntity
 import com.baothanhbin.core.theme.GreenSurface
 import com.baothanhbin.core.theme.Subtitle
 import com.baothanhbin.core.ui.dialog.LocationDialog
-import com.baothanhbin.feature.myplants.components.AddPlantBottomSheet
-import com.baothanhbin.feature.myplants.components.EditPlantBottomSheet
-import com.baothanhbin.feature.myplants.components.MyPlantsContent
-import com.baothanhbin.feature.myplants.components.MyPlantsTopBar
-import com.baothanhbin.feature.myplants.components.ReminderContent
-import com.baothanhbin.feature.myplants.components.SetReminderDialog
+import com.baothanhbin.feature.myplants.component.MyPlantsContent
+import com.baothanhbin.feature.myplants.component.MyPlantsTopBar
+import com.baothanhbin.feature.myplants.component.ReminderContent
+import com.baothanhbin.feature.myplants.dialog.SetReminderDialog
+import com.baothanhbin.feature.myplants.sheet.AddPlantBottomSheet
+import com.baothanhbin.feature.myplants.sheet.EditPlantBottomSheet
 import com.baothanhbin.feature.settings.navigation.navigateToSettings
 
 @Composable

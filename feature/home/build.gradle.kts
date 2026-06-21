@@ -20,6 +20,5 @@ dependencies {
     implementation(projects.feature.myplants)
     implementation(projects.core.ui)
     implementation(projects.core.data)
-    implementation(projects.core.worker)
-    implementation(libs.androidx.work.runtime.ktx)
+    implementation(projects.core.alarm)
 }
