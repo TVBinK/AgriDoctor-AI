@@ -8,6 +8,7 @@ android {
 
 dependencies {
     implementation(projects.core.theme)
+    implementation(projects.core.ui)
     implementation(projects.feature.processimage)
     implementation(libs.androidx.camera.view)
     implementation(libs.androidx.camera.core)

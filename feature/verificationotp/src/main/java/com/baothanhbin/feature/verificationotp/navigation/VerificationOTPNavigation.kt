@@ -6,6 +6,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.baothanhbin.core.model.OtpVerificationPurpose
+import com.baothanhbin.core.ui.navigation.slideInFromRightHalf
+import com.baothanhbin.core.ui.navigation.slideOutToRightHalf
 import com.baothanhbin.feature.verificationotp.VerifycationOTPScreen
 
 const val VERIFICATION_OTP_ROUTE = "verification_otp_route"
@@ -31,7 +33,9 @@ fun NavGraphBuilder.verificationOTPScreen(
                 type = NavType.StringType
                 defaultValue = OtpVerificationPurpose.LOGIN.name
             }
-        )
+        ),
+        enterTransition = { slideInFromRightHalf() },
+        popExitTransition = { slideOutToRightHalf() }
     ) {
         VerifycationOTPScreen(
             onBackClick = onBackClick,

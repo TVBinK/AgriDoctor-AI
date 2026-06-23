@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.navigation.*
 import androidx.navigation.compose.composable
 import com.baothanhbin.core.model.ApiType
+import com.baothanhbin.core.ui.navigation.slideInFromBottomHalf
+import com.baothanhbin.core.ui.navigation.slideOutToBottomHalf
 import com.baothanhbin.core.ui.util.LocationStateHolder
 import com.baothanhbin.feature.processimage.ProcessImageRoute
 
@@ -37,7 +39,9 @@ fun NavGraphBuilder.processImageScreen(
                 type = NavType.StringType
                 defaultValue = "DETECT"
             }
-        )
+        ),
+        enterTransition = { slideInFromBottomHalf() },
+        popExitTransition = { slideOutToBottomHalf() }
     ) {
         val uriString = it.arguments?.getString(ARG_IMAGE_URI)
         val uri = uriString?.let { s -> Uri.parse(Uri.decode(s)) }

@@ -3,6 +3,8 @@ package com.baothanhbin.feature.login.navigation
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
+import com.baothanhbin.core.ui.navigation.slideInFromRightHalf
+import com.baothanhbin.core.ui.navigation.slideOutToRightHalf
 import com.baothanhbin.core.model.OtpVerificationPurpose
 import com.baothanhbin.feature.login.LoginRoute
 
@@ -17,7 +19,11 @@ fun NavGraphBuilder.loginScreen(
     onNavigateToPin: (String, OtpVerificationPurpose) -> Unit,
     onNavigateToForgotPassword: () -> Unit,
 ) {
-    composable(route = LOGIN_ROUTE) {
+    composable(
+        route = LOGIN_ROUTE,
+        enterTransition = { slideInFromRightHalf() },
+        popExitTransition = { slideOutToRightHalf() }
+    ) {
         LoginRoute(
             onNavigateToSignup = onNavigateToSignup,
             onNavigateToPin = onNavigateToPin,

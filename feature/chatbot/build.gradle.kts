@@ -12,6 +12,7 @@ android {
 
 dependencies {
     implementation(projects.core.theme)
+    implementation(projects.core.ui)
     implementation(projects.core.network)
     implementation(projects.core.database)
     implementation(projects.core.data)

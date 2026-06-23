@@ -1,16 +1,7 @@
 package com.baothanhbin.agridoctorai.navigation
 
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavBackStackEntry
 import androidx.navigation.compose.NavHost
 import com.baothanhbin.core.model.OtpVerificationPurpose
 import com.baothanhbin.feature.camera.navigation.cameraScreen
@@ -51,11 +42,7 @@ fun MainNavHost(
     NavHost(
         modifier = modifier,
         startDestination = startDestination,
-        navController = navController,
-        enterTransition = { forwardEnterTransition() },
-        exitTransition = { forwardExitTransition() },
-        popEnterTransition = { backwardEnterTransition() },
-        popExitTransition = { backwardExitTransition() }
+        navController = navController
     ) {
         loginScreen(
             onNavigateToSignup = {
@@ -147,142 +134,4 @@ fun MainNavHost(
             }
         )
     }
-}
-
-private const val NAV_FADE_DURATION_MS = 140
-private const val NAV_PARALLAX_DIVISOR = 4
-private const val TOP_LEVEL_FADE_DURATION_MS = 110
-private const val TOP_LEVEL_PARALLAX_DIVISOR = 2
-
-private val topLevelRoutes = setOf(
-    HOME_ROUTE,
-    DIAGNOSE_ROUTE,
-    MY_PLANTS_ROUTE,
-    CHATBOT_ROUTE_BASE
-)
-
-private val topLevelRouteOrder = listOf(
-    HOME_ROUTE,
-    DIAGNOSE_ROUTE,
-    MY_PLANTS_ROUTE,
-    CHATBOT_ROUTE_BASE
-)
-
-private fun NavBackStackEntry.baseRoute(): String? {
-    return destination.route
-        ?.substringBefore('?')
-        ?.substringBefore('/')
-}
-
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.isTopLevelTransition(): Boolean {
-    val initialRoute = initialState.baseRoute()
-    val targetRoute = targetState.baseRoute()
-    return initialRoute in topLevelRoutes && targetRoute in topLevelRoutes
-}
-
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.topLevelSlideDirection():
-    AnimatedContentTransitionScope.SlideDirection {
-    val initialIndex = topLevelRouteOrder.indexOf(initialState.baseRoute())
-    val targetIndex = topLevelRouteOrder.indexOf(targetState.baseRoute())
-    return if (targetIndex >= initialIndex) {
-        AnimatedContentTransitionScope.SlideDirection.Left
-    } else {
-        AnimatedContentTransitionScope.SlideDirection.Right
-    }
-}
-
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.forwardEnterTransition(): EnterTransition {
-    if (initialState.destination.route == targetState.destination.route) {
-        return EnterTransition.None
-    }
-    if (isTopLevelTransition()) {
-        return slideIntoContainer(
-            towards = topLevelSlideDirection(),
-            animationSpec = spring(
-                stiffness = Spring.StiffnessLow,
-                dampingRatio = Spring.DampingRatioNoBouncy
-            ),
-            initialOffset = { fullOffset -> fullOffset / TOP_LEVEL_PARALLAX_DIVISOR }
-        ) + fadeIn(animationSpec = tween(durationMillis = TOP_LEVEL_FADE_DURATION_MS))
-    }
-    return slideIntoContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-        animationSpec = spring(
-            stiffness = Spring.StiffnessMediumLow,
-            dampingRatio = Spring.DampingRatioNoBouncy
-        ),
-        initialOffset = { fullOffset -> fullOffset / NAV_PARALLAX_DIVISOR }
-    ) + fadeIn(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MS))
-}
-
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.forwardExitTransition(): ExitTransition {
-    if (initialState.destination.route == targetState.destination.route) {
-        return ExitTransition.None
-    }
-    if (isTopLevelTransition()) {
-        return slideOutOfContainer(
-            towards = topLevelSlideDirection(),
-            animationSpec = spring(
-                stiffness = Spring.StiffnessLow,
-                dampingRatio = Spring.DampingRatioNoBouncy
-            ),
-            targetOffset = { fullOffset -> fullOffset / TOP_LEVEL_PARALLAX_DIVISOR }
-        ) + fadeOut(animationSpec = tween(durationMillis = TOP_LEVEL_FADE_DURATION_MS))
-    }
-    return slideOutOfContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-        animationSpec = spring(
-            stiffness = Spring.StiffnessMediumLow,
-            dampingRatio = Spring.DampingRatioNoBouncy
-        ),
-        targetOffset = { fullOffset -> fullOffset / NAV_PARALLAX_DIVISOR }
-    ) + fadeOut(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MS))
-}
-
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.backwardEnterTransition(): EnterTransition {
-    if (initialState.destination.route == targetState.destination.route) {
-        return EnterTransition.None
-    }
-    if (isTopLevelTransition()) {
-        return slideIntoContainer(
-            towards = topLevelSlideDirection(),
-            animationSpec = spring(
-                stiffness = Spring.StiffnessLow,
-                dampingRatio = Spring.DampingRatioNoBouncy
-            ),
-            initialOffset = { fullOffset -> fullOffset / TOP_LEVEL_PARALLAX_DIVISOR }
-        ) + fadeIn(animationSpec = tween(durationMillis = TOP_LEVEL_FADE_DURATION_MS))
-    }
-    return slideIntoContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-        animationSpec = spring(
-            stiffness = Spring.StiffnessMediumLow,
-            dampingRatio = Spring.DampingRatioNoBouncy
-        ),
-        initialOffset = { fullOffset -> fullOffset / NAV_PARALLAX_DIVISOR }
-    ) + fadeIn(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MS))
-}
-
-private fun AnimatedContentTransitionScope<NavBackStackEntry>.backwardExitTransition(): ExitTransition {
-    if (initialState.destination.route == targetState.destination.route) {
-        return ExitTransition.None
-    }
-    if (isTopLevelTransition()) {
-        return slideOutOfContainer(
-            towards = topLevelSlideDirection(),
-            animationSpec = spring(
-                stiffness = Spring.StiffnessLow,
-                dampingRatio = Spring.DampingRatioNoBouncy
-            ),
-            targetOffset = { fullOffset -> fullOffset / TOP_LEVEL_PARALLAX_DIVISOR }
-        ) + fadeOut(animationSpec = tween(durationMillis = TOP_LEVEL_FADE_DURATION_MS))
-    }
-    return slideOutOfContainer(
-        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-        animationSpec = spring(
-            stiffness = Spring.StiffnessMediumLow,
-            dampingRatio = Spring.DampingRatioNoBouncy
-        ),
-        targetOffset = { fullOffset -> fullOffset / NAV_PARALLAX_DIVISOR }
-    ) + fadeOut(animationSpec = tween(durationMillis = NAV_FADE_DURATION_MS))
 }

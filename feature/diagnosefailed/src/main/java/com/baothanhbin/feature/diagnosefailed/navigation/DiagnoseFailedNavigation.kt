@@ -9,6 +9,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.baothanhbin.core.model.ApiType
+import com.baothanhbin.core.ui.navigation.slideInFromBottomHalf
+import com.baothanhbin.core.ui.navigation.slideOutToBottomHalf
 import com.baothanhbin.feature.diagnosefailed.DiagnoseFailedRoute
 
 const val DIAGNOSE_FAILED_ROUTE = "DIAGNOSE_FAILED_ROUTE"
@@ -44,7 +46,9 @@ fun NavGraphBuilder.diagnoseFailedScreen(navController: NavHostController) {
                 type = NavType.StringType
                 defaultValue = "DETECT"
             }
-        )
+        ),
+        enterTransition = { slideInFromBottomHalf() },
+        popExitTransition = { slideOutToBottomHalf() }
     ) {
         val uriString = it.arguments?.getString(ARG_IMAGE_URI)
         val imageUri = uriString?.let { s -> Uri.parse(Uri.decode(s)) }
@@ -67,7 +71,9 @@ fun NavGraphBuilder.diagnoseFailedScreen(navController: NavHostController) {
                 type = NavType.StringType
                 defaultValue = "DETECT"
             }
-        )
+        ),
+        enterTransition = { slideInFromBottomHalf() },
+        popExitTransition = { slideOutToBottomHalf() }
     ) {
         val apiTypeString = it.arguments?.getString(ARG_API_TYPE) ?: "DETECT"
         val apiType = when (apiTypeString) {

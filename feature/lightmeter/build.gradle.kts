@@ -14,5 +14,6 @@ dependencies {
     implementation(libs.androidx.camera.view)
     
     // Resources module
+    implementation(projects.core.ui)
     implementation(projects.resources)
 }

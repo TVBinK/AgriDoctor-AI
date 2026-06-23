@@ -8,6 +8,8 @@ import com.baothanhbin.feature.camera.CameraRoute
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.navArgument
+import com.baothanhbin.core.ui.navigation.slideInFromBottomHalf
+import com.baothanhbin.core.ui.navigation.slideOutToBottomHalf
 
 const val CAMERA_ROUTE = "CAMERA_ROUTE"
 const val CAMERA_MODE_ARG = "modeIndex"
@@ -29,7 +31,9 @@ fun NavGraphBuilder.cameraScreen(
                 type = NavType.IntType
                 defaultValue = 0
             }
-        )
+        ),
+        enterTransition = { slideInFromBottomHalf() },
+        popExitTransition = { slideOutToBottomHalf() }
     ) { backStackEntry ->
         val modeIndex = backStackEntry.arguments?.getInt(CAMERA_MODE_ARG) ?: 0
         CameraRoute(
